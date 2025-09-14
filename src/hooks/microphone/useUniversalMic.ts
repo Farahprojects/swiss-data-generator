@@ -99,8 +99,10 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
           setIsRecording(false);
           setIsProcessing(true);
         },
-        silenceThreshold: options.silenceThreshold || 0.02,
-        silenceDuration: options.silenceDuration || 1200,
+        baselineCaptureDuration: 1000, // 1 second baseline capture
+        silenceMargin: 0.15, // 15% below baseline
+        silenceHangover: 300, // 300ms silence detection
+        enableBandpass: true, // Human speech filter 100-4000Hz
       });
 
       await recorderRef.current.start();

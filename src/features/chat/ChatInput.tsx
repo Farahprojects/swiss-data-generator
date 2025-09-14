@@ -61,8 +61,6 @@ export const ChatInput = () => {
     audioLevelRef
   } = useUniversalMic({
     onTranscriptReady: handleTranscriptReady,
-    silenceThreshold: 0.01,
-    silenceDuration: 1200,
   });
 
   const handleSend = async () => {

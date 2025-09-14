@@ -4,8 +4,10 @@ export interface STTRecorderOptions {
   onTranscriptReady?: (transcript: string) => void;
   onError?: (error: Error) => void;
   onLevel?: (level: number) => void;
-  silenceThreshold?: number;
-  silenceDuration?: number;
+  baselineCaptureDuration?: number; // ms to capture baseline energy (default: 1000)
+  silenceMargin?: number; // percentage below baseline to trigger silence (default: 0.15)
+  silenceHangover?: number; // ms before triggering silence (default: 300)
+  enableBandpass?: boolean; // enable 100-4000Hz human speech filter (default: true)
   mode?: string; // e.g., 'conversation'
   onProcessingStart?: () => void; // fired when recording stops and processing begins
 }
@@ -22,21 +24,26 @@ export class UniversalSTTRecorder {
   private animationFrame: number | null = null;
   private dataArray: Float32Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
-  private notch50Filter: BiquadFilterNode | null = null;
-  private notch60Filter: BiquadFilterNode | null = null;
-  private lowPassFilter: BiquadFilterNode | null = null;
+  private bandpassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private filteredStream: MediaStream | null = null;
   
-  // Control
+  // Simplified VAD state
   private silenceTimer: NodeJS.Timeout | null = null;
   private isRecording = false;
   private options: STTRecorderOptions;
+  private baselineEnergy: number = 0;
+  private baselineStartTime: number = 0;
+  private baselineCapturing = false;
+  private baselineEnergySum = 0;
+  private baselineEnergyCount = 0;
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
-      silenceThreshold: 0.02,
-      silenceDuration: 1200, // 1.2 seconds
+      baselineCaptureDuration: 1000, // 1 second to capture baseline
+      silenceMargin: 0.15, // 15% below baseline
+      silenceHangover: 300, // 300ms before triggering silence
+      enableBandpass: true, // enable human speech filter
       ...options
     };
   }
@@ -154,55 +161,58 @@ export class UniversalSTTRecorder {
       return;
     }
 
-    // Create AudioContext and filtered chain
+    // Create AudioContext and simplified filter chain
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
 
-    // High-pass filter: cut low-frequency rumble
+    // Essential high-pass filter: cut low-frequency rumble at 80Hz
     this.highPassFilter = this.audioContext.createBiquadFilter();
     this.highPassFilter.type = 'highpass';
     this.highPassFilter.frequency.value = 80; // Hz (cut below ~80Hz)
     this.highPassFilter.Q.value = 0.8;
 
-    // Notch filters: remove mains hum at 50/60 Hz
-    this.notch50Filter = this.audioContext.createBiquadFilter();
-    this.notch50Filter.type = 'notch';
-    this.notch50Filter.frequency.value = 50;
-    this.notch50Filter.Q.value = 30; // narrow notch
+    // Optional bandpass filter for human speech (100-4000Hz)
+    let lastFilterNode = this.highPassFilter;
+    if (this.options.enableBandpass) {
+      this.bandpassFilter = this.audioContext.createBiquadFilter();
+      this.bandpassFilter.type = 'bandpass';
+      this.bandpassFilter.frequency.value = 2050; // Center frequency for 100-4000Hz range
+      this.bandpassFilter.Q.value = 0.5; // Moderate Q for speech range
+      this.highPassFilter.connect(this.bandpassFilter);
+      lastFilterNode = this.bandpassFilter;
+    }
 
-    this.notch60Filter = this.audioContext.createBiquadFilter();
-    this.notch60Filter.type = 'notch';
-    this.notch60Filter.frequency.value = 60;
-    this.notch60Filter.Q.value = 30; // narrow notch
-
-    // Low-pass filter: tame high-frequency hiss
-    this.lowPassFilter = this.audioContext.createBiquadFilter();
-    this.lowPassFilter.type = 'lowpass';
-    this.lowPassFilter.frequency.value = 8000; // Hz
-    this.lowPassFilter.Q.value = 0.7;
-
-    // Analyser for energy monitoring
+    // Analyser for energy monitoring with simplified settings
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
-    this.analyser.smoothingTimeConstant = 0.8;
+    this.analyser.smoothingTimeConstant = 0; // No smoothing - we'll handle it ourselves
 
     // Destination for MediaRecorder (record filtered audio)
     this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
 
-    // Wire graph: source -> HPF -> Notch50 -> Notch60 -> LPF -> analyser & destination
+    // Simplified graph: source -> HPF -> [optional bandpass] -> analyser & destination
     sourceNode.connect(this.highPassFilter);
-    this.highPassFilter.connect(this.notch50Filter);
-    this.notch50Filter.connect(this.notch60Filter);
-    this.notch60Filter.connect(this.lowPassFilter);
-    this.lowPassFilter.connect(this.analyser);
-    this.lowPassFilter.connect(this.mediaStreamDestination);
+    lastFilterNode.connect(this.analyser);
+    lastFilterNode.connect(this.mediaStreamDestination);
 
     // Expose filtered stream for recording
     this.filteredStream = this.mediaStreamDestination.stream;
 
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
+    
+    // Initialize baseline capture
+    this.resetBaselineCapture();
     this.startEnergyMonitoring();
+  }
+
+  private resetBaselineCapture(): void {
+    this.baselineEnergy = 0;
+    this.baselineStartTime = Date.now();
+    this.baselineCapturing = true;
+    this.baselineEnergySum = 0;
+    this.baselineEnergyCount = 0;
+    console.log('[UniversalSTTRecorder] 🎯 Starting baseline energy capture for', this.options.baselineCaptureDuration, 'ms');
   }
 
   private startEnergyMonitoring(): void {
@@ -226,6 +236,19 @@ export class UniversalSTTRecorder {
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
       
+      // Handle baseline energy capture during first ~1 second
+      const now = Date.now();
+      if (this.baselineCapturing) {
+        this.baselineEnergySum += rms;
+        this.baselineEnergyCount++;
+        
+        if (now - this.baselineStartTime >= this.options.baselineCaptureDuration!) {
+          this.baselineEnergy = this.baselineEnergySum / this.baselineEnergyCount;
+          this.baselineCapturing = false;
+          console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
+        }
+      }
+      
       // Smooth level changes for UI (prevent jittery animation)
       const rawLevel = Math.min(1, rms * 15);
       const smoothedLevel = lastLevel * 0.7 + rawLevel * 0.3;
@@ -234,20 +257,24 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Log occasionally for debugging (removed to reduce noise)
-      // if (Math.random() < 0.01) {
-      //   console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
-      // }
-
-      // Only run VAD/silence stop logic while actively recording
-      if (this.isRecording) {
-        const isSpeaking = smoothedLevel > this.options.silenceThreshold!;
+      // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
+      if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
+        // Dynamic threshold: baseline energy × (1 - margin)
+        const dynamicThreshold = this.baselineEnergy * (1 - this.options.silenceMargin!);
+        const isSpeaking = rms > dynamicThreshold;
+        
+        // Log occasionally for debugging
+        if (Math.random() < 0.01) {
+          console.log('[UniversalSTTRecorder] Current RMS:', rms.toFixed(6), 'Threshold:', dynamicThreshold.toFixed(6), 'Speaking:', isSpeaking);
+        }
+        
         if (!isSpeaking) {
           // Start silence timer
           if (!this.silenceTimer) {
             this.silenceTimer = setTimeout(() => {
+              console.log('[UniversalSTTRecorder] 🔇 Silence detected - stopping recording');
               this.stop();
-            }, this.options.silenceDuration);
+            }, this.options.silenceHangover);
           }
         } else {
           // Clear silence timer (voice detected)
@@ -371,14 +398,18 @@ export class UniversalSTTRecorder {
 
     this.analyser = null;
     this.highPassFilter = null;
-    this.notch50Filter = null;
-    this.notch60Filter = null;
-    this.lowPassFilter = null;
+    this.bandpassFilter = null;
     this.mediaStreamDestination = null;
     this.filteredStream = null;
     this.dataArray = null;
     this.mediaRecorder = null;
     this.audioBlob = null;
+    
+    // Reset baseline capture state
+    this.baselineEnergy = 0;
+    this.baselineCapturing = false;
+    this.baselineEnergySum = 0;
+    this.baselineEnergyCount = 0;
   }
 
   dispose(): void {
