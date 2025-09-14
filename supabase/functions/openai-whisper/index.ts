@@ -1,9 +1,10 @@
+// @ts-nocheck
 //
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-meta, x-trace-id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
 };
 
 serve(async (req) => {
@@ -22,20 +23,26 @@ serve(async (req) => {
       });
     }
 
-    // Get raw binary audio data
-    const arrayBuffer = await req.arrayBuffer();
+    // Expect multipart/form-data with: file, chat_id, mode, language
+    const form = await req.formData();
+    const file = form.get('file') as File | null;
+    const chat_id = (form.get('chat_id') as string) || undefined;
+    const mode = (form.get('mode') as string) || undefined;
+    const language = (form.get('language') as string) || 'en';
+
+    if (!file) {
+      throw new Error('Missing file in form-data');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
     const audioBuffer = new Uint8Array(arrayBuffer);
-    
-    // Get basic config from headers if provided
-    const metaHeader = req.headers.get('X-Meta');
-    const meta = metaHeader ? JSON.parse(metaHeader) : {};
-    const config = meta.config || {};
-    
+    const mimeType = file.type || 'audio/webm';
+
     console.log('[openai-whisper] 📥 RECEIVED:', {
       audioSize: audioBuffer.length,
-      mode: meta.mode,
-      chat_id: meta.chat_id,
-      config: config
+      mode,
+      chat_id,
+      mimeType
     });
     
     // Validate audio data
@@ -53,7 +60,6 @@ serve(async (req) => {
     const formData = new FormData();
     
     // Create a Blob from the audio buffer with appropriate MIME type
-    const mimeType = config.mimeType || 'audio/webm';
     const audioBlob = new Blob([audioBuffer], { type: mimeType });
     
     // Determine appropriate file extension based on MIME type
@@ -77,7 +83,7 @@ serve(async (req) => {
     // Add file to FormData with correct filename
     formData.append('file', audioBlob, filename);
     formData.append('model', 'whisper-1');
-    formData.append('language', config.languageCode || 'en');
+    formData.append('language', language || 'en');
     formData.append('response_format', 'json');
 
     // Call OpenAI Whisper API
@@ -104,7 +110,7 @@ serve(async (req) => {
     console.log('[openai-whisper] 📤 OPENAI API RESPONSE:', {
       transcriptLength: transcript.length,
       transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-      mode: meta.mode
+      mode
     });
 
     // Handle empty transcription results
@@ -119,7 +125,7 @@ serve(async (req) => {
     }
 
     // For conversation mode: Fire and forget to LLM, then broadcast thinking-mode
-    if (meta.mode === 'conversation' && meta.chat_id) {
+    if (mode === 'conversation' && chat_id) {
       console.log('[openai-whisper] 🔄 CONVERSATION MODE: Calling LLM and broadcasting thinking-mode');
       
       // Fire and forget to LLM
@@ -131,7 +137,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            chat_id: meta.chat_id,
+            chat_id,
             text: transcript,
             client_msg_id: crypto.randomUUID(),
             mode: 'conversation'
@@ -151,7 +157,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            channel: `conversation:${meta.chat_id}`,
+            channel: `conversation:${chat_id}`,
             event: 'thinking-mode',
             payload: { transcript }
           })

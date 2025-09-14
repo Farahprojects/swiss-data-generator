@@ -23,20 +23,15 @@ class SttService {
     
     // OpenAI Whisper: Log simplified payload
 
-    // OpenAI Whisper: Send raw binary audio directly
+    // OpenAI Whisper: Send multipart/form-data with minimal fields
+    const form = new FormData();
+    form.append('file', audioBlob, 'audio');
+    if (chat_id) form.append('chat_id', chat_id);
+    if (mode) form.append('mode', mode);
+    form.append('language', 'en');
+
     const { data, error } = await supabase.functions.invoke('openai-whisper', {
-      body: audioBlob,
-      headers: {
-        'X-Meta': JSON.stringify({
-          ...(meta || {}), // Pass along any additional meta from the controller
-          mode,
-          chat_id,
-          config: {
-            mimeType: audioBlob.type,
-            languageCode: 'en'
-          }
-        })
-      }
+      body: form
     });
 
     if (error) {
