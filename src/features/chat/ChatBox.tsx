@@ -291,8 +291,8 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
               </Suspense>
             </div>
 
-            {/* Footer Area */}
-            <div className="pb-safe sticky bottom-0 left-0 right-0 z-10" style={{ transform: 'none' as any }}>
+            {/* Footer Area (in-flow on mobile to follow keyboard) */}
+            <div className="pb-safe" style={{ transform: 'none' as any }}>
               {error && (
                 <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
                   {error}
