@@ -34,12 +34,23 @@ const InlineDateTimeSelector = ({
   const [isAm, setIsAm] = useState(true);
 
   useEffect(() => {
-    setLocalValue(value);
-    // Parse AM/PM from existing time value
-    if (type === 'time' && value) {
-      const [hours] = value.split(':');
-      const hour24 = parseInt(hours, 10);
-      setIsAm(hour24 < 12);
+    // Always display in human format for date (DD/MM/YYYY)
+    if (type === 'date') {
+      setLocalValue(formatDisplayValue(value));
+    } else {
+      // Normalize time to HH:MM and clamp length
+      if (value) {
+        const digits = value.replace(/[^\d]/g, '').slice(0, 4);
+        const hh = digits.slice(0, 2);
+        const mm = digits.slice(2, 4);
+        const formatted = mm ? `${hh}:${mm}` : hh;
+        setLocalValue(formatted);
+        const [hours] = (formatted || '00').split(':');
+        const hour24 = parseInt(hours || '0', 10);
+        setIsAm(hour24 < 12);
+      } else {
+        setLocalValue('');
+      }
     }
   }, [value, type]);
 
@@ -62,17 +73,17 @@ const InlineDateTimeSelector = ({
       if (inputValue.length >= 5 && inputValue.split('/').length === 2) {
         inputValue = inputValue.slice(0, 5) + '/' + inputValue.slice(5, 9);
       }
+      // Clamp to DD/MM/YYYY length
+      inputValue = inputValue.slice(0, 10);
     }
     
     // Format time input (HH:MM)
     if (type === 'time') {
-      // Remove non-numeric characters except colons
-      inputValue = inputValue.replace(/[^\d:]/g, '');
-      
-      // Auto-format with colon
-      if (inputValue.length >= 2 && !inputValue.includes(':')) {
-        inputValue = inputValue.slice(0, 2) + ':' + inputValue.slice(2, 4);
-      }
+      // Keep only digits and clamp to 4
+      const digits = inputValue.replace(/[^\d]/g, '').slice(0, 4);
+      const hh = digits.slice(0, 2);
+      const mm = digits.slice(2, 4);
+      inputValue = mm ? `${hh}:${mm}` : hh;
     }
     
     setLocalValue(inputValue);
@@ -181,6 +192,8 @@ const InlineDateTimeSelector = ({
             className={`h-12 text-base font-light ${
               hasError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-gray-400'
             }`}
+            inputMode="numeric"
+            autoComplete="off"
           />
           <button
             type="button"
