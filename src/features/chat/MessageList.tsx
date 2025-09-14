@@ -10,6 +10,7 @@ import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
+import { useMessages } from '@/hooks/useMessages';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -148,15 +149,15 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
 };
 
 export const MessageList = () => {
-  const messages = useChatStore((state) => state.messages);
-  // 🚀 LAZY LOAD: Removed isLoadingMessages - no loading states
-  const messageLoadError = useChatStore((state) => state.messageLoadError);
-  const retryLoadMessages = useChatStore((state) => state.retryLoadMessages);
+  const chat_id = useChatStore((state) => state.chat_id);
+  // Sliding window from DB + realtime
+  const { messages: windowMessages, error: windowError, hasOlder, loadOlder } = useMessages(chat_id, 50);
   
   // Direct assistant message state - bypasses store for immediate UI update
   const [directAssistantMessage, setDirectAssistantMessage] = useState<Message | null>(null);
-  const lastMessagesFetch = useChatStore((state) => state.lastMessagesFetch);
-  const chat_id = useChatStore((state) => state.chat_id);
+  
+  // Read optimistic user messages from store only (transient, not persisted)
+  const optimisticStoreMessages = useChatStore((state) => state.messages);
   
   // Listen for direct assistant messages
   useEffect(() => {
@@ -199,16 +200,16 @@ export const MessageList = () => {
     console.log('User chose to add astro data');
   };
   
-  // Track initial message count to determine which messages are from history
+  // Track initial message count to determine which messages are from history (window-based now)
   React.useEffect(() => {
-    if (initialMessageCount === null && messages.length > 0) {
-      setInitialMessageCount(messages.length);
+    if (initialMessageCount === null && windowMessages.length > 0) {
+      setInitialMessageCount(windowMessages.length);
     }
-  }, [messages.length, initialMessageCount]);
+  }, [windowMessages.length, initialMessageCount]);
 
-  // Check if user has sent a message
+  // Check if user has sent a message (from optimistic store messages)
   React.useEffect(() => {
-    const userMessages = messages.filter(m => m.role === 'user');
+    const userMessages = optimisticStoreMessages.filter(m => m.role === 'user');
     if (userMessages.length > 0) {
       setHasUserSentMessage(true);
       // Auto-assume "without" if user starts typing
@@ -216,22 +217,38 @@ export const MessageList = () => {
         setAstroChoiceMade(true);
       }
     }
-  }, [messages, astroChoiceMade]);
+  }, [optimisticStoreMessages, astroChoiceMade]);
 
-  // Auto-scroll when messages change
+  // Auto-scroll when messages change (window)
   React.useEffect(() => {
     onContentChange();
-  }, [messages.length, onContentChange]);
+  }, [windowMessages.length, onContentChange]);
   
+  // Combine window messages with optimistic ones (append optimistic at end)
+  const mergedMessages = React.useMemo(() => {
+    // Deduplicate by id, prefer window (DB) messages over optimistic
+    const byId = new Map<string, Message>();
+    for (const m of windowMessages) {
+      byId.set(m.id, m);
+    }
+    for (const m of optimisticStoreMessages) {
+      if (m.role !== 'user') continue; // only optimistic users live in store
+      if (!byId.has(m.id)) {
+        byId.set(m.id, m);
+      }
+    }
+    return Array.from(byId.values());
+  }, [windowMessages, optimisticStoreMessages]);
+
   // Group messages into turns
-  const turns = groupMessagesIntoTurns(messages);
+  const turns = groupMessagesIntoTurns(mergedMessages);
   
   // Determine which turns are from history
   const getIsFromHistory = (turn: Turn): boolean => {
     if (initialMessageCount === null) return false;
     const messageToCheck = turn.userMessage || turn.assistantMessage;
     if (!messageToCheck) return false;
-    const messageIndex = messages.findIndex(m => m.id === messageToCheck.id);
+    const messageIndex = mergedMessages.findIndex(m => m.id === messageToCheck.id);
     return messageIndex < initialMessageCount;
   };
 
@@ -246,20 +263,18 @@ export const MessageList = () => {
       ref={containerRef}
       id="chat-scroll-container"
     >
-      {/* 🚀 LAZY LOAD: No loading spinner - messages load silently in background */}
-
-      {/* Error state for message loading */}
-      {messageLoadError && messages.length === 0 && (
+      {/* Error state for message loading (window-based) */}
+      {windowError && windowMessages.length === 0 && (
         <div className="flex-1 flex flex-col justify-center items-center p-4">
           <AlertTriangle className="h-8 w-8 text-orange-500 mb-2" />
           <p className="text-gray-600 text-center mb-4">
             Failed to load conversation
           </p>
           <p className="text-gray-500 text-sm text-center mb-4">
-            {messageLoadError}
+            {windowError}
           </p>
           <Button 
-            onClick={retryLoadMessages}
+            onClick={loadOlder}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
@@ -271,9 +286,9 @@ export const MessageList = () => {
       )}
 
       {/* Empty state or content */}
-      {!messageLoadError && (
+      {!windowError && (
         <>
-          {messages.length === 0 ? (
+          {windowMessages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
                 {!astroChoiceMade && !chat_id ? (
@@ -306,7 +321,7 @@ export const MessageList = () => {
               {turns.map((turn, index) => {
                 const isFromHistory = getIsFromHistory(turn);
                 const isLastTurn = index === turns.length - 1;
-                const turnKey = turn.userMessage?.id || turn.assistantMessage?.id || `turn-${index}`;
+                const turnKey = `${turn.userMessage?.id ?? 'u'}-${turn.assistantMessage?.id ?? 'a'}-${index}`;
                 
                 return (
                   <TurnItem 
