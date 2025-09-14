@@ -46,6 +46,19 @@ export class UniversalSTTRecorder {
       enableBandpass: true, // enable human speech filter
       ...options
     };
+
+    // Apply mobile-specific defaults unless explicitly overridden
+    if (this.isMobileDevice()) {
+      if (options.silenceMargin === undefined) {
+        this.options.silenceMargin = 0.10; // more sensitive on mobile
+      }
+      if (options.silenceHangover === undefined) {
+        this.options.silenceHangover = 500; // slightly longer to avoid premature stops
+      }
+      if (options.baselineCaptureDuration === undefined) {
+        this.options.baselineCaptureDuration = 1500; // longer baseline capture on mobile
+      }
+    }
   }
 
   async start(): Promise<void> {
@@ -415,5 +428,14 @@ export class UniversalSTTRecorder {
   dispose(): void {
     this.stop();
     this.cleanup();
+  }
+
+  // Basic mobile device detection (runtime-only)
+  private isMobileDevice(): boolean {
+    if (typeof navigator === 'undefined' || typeof navigator.userAgent !== 'string') {
+      return false;
+    }
+    const ua = navigator.userAgent;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
   }
 }
