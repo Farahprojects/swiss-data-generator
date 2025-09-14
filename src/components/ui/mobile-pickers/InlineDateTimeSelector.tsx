@@ -34,23 +34,12 @@ const InlineDateTimeSelector = ({
   const [isAm, setIsAm] = useState(true);
 
   useEffect(() => {
-    // Always display in human format for date (DD/MM/YYYY)
-    if (type === 'date') {
-      setLocalValue(formatDisplayValue(value));
-    } else {
-      // Normalize time to HH:MM and clamp length
-      if (value) {
-        const digits = value.replace(/[^\d]/g, '').slice(0, 4);
-        const hh = digits.slice(0, 2);
-        const mm = digits.slice(2, 4);
-        const formatted = mm ? `${hh}:${mm}` : hh;
-        setLocalValue(formatted);
-        const [hours] = (formatted || '00').split(':');
-        const hour24 = parseInt(hours || '0', 10);
-        setIsAm(hour24 < 12);
-      } else {
-        setLocalValue('');
-      }
+    setLocalValue(value);
+    // Parse AM/PM from existing time value
+    if (type === 'time' && value) {
+      const [hours] = value.split(':');
+      const hour24 = parseInt(hours, 10);
+      setIsAm(hour24 < 12);
     }
   }, [value, type]);
 
@@ -73,32 +62,33 @@ const InlineDateTimeSelector = ({
       if (inputValue.length >= 5 && inputValue.split('/').length === 2) {
         inputValue = inputValue.slice(0, 5) + '/' + inputValue.slice(5, 9);
       }
-      // Clamp to DD/MM/YYYY length
-      inputValue = inputValue.slice(0, 10);
     }
     
     // Format time input (HH:MM)
     if (type === 'time') {
-      // Keep only digits and clamp to 4
-      const digits = inputValue.replace(/[^\d]/g, '').slice(0, 4);
-      const hh = digits.slice(0, 2);
-      const mm = digits.slice(2, 4);
-      inputValue = mm ? `${hh}:${mm}` : hh;
-    }
-    
-    setLocalValue(inputValue);
-    
-    // Convert DD/MM/YYYY to YYYY-MM-DD for date inputs before calling onChange
-    if (type === 'date' && inputValue.includes('/')) {
-      const parts = inputValue.split('/');
-      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-        const [day, month, year] = parts;
-        const isoDate = `${year}-${month}-${day}`;
-        onChange(isoDate);
-        return;
+      // Remove non-numeric characters except colons
+      inputValue = inputValue.replace(/[^\d:]/g, '');
+      
+      // Limit to HH:MM format (max 5 characters: HH:MM)
+      if (inputValue.length > 5) {
+        inputValue = inputValue.slice(0, 5);
+      }
+      
+      // Auto-format with colon
+      if (inputValue.length >= 2 && !inputValue.includes(':')) {
+        inputValue = inputValue.slice(0, 2) + ':' + inputValue.slice(2, 4);
+      }
+      
+      // Ensure only 2 digits for hours and 2 digits for minutes
+      if (inputValue.includes(':')) {
+        const [hours, minutes] = inputValue.split(':');
+        const limitedHours = hours.slice(0, 2);
+        const limitedMinutes = minutes.slice(0, 2);
+        inputValue = limitedHours + ':' + limitedMinutes;
       }
     }
     
+    setLocalValue(inputValue);
     onChange(inputValue);
   };
 
@@ -126,8 +116,21 @@ const InlineDateTimeSelector = ({
   const handleConfirm = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Update the parent component's value immediately
-    onChange(localValue);
+    
+    // Convert DD/MM/YYYY to YYYY-MM-DD for date inputs only on confirm
+    if (type === 'date' && localValue.includes('/')) {
+      const parts = localValue.split('/');
+      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+        const [day, month, year] = parts;
+        const isoDate = `${year}-${month}-${day}`;
+        onChange(isoDate);
+      } else {
+        onChange(localValue);
+      }
+    } else {
+      onChange(localValue);
+    }
+    
     onConfirm();
   };
 
@@ -192,8 +195,6 @@ const InlineDateTimeSelector = ({
             className={`h-12 text-base font-light ${
               hasError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-gray-400'
             }`}
-            inputMode="numeric"
-            autoComplete="off"
           />
           <button
             type="button"
