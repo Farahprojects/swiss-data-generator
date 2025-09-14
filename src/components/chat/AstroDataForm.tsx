@@ -328,15 +328,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         // Keep original form fields for compatibility
         ...formData,
         
-        // Add translator field names for birth data
-        birth_date: formData.birthDate,
+        // Add translator field names for birth data (convert dates to ISO format)
+        birth_date: convertDateFormat(formData.birthDate),
         birth_time: formData.birthTime,
         location: formData.birthLocation,
         latitude: formData.birthLatitude,
         longitude: formData.birthLongitude,
         
-        // Second person fields with translator names
-        second_person_birth_date: formData.secondPersonBirthDate,
+        // Second person fields with translator names (convert dates to ISO format)
+        second_person_birth_date: convertDateFormat(formData.secondPersonBirthDate),
         second_person_birth_time: formData.secondPersonBirthTime,
         second_person_location: formData.secondPersonBirthLocation,
         second_person_latitude: formData.secondPersonLatitude,
