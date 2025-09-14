@@ -63,6 +63,17 @@ serve(async (req) => {
 
 
 
+    // Get the next message number for this chat
+    const { data: lastMessage } = await supabase
+      .from("messages")
+      .select("message_number")
+      .eq("chat_id", chat_id)
+      .order("message_number", { ascending: false })
+      .limit(1);
+
+    const nextMessageNumber = (lastMessage?.[0]?.message_number || 0) + 1;
+    console.log(`[chat-send] Next message number for chat ${chat_id}: ${nextMessageNumber}`);
+
     // Save message to DB (fire and forget)
     const userMessageData = {
       chat_id,
@@ -70,6 +81,7 @@ serve(async (req) => {
       text: text, // Save original text to DB
       client_msg_id: client_msg_id || crypto.randomUUID(),
       status: "complete",
+      message_number: nextMessageNumber,
       meta: {}
     };
 
@@ -121,9 +133,27 @@ serve(async (req) => {
             
             if (assistantMessageData) {
               console.log('[chat-send] 💾 Saving assistant message to DB (conversation mode)...');
+              
+              // Get the next message number for this chat (assistant message)
+              const { data: lastMessage } = await supabase
+                .from("messages")
+                .select("message_number")
+                .eq("chat_id", chat_id)
+                .order("message_number", { ascending: false })
+                .limit(1);
+
+              const nextMessageNumber = (lastMessage?.[0]?.message_number || 0) + 1;
+              console.log(`[chat-send] Next message number for assistant message: ${nextMessageNumber}`);
+              
+              // Add message number to assistant message data
+              const assistantMessageWithNumber = {
+                ...assistantMessageData,
+                message_number: nextMessageNumber
+              };
+              
               const { error: assistantError } = await supabase
                 .from("messages")
-                .upsert(assistantMessageData, {
+                .upsert(assistantMessageWithNumber, {
                   onConflict: "client_msg_id"
                 });
               
@@ -184,9 +214,26 @@ serve(async (req) => {
 
         console.log('[chat-send] 💾 Saving assistant message to DB...');
 
+        // Get the next message number for this chat (assistant message)
+        const { data: lastMessage } = await supabase
+          .from("messages")
+          .select("message_number")
+          .eq("chat_id", chat_id)
+          .order("message_number", { ascending: false })
+          .limit(1);
+
+        const nextMessageNumber = (lastMessage?.[0]?.message_number || 0) + 1;
+        console.log(`[chat-send] Next message number for assistant message: ${nextMessageNumber}`);
+        
+        // Add message number to assistant message data
+        const assistantMessageWithNumber = {
+          ...assistantMessageData,
+          message_number: nextMessageNumber
+        };
+
         const { error: assistantError } = await supabase
           .from("messages")
-          .upsert(assistantMessageData, {
+          .upsert(assistantMessageWithNumber, {
             onConflict: "client_msg_id"
           });
 
