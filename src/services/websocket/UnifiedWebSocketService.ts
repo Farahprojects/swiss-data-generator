@@ -21,6 +21,7 @@ class UnifiedWebSocketService {
   private onMessageUpdated?: (message: Message) => void;
   private onStatusChange?: (status: string) => void;
   private onOptimisticMessage?: (message: Message) => void;
+  private onAssistantMessage?: (message: Message) => void; // Direct UI callback
 
   constructor() {
     this.setupContentAreaObserver();
@@ -34,12 +35,14 @@ class UnifiedWebSocketService {
     onMessageUpdated?: (message: Message) => void;
     onStatusChange?: (status: string) => void;
     onOptimisticMessage?: (message: Message) => void;
+    onAssistantMessage?: (message: Message) => void;
   }) {
     this.currentChatId = chat_id;
     this.onMessageReceived = callbacks.onMessageReceived;
     this.onMessageUpdated = callbacks.onMessageUpdated;
     this.onStatusChange = callbacks.onStatusChange;
     this.onOptimisticMessage = callbacks.onOptimisticMessage;
+    this.onAssistantMessage = callbacks.onAssistantMessage;
 
     // Clean up existing subscription
     this.cleanupRealtimeSubscription();
@@ -194,6 +197,19 @@ class UnifiedWebSocketService {
       return;
     }
     
+    // Direct UI update for assistant messages - no store delay
+    if (message.role === 'assistant') {
+      console.log(`[UnifiedWebSocket] Direct UI update for assistant message: ${message.id}`);
+      this.onAssistantMessage?.(message);
+      
+      // Async store update for persistence (don't block UI)
+      setTimeout(() => {
+        this.onMessageReceived?.(message);
+      }, 0);
+      return;
+    }
+    
+    // User messages go through normal flow
     this.onMessageReceived?.(message);
   }
 

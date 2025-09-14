@@ -65,7 +65,8 @@ class ChatController {
       onMessageReceived: this.handleMessageReceived.bind(this),
       onMessageUpdated: this.handleMessageUpdated.bind(this),
       onStatusChange: this.handleStatusChange.bind(this),
-      onOptimisticMessage: this.handleOptimisticMessage.bind(this)
+      onOptimisticMessage: this.handleOptimisticMessage.bind(this),
+      onAssistantMessage: this.handleAssistantMessageDirect.bind(this)
     });
     
     await this.loadExistingMessages();
@@ -117,6 +118,20 @@ class ChatController {
       // Message not in store yet, add it
       addMessage(message);
     }
+  }
+
+  /**
+   * Handle assistant messages directly to UI - no store delay
+   */
+  private handleAssistantMessageDirect(message: Message) {
+    console.log('[ChatController] 🚀 DIRECT assistant message to UI:', message.id);
+    
+    // Direct UI update - bypass store completely
+    // This will trigger immediate TypewriterText animation
+    const event = new CustomEvent('assistantMessage', { 
+      detail: message 
+    });
+    window.dispatchEvent(event);
   }
 
   /**
@@ -172,7 +187,8 @@ class ChatController {
       onMessageReceived: this.handleMessageReceived.bind(this),
       onMessageUpdated: this.handleMessageUpdated.bind(this),
       onStatusChange: this.handleStatusChange.bind(this),
-      onOptimisticMessage: this.handleOptimisticMessage.bind(this)
+      onOptimisticMessage: this.handleOptimisticMessage.bind(this),
+      onAssistantMessage: this.handleAssistantMessageDirect.bind(this)
     });
     
     this.loadExistingMessages(); // Load conversation history

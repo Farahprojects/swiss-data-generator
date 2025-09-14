@@ -1,4 +1,4 @@
-import React, { useRef, useState, Suspense, lazy } from 'react';
+import React, { useRef, useState, useEffect, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
@@ -30,12 +30,20 @@ const InlineEllipsis = () => {
   return <span aria-hidden="true">{dots}</span>;
 };
 
-const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn: boolean; isFromHistory?: boolean }) => {
+const TurnItem = ({ turn, isLastTurn, isFromHistory, directAssistantMessage }: { 
+  turn: Turn; 
+  isLastTurn: boolean; 
+  isFromHistory?: boolean;
+  directAssistantMessage?: Message | null;
+}) => {
   const { userMessage, assistantMessage } = turn;
   const { isConversationOpen } = useConversationUIStore();
   
+  // Use direct assistant message if available, otherwise use turn message
+  const displayAssistantMessage = directAssistantMessage || assistantMessage;
+  
   // Skip animation for existing messages from history, if it's not the last turn, OR if conversation overlay is open
-  const shouldAnimate = assistantMessage && isLastTurn && !isFromHistory && !isConversationOpen;
+  const shouldAnimate = displayAssistantMessage && isLastTurn && !isFromHistory && !isConversationOpen;
 
   return (
     <div 
@@ -54,28 +62,28 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
       )}
       
       {/* Assistant Message */}
-      {assistantMessage && (
+      {displayAssistantMessage && (
         <div className="flex items-end gap-3 justify-start mb-8">
           <div 
             className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
             style={{ overflowAnchor: 'none' }}
           >
             <p className="text-base font-light leading-relaxed text-left selectable-text">
-              {assistantMessage.meta?.type === 'payment-progress' ? (
+              {displayAssistantMessage.meta?.type === 'payment-progress' ? (
                 <span className="whitespace-pre-wrap">
-                  {(assistantMessage.text || 'Generating your personal space')}
+                  {(displayAssistantMessage.text || 'Generating your personal space')}
                   <InlineEllipsis />
                 </span>
               ) : (
                 <Suspense fallback={
                   <span className="whitespace-pre-wrap">
-                    {shouldAnimate ? '' : (assistantMessage.text || '')}
+                    {shouldAnimate ? '' : (displayAssistantMessage.text || '')}
                   </span>
                 }>
                   <TypewriterText 
-                    text={assistantMessage.text || ''} 
+                    text={displayAssistantMessage.text || ''} 
                     msPerWord={80}
-                    disabled={!shouldAnimate || assistantMessage.role === 'system'}
+                    disabled={!shouldAnimate || displayAssistantMessage.role === 'system'}
                     className="whitespace-pre-wrap"
                   />
                 </Suspense>
@@ -144,8 +152,31 @@ export const MessageList = () => {
   // 🚀 LAZY LOAD: Removed isLoadingMessages - no loading states
   const messageLoadError = useChatStore((state) => state.messageLoadError);
   const retryLoadMessages = useChatStore((state) => state.retryLoadMessages);
+  
+  // Direct assistant message state - bypasses store for immediate UI update
+  const [directAssistantMessage, setDirectAssistantMessage] = useState<Message | null>(null);
   const lastMessagesFetch = useChatStore((state) => state.lastMessagesFetch);
   const chat_id = useChatStore((state) => state.chat_id);
+  
+  // Listen for direct assistant messages
+  useEffect(() => {
+    const handleDirectAssistantMessage = (event: CustomEvent) => {
+      const message = event.detail as Message;
+      console.log('[MessageList] 🚀 Direct assistant message received:', message.id);
+      setDirectAssistantMessage(message);
+      
+      // Clear after a delay to allow store to catch up
+      setTimeout(() => {
+        setDirectAssistantMessage(null);
+      }, 1000);
+    };
+    
+    window.addEventListener('assistantMessage', handleDirectAssistantMessage as EventListener);
+    
+    return () => {
+      window.removeEventListener('assistantMessage', handleDirectAssistantMessage as EventListener);
+    };
+  }, []);
   
   // Auth detection
   const { user } = useAuth();
@@ -283,6 +314,7 @@ export const MessageList = () => {
                     turn={turn}
                     isLastTurn={isLastTurn}
                     isFromHistory={isFromHistory}
+                    directAssistantMessage={directAssistantMessage}
                   />
                 );
               })}
