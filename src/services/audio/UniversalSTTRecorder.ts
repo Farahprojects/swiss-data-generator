@@ -22,6 +22,8 @@ export class UniversalSTTRecorder {
   private animationFrame: number | null = null;
   private dataArray: Float32Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
+  private notch50Filter: BiquadFilterNode | null = null;
+  private notch60Filter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private filteredStream: MediaStream | null = null;
@@ -159,8 +161,19 @@ export class UniversalSTTRecorder {
     // High-pass filter: cut low-frequency rumble
     this.highPassFilter = this.audioContext.createBiquadFilter();
     this.highPassFilter.type = 'highpass';
-    this.highPassFilter.frequency.value = 100; // Hz
+    this.highPassFilter.frequency.value = 80; // Hz (cut below ~80Hz)
     this.highPassFilter.Q.value = 0.8;
+
+    // Notch filters: remove mains hum at 50/60 Hz
+    this.notch50Filter = this.audioContext.createBiquadFilter();
+    this.notch50Filter.type = 'notch';
+    this.notch50Filter.frequency.value = 50;
+    this.notch50Filter.Q.value = 30; // narrow notch
+
+    this.notch60Filter = this.audioContext.createBiquadFilter();
+    this.notch60Filter.type = 'notch';
+    this.notch60Filter.frequency.value = 60;
+    this.notch60Filter.Q.value = 30; // narrow notch
 
     // Low-pass filter: tame high-frequency hiss
     this.lowPassFilter = this.audioContext.createBiquadFilter();
@@ -176,9 +189,11 @@ export class UniversalSTTRecorder {
     // Destination for MediaRecorder (record filtered audio)
     this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
 
-    // Wire graph: source -> HPF -> LPF -> analyser & destination
+    // Wire graph: source -> HPF -> Notch50 -> Notch60 -> LPF -> analyser & destination
     sourceNode.connect(this.highPassFilter);
-    this.highPassFilter.connect(this.lowPassFilter);
+    this.highPassFilter.connect(this.notch50Filter);
+    this.notch50Filter.connect(this.notch60Filter);
+    this.notch60Filter.connect(this.lowPassFilter);
     this.lowPassFilter.connect(this.analyser);
     this.lowPassFilter.connect(this.mediaStreamDestination);
 
@@ -356,6 +371,8 @@ export class UniversalSTTRecorder {
 
     this.analyser = null;
     this.highPassFilter = null;
+    this.notch50Filter = null;
+    this.notch60Filter = null;
     this.lowPassFilter = null;
     this.mediaStreamDestination = null;
     this.filteredStream = null;
