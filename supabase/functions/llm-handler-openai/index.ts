@@ -178,6 +178,7 @@ Content Rules:
     }
 
     // Return response with assistant message data for chat-send to save
+    console.log('[llm-handler-openai] done');
     return new Response(JSON.stringify({ 
       text: sanitizedText,
       usage,

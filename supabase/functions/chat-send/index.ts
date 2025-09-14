@@ -154,6 +154,9 @@ serve(async (req) => {
                 ignoreDuplicates: true,
                 returning: "minimal"
               });
+            console.log('[chat-send] done');
+          } else {
+            console.log('[chat-send] done');
           }
         }
       }).catch(() => {}); // Silent error handling
@@ -227,6 +230,9 @@ serve(async (req) => {
             ignoreDuplicates: true,
             returning: "minimal"
           });
+        console.log('[chat-send] done');
+      } else {
+        console.log('[chat-send] done');
       }
     }).catch(() => {}); // Silent error handling
 
