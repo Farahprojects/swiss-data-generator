@@ -10,6 +10,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useChatInputState } from '@/hooks/useChatInputState';
 import { useChatStore } from '@/core/store';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
+import { supabase } from '@/integrations/supabase/client';
+import { Message } from '@/core/types';
 // Removed - using single source of truth in useChatStore
 
 // Stop icon component
@@ -87,8 +89,35 @@ export const ChatInput = () => {
       // Immediately show stop icon when sending message
       setAssistantTyping(true);
       
-      // Fire-and-forget direct send to WebSocket - fastest possible
-      unifiedWebSocketService.sendMessageDirect(text, 'text');
+      // DIRECT INVOKE - No service layers, fastest possible
+      const client_msg_id = crypto.randomUUID();
+      
+      // Show optimistic message immediately in UI
+      const optimisticMessage: Message = {
+        id: client_msg_id,
+        chat_id: chat_id!,
+        role: 'user',
+        text: text.trim(),
+        createdAt: new Date().toISOString(),
+        status: 'thinking',
+        client_msg_id
+      };
+      
+      // Update UI directly through store
+      const { addMessage } = useChatStore.getState();
+      addMessage(optimisticMessage);
+      
+      // Fire-and-forget direct invoke - no queueMicrotask delay
+      supabase.functions.invoke('chat-send', {
+        body: {
+          chat_id: chat_id!,
+          text: text.trim(),
+          client_msg_id,
+          mode: 'text'
+        }
+      }).catch((error) => {
+        console.error('[ChatInput] Direct invoke failed:', error);
+      });
       
       // Clear the text immediately
       setText('');
