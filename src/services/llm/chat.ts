@@ -24,31 +24,46 @@ class LlmService {
     client_msg_id?: string;
     mode?: string; // 🔥 CONVERSATION MODE: Flag for orchestrated flow
   }): Promise<Message> {
-    
-    // Use chat-send for all modes (including conversation mode)
-    const { data, error } = await supabase.functions.invoke('chat-send', {
-      body: {
-        chat_id: request.chat_id,
-        text: request.text,
-        client_msg_id: request.client_msg_id,
-        mode: request.mode,
-      },
-    });
+    // Fire-and-forget invoke (no await) to minimize perceived latency
+    try {
+      if (typeof queueMicrotask === 'function') {
+        queueMicrotask(() => {
+          supabase.functions.invoke('chat-send', {
+            body: {
+              chat_id: request.chat_id,
+              text: request.text,
+              client_msg_id: request.client_msg_id,
+              mode: request.mode,
+            },
+          }).catch((error) => {
+            networkErrorHandler.handleError(error, 'LlmService.sendMessage');
+          });
+        });
+      } else {
+        setTimeout(() => {
+          supabase.functions.invoke('chat-send', {
+            body: {
+              chat_id: request.chat_id,
+              text: request.text,
+              client_msg_id: request.client_msg_id,
+              mode: request.mode,
+            },
+          }).catch((error) => {
+            networkErrorHandler.handleError(error, 'LlmService.sendMessage');
+          });
+        }, 0);
+      }
+    } catch {}
 
-    if (error) {
-      // Use network error handler instead of console.error
-      networkErrorHandler.handleError(error, 'LlmService.sendMessage');
-      throw new Error(`Error invoking chat-send: ${error.message}`);
-    }
-
-    if (data?.error && Object.keys(data.error).length > 0) {
-      // Use network error handler for server-side errors too
-      networkErrorHandler.handleError(data.error, 'LlmService.sendMessage.server');
-      const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-      throw new Error(`chat-send error: ${errorMessage}`);
-    }
-
-    return data as Message;
+    // Immediate ack (optimistic UI already handled by caller)
+    return {
+      id: request.client_msg_id || '',
+      chat_id: request.chat_id,
+      role: 'user',
+      text: request.text,
+      createdAt: new Date().toISOString(),
+      status: 'thinking'
+    } as unknown as Message;
   }
 
   // Legacy method - kept for compatibility if needed
