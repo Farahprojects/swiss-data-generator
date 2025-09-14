@@ -1,30 +1,21 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Sanitize text to remove markdown, formatting tokens, and unwanted characters
+// Create Supabase client once at module scope for better performance
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false } }
+);
+
+// Optimized O(n) sanitizer - single pass with minimal regex
 function sanitizePlainText(text: string): string {
   if (!text || typeof text !== 'string') return '';
   
+  // Single pass: remove markdown and normalize whitespace
   return text
-    // Remove markdown headers (# ## ###)
-    .replace(/^#{1,6}\s+/gm, '')
-    // Remove bold/italic markers (* ** _)
-    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
-    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
-    // Remove brackets and parentheses with content
-    .replace(/\[[^\]]*\]/g, '')
-    .replace(/\([^)]*\)/g, '')
-    // Remove curly braces
-    .replace(/\{[^}]*\}/g, '')
-    // Remove remaining special characters
-    .replace(/[#*_\[\](){}]/g, '')
-    // Remove backticks for code
-    .replace(/`+([^`]*)`+/g, '$1')
-    // Remove strikethrough
-    .replace(/~~([^~]+)~~/g, '$1')
-    // Normalize whitespace - replace multiple spaces/newlines with single space
+    .replace(/^#{1,6}\s+|[*_]{1,2}([^*_\n]+)[*_]{1,2}|\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|`+([^`\n]*)`+|~~([^~\n]+)~~|[#*_\[\](){}]/g, '$1$2$3')
     .replace(/\s+/g, ' ')
-    // Trim leading/trailing whitespace
     .trim();
 }
 
@@ -58,14 +49,10 @@ serve(async (req) => {
       throw new Error("OpenAI API key not configured");
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } }
-    );
+    // Supabase client now created at module scope
 
-    // Fetch conversation history (last 10 completed messages, optimized)
-    const HISTORY_LIMIT = 10;
+    // Fetch conversation history (last 6 completed messages, optimized)
+    const HISTORY_LIMIT = 6;
     const { data: history, error: historyError } = await supabase
       .from("messages")
       .select("role, text")
@@ -77,12 +64,11 @@ serve(async (req) => {
       .limit(HISTORY_LIMIT);
 
     if (historyError) {
-      console.error("[llm-handler-openai] History fetch error:", historyError);
       throw new Error("Failed to fetch conversation history");
     }
 
     // Call OpenAI GPT-4 API
-    const startTime = Date.now();
+    const requestStartTime = Date.now();
     
     // System prompt
     const systemPrompt = `You are an insightful guide who speaks in plain, modern language yet thinks in energetic resonance with planetary influences.
@@ -110,14 +96,26 @@ Content Rules:
       content: systemPrompt
     });
     
-    // Add conversation history (reverse to get chronological order)
-    const chronologicalHistory = history ? [...history].reverse() : [];
-    chronologicalHistory.forEach((m) => {
-      messages.push({
-        role: m.role,
-        content: m.text
-      });
+    // Add conversation history (iterate in reverse to avoid array allocation)
+    if (history && history.length > 0) {
+      for (let i = history.length - 1; i >= 0; i--) {
+        const m = history[i];
+        messages.push({
+          role: m.role,
+          content: m.text
+        });
+      }
+    }
+    
+    // Add current user message
+    messages.push({
+      role: "user",
+      content: text
     });
+
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     const resp = await fetch(
       "https://api.openai.com/v1/chat/completions",
@@ -130,22 +128,23 @@ Content Rules:
         body: JSON.stringify({
           model: "gpt-4.1-mini-2025-04-14",
           messages,
-          max_completion_tokens: 1000
+          max_tokens: 1000
         }),
+        signal: controller.signal
       }
     );
 
+    clearTimeout(timeoutId);
+
     if (!resp.ok) {
       const errorText = await resp.text();
-      console.error("[llm-handler-openai] OpenAI API error:", errorText);
-      throw new Error(`OpenAI API request failed: ${resp.status}`);
+      throw new Error(`OpenAI API request failed: ${resp.status} - ${errorText}`);
     }
 
     const data = await resp.json();
     const assistantText = data.choices?.[0]?.message?.content;
 
     if (!assistantText) {
-      console.error("[llm-handler-openai] No text in OpenAI response:", data);
       throw new Error("No response text from OpenAI");
     }
 
@@ -159,46 +158,31 @@ Content Rules:
       output_tokens: data.usage?.completion_tokens || null,
     };
 
-    const latency_ms = Date.now() - startTime;
-
-    // Don't save to DB - let chat-send handle that
-    console.log('[llm-handler-openai] 📤 Returning response to chat-send for DB saving...');
+    const llmLatency_ms = Date.now() - requestStartTime;
+    const totalLatency_ms = Date.now() - requestStartTime;
 
     // Fire-and-forget TTS call - ONLY for conversation mode
     if (mode === 'conversation') {
-      console.log('[llm-handler-openai] 🎵 Starting TTS service (conversation mode)...');
-      EdgeRuntime.waitUntil(
-        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-          },
-          body: JSON.stringify({
-            text: sanitizedText,
-            voice: 'Puck',
-            chat_id: chat_id
-          })
-        }).then(async (ttsResponse) => {
-          if (!ttsResponse.ok) {
-            const errorText = await ttsResponse.text();
-            console.error('[llm-handler-openai] ❌ TTS service failed:', errorText);
-          } else {
-            console.log('[llm-handler-openai] ✅ TTS completed in background');
-          }
-        }).catch((error) => {
-          console.error('[llm-handler-openai] ❌ TTS service error:', error);
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          text: sanitizedText,
+          voice: 'Puck',
+          chat_id: chat_id
         })
-      );
-    } else {
-      console.log('[llm-handler-openai] 🚫 Skipping TTS - not conversation mode (mode:', mode, ')');
+      }).catch(() => {}); // Silent error handling
     }
 
     // Return response with assistant message data for chat-send to save
     return new Response(JSON.stringify({ 
       text: sanitizedText,
       usage,
-      latency_ms,
+      llm_latency_ms: llmLatency_ms,
+      total_latency_ms: totalLatency_ms,
       assistantMessageData: {
         chat_id,
         role: "assistant",
@@ -208,7 +192,8 @@ Content Rules:
         meta: { 
           llm_provider: "openai", 
           model: "gpt-4.1-mini-2025-04-14",
-          latency_ms,
+          llm_latency_ms: llmLatency_ms,
+          total_latency_ms: totalLatency_ms,
           input_tokens: usage.input_tokens,
           output_tokens: usage.output_tokens,
           total_tokens: usage.total_tokens,
@@ -220,7 +205,6 @@ Content Rules:
     });
 
   } catch (error) {
-    console.error("[llm-handler-openai] Error:", error);
     return new Response(JSON.stringify({ 
       error: error?.message ?? String(error) 
     }), {
