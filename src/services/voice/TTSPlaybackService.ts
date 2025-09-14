@@ -311,6 +311,7 @@ class TTSPlaybackService {
     }
     // Stop buffer source playback if in fallback mode
     if (this.bufferSource) {
+      this.bufferSource.onended = null; // Clear callback to prevent restart
       try { this.bufferSource.stop(0); } catch {}
     }
     if (this.currentUrl) {
