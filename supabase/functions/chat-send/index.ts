@@ -55,15 +55,23 @@ serve(async (req) => {
 
 
 
-    // Get the next message number for this chat using MAX() to ignore NULLs
-    const { data: userAgg } = await supabase
-      .from("messages")
-      .select("max(message_number)")
-      .eq("chat_id", chat_id)
-      .single();
+    // Get the next message number for this chat using the database function
+    const { data: userMessageNumber, error: userNumberError } = await supabase
+      .rpc('get_next_message_number', { p_chat_id: chat_id });
 
-    const userLast = (userAgg as any)?.max ?? 0;
-    const nextMessageNumber = (userLast || 0) + 1;
+    if (userNumberError) {
+      return new Response(JSON.stringify({
+        error: "Failed to get message number"
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const nextMessageNumber = userMessageNumber;
 
     // Save message to DB (fire and forget)
     const userMessageData = {
@@ -118,19 +126,18 @@ serve(async (req) => {
         const { assistantMessageData } = llmData;
         
         if (assistantMessageData) {
-          // Always fetch the latest number for this chat and assign next
-          const { data: assistantAgg } = await supabase
-            .from("messages")
-            .select("max(message_number)")
-            .eq("chat_id", chat_id)
-            .single();
+          // Get the next message number for this chat using the database function
+          const { data: assistantMessageNumber, error: assistantNumberError } = await supabase
+            .rpc('get_next_message_number', { p_chat_id: chat_id });
 
-          const assistantLast = (assistantAgg as any)?.max ?? 0;
-          const assistantNextNumber = (assistantLast || 0) + 1;
+          if (assistantNumberError) {
+            console.error('[chat-send] Failed to get assistant message number:', assistantNumberError);
+            return;
+          }
 
           const assistantMessageWithNumber = {
             ...assistantMessageData,
-            message_number: assistantNextNumber
+            message_number: assistantMessageNumber
           };
 
           await supabase
@@ -178,19 +185,18 @@ serve(async (req) => {
         return;
       }
 
-      // Always fetch latest number and assign next
-      const { data: assistantAgg } = await supabase
-        .from("messages")
-        .select("max(message_number)")
-        .eq("chat_id", chat_id)
-        .single();
+      // Get the next message number for this chat using the database function
+      const { data: assistantMessageNumber, error: assistantNumberError } = await supabase
+        .rpc('get_next_message_number', { p_chat_id: chat_id });
 
-      const assistantLast = (assistantAgg as any)?.max ?? 0;
-      const assistantNextNumber = (assistantLast || 0) + 1;
+      if (assistantNumberError) {
+        console.error('[chat-send] Failed to get assistant message number:', assistantNumberError);
+        return;
+      }
 
       const assistantMessageWithNumber = {
         ...assistantMessageData,
-        message_number: assistantNextNumber
+        message_number: assistantMessageNumber
       };
 
       await supabase
