@@ -104,10 +104,59 @@ serve(async (req) => {
       });
     }
 
-    // 🎯 CONVERSATION MODE: Call LLM handler (fire-and-forget)
-    if (mode === 'conversation') {
-      // Fire-and-forget LLM call - llm-handler-openai will handle TTS and DB save
-      void fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
+    // For conversation_user_only mode, just save user message and return
+    if (mode === 'conversation_user_only') {
+      console.log('[chat-send] Conversation user-only mode: User message saved');
+      return new Response(JSON.stringify({
+        message: "User message saved successfully",
+        user_message: userMessageData
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // For conversation_assistant_only mode, just save assistant message and return
+    if (mode === 'conversation_assistant_only') {
+      const assistantMessageData = {
+        chat_id,
+        role: "assistant",
+        text: text,
+        client_msg_id: client_msg_id || crypto.randomUUID(),
+        status: "complete",
+        message_number: nextMessageNumber,
+        meta: {}
+      };
+
+      const { error: assistantError } = await supabase
+        .from("messages")
+        .insert(assistantMessageData, {
+          onConflict: "client_msg_id",
+          ignoreDuplicates: true,
+          returning: "minimal"
+        });
+
+      if (assistantError) {
+        console.error('[chat-send] Failed to save assistant message:', assistantError);
+        return new Response(JSON.stringify({
+          error: "Failed to save assistant message"
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      console.log('[chat-send] Conversation assistant-only mode: Assistant message saved');
+      return new Response(JSON.stringify({
+        message: "Assistant message saved successfully",
+        assistant_message: assistantMessageData
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // For non-conversation modes, call LLM handler and save assistant response
+    try {
+      const llmResponse = await fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,108 +167,80 @@ serve(async (req) => {
           text: text,
           mode: mode
         })
-      }).then(async (llmResponse) => {
-        if (!llmResponse.ok) {
-          return;
-        }
-        const llmData = await llmResponse.json();
-        const { assistantMessageData } = llmData;
-        
-        if (assistantMessageData) {
-          // Get the next message number for this chat using the database function
-          const { data: assistantMessageNumber, error: assistantNumberError } = await supabase
-            .rpc('get_next_message_number', { p_chat_id: chat_id });
-
-          if (assistantNumberError) {
-            console.error('[chat-send] Failed to get assistant message number:', assistantNumberError);
-            return;
-          }
-
-          const assistantMessageWithNumber = {
-            ...assistantMessageData,
-            message_number: assistantMessageNumber
-          };
-
-          await supabase
-            .from("messages")
-            .insert(assistantMessageWithNumber, {
-              onConflict: "client_msg_id",
-              ignoreDuplicates: true,
-              returning: "minimal"
-            });
-
-          console.log('[chat-send] done');
-        }
-      }).catch(() => {}); // Silent error handling
-
-      // Return immediate response - LLM handler will handle the rest
-      return new Response(JSON.stringify({
-        message: "Message saved, processing assistant response",
-        client_msg_id: userMessageData.client_msg_id
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
-    }
 
-    // For non-conversation modes, use fire-and-forget approach
-    void fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-      },
-      body: JSON.stringify({
-        chat_id,
-        text: text,
-        mode: mode
-      })
-    }).then(async (llmResponse) => {
       if (!llmResponse.ok) {
-        return;
+        console.error('[chat-send] LLM handler failed:', llmResponse.status, llmResponse.statusText);
+        return new Response(JSON.stringify({
+          error: "Failed to process message with LLM"
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
       }
 
       const llmData = await llmResponse.json();
       const { assistantMessageData } = llmData;
 
-      if (!assistantMessageData) {
-        return;
+      if (assistantMessageData) {
+        // Get the next message number for this chat using the database function
+        const { data: assistantMessageNumber, error: assistantNumberError } = await supabase
+          .rpc('get_next_message_number', { p_chat_id: chat_id });
+
+        if (assistantNumberError) {
+          console.error('[chat-send] Failed to get assistant message number:', assistantNumberError);
+          return new Response(JSON.stringify({
+            error: "Failed to get message number for assistant response"
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const assistantMessageWithNumber = {
+          ...assistantMessageData,
+          message_number: assistantMessageNumber
+        };
+
+        const { error: assistantError } = await supabase
+          .from("messages")
+          .insert(assistantMessageWithNumber, {
+            onConflict: "client_msg_id",
+            ignoreDuplicates: true,
+            returning: "minimal"
+          });
+
+        if (assistantError) {
+          console.error('[chat-send] Failed to save assistant message:', assistantError);
+          return new Response(JSON.stringify({
+            error: "Failed to save assistant response"
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        console.log('[chat-send] Successfully saved user and assistant messages');
       }
 
-      // Get the next message number for this chat using the database function
-      const { data: assistantMessageNumber, error: assistantNumberError } = await supabase
-        .rpc('get_next_message_number', { p_chat_id: chat_id });
+      // Return success response
+      return new Response(JSON.stringify({
+        message: "Message processed successfully",
+        user_message: userMessageData,
+        assistant_saved: !!assistantMessageData
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
 
-      if (assistantNumberError) {
-        console.error('[chat-send] Failed to get assistant message number:', assistantNumberError);
-        return;
-      }
-
-      const assistantMessageWithNumber = {
-        ...assistantMessageData,
-        message_number: assistantMessageNumber
-      };
-
-      await supabase
-        .from("messages")
-        .insert(assistantMessageWithNumber, {
-          onConflict: "client_msg_id",
-          ignoreDuplicates: true,
-          returning: "minimal"
-        });
-      console.log('[chat-send] done');
-    }).catch(() => {}); // Silent error handling
-
-    // Return immediate acknowledgment
-    return new Response(JSON.stringify({
-      message: "Message saved successfully",
-      user_message: userMessageData,
-      processing: true
-    }), {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      }
-    });
+    } catch (error) {
+      console.error('[chat-send] Error processing LLM response:', error);
+      return new Response(JSON.stringify({
+        error: "Failed to process message"
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
   } catch (error) {
     return new Response(JSON.stringify({

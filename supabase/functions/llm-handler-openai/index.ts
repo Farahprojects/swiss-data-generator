@@ -175,6 +175,21 @@ Content Rules:
           chat_id: chat_id
         })
       }).catch(() => {}); // Silent error handling
+
+      // Fire-and-forget chat-send call to save assistant message
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: sanitizedText,
+          client_msg_id: crypto.randomUUID(),
+          mode: 'conversation_assistant_only'
+        })
+      }).catch(() => {}); // Silent error handling
     }
 
     // Return response with assistant message data for chat-send to save
