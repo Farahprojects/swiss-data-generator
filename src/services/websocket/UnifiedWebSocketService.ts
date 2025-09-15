@@ -26,6 +26,11 @@ class UnifiedWebSocketService {
     onMessage?: (message: Message) => void,
     onError?: (error: string) => void
   ) {
+    console.log('[UnifiedWebSocket] Initializing with callbacks:', {
+      hasOnMessage: !!onMessage,
+      hasOnError: !!onError
+    });
+    
     this.onMessage = onMessage;
     this.onError = onError;
 
@@ -43,6 +48,11 @@ class UnifiedWebSocketService {
    * Subscribe to a specific chat (called when chat_id is known)
    */
   async subscribeToChat(chat_id: string) {
+    console.log('[UnifiedWebSocket] Subscribing to chat:', chat_id, 'with callbacks:', {
+      hasOnMessage: !!this.onMessage,
+      hasOnError: !!this.onError
+    });
+    
     this.currentChatId = chat_id;
     
     // Clean up existing subscription
@@ -73,16 +83,13 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
-            console.log('[UnifiedWebSocket] Raw payload received:', payload);
             const newMessage = this.transformDatabaseMessage(payload.new);
-            console.log('[UnifiedWebSocket] Transformed message:', {
-              id: newMessage.id,
-              role: newMessage.role,
-              message_number: newMessage.message_number,
-              text: newMessage.text?.substring(0, 50) + '...'
-            });
-            console.log('[UnifiedWebSocket] Calling onMessage callback...');
-            this.onMessage?.(newMessage);
+            console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
+            if (this.onMessage) {
+              this.onMessage(newMessage);
+            } else {
+              console.warn('[UnifiedWebSocket] onMessage callback not set, message ignored');
+            }
           }
         )
         .on(
@@ -96,7 +103,11 @@ class UnifiedWebSocketService {
           (payload) => {
             const updatedMessage = this.transformDatabaseMessage(payload.new);
             console.log('[UnifiedWebSocket] Message updated:', updatedMessage.id);
-            this.onMessage?.(updatedMessage);
+            if (this.onMessage) {
+              this.onMessage(updatedMessage);
+            } else {
+              console.warn('[UnifiedWebSocket] onMessage callback not set, update ignored');
+            }
           }
         )
         .subscribe((status) => {
