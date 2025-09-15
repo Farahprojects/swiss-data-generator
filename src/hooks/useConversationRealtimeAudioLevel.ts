@@ -7,7 +7,6 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-// import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 
 interface UseConversationRealtimeAudioLevelOptions {
   updateIntervalMs?: number; // How often to update React state (default: 50ms = 20fps)

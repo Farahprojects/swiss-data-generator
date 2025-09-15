@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
-// import { useJournalMicrophone } from './microphone/useJournalMicrophone';
 import { useToast } from './use-toast';
 import { ReportFormData } from '@/types/public-report';
 

@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
 import { TypingCursor } from '@/components/ui/TypingCursor';
-// import { useJournalMicrophone } from '@/hooks/microphone/useJournalMicrophone';
 import { useTypewriter } from '@/components/ui/TypewriterText';
 import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
