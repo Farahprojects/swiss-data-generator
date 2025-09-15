@@ -23,25 +23,73 @@ class UnifiedWebSocketService {
    * This creates a hot connection that can be used for any chat
    */
   async initialize(
-    onMessage?: (message: Message) => void,
-    onError?: (error: string) => void
+    chat_id: string,
+    callbacks?: {
+      onMessageReceived?: (message: Message) => void;
+      onMessageUpdated?: (message: Message) => void;
+      onStatusChange?: (status: string) => void;
+      onOptimisticMessage?: (message: Message) => void;
+      onAssistantMessage?: (message: Message) => void;
+    }
   ) {
     console.log('[UnifiedWebSocket] Initializing with callbacks:', {
-      hasOnMessage: !!onMessage,
-      hasOnError: !!onError
+      hasOnMessageReceived: !!callbacks?.onMessageReceived,
+      hasOnMessageUpdated: !!callbacks?.onMessageUpdated
     });
     
-    this.onMessage = onMessage;
-    this.onError = onError;
+    this.onMessage = callbacks?.onMessageReceived;
+    this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
 
+    // Store the chat_id and subscribe immediately
+    this.currentChatId = chat_id;
+    
     // Clean up existing subscription
     if (this.realtimeChannel) {
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
     }
 
-    // Connect to Supabase realtime early
-    console.log('[UnifiedWebSocket] Connecting to Supabase realtime...');
+    // Setup realtime subscription for this specific chat
+    this.setupRealtimeSubscription(chat_id);
+    
+    console.log('[UnifiedWebSocket] Initialized and subscribed to chat:', chat_id);
+  }
+
+  /**
+   * Pause realtime subscription (stub for compatibility)
+   */
+  pauseRealtimeSubscription() {
+    console.log('[UnifiedWebSocket] pauseRealtimeSubscription: Pausing subscription');
+    if (this.realtimeChannel) {
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+  }
+
+  /**
+   * Resume realtime subscription (stub for compatibility)
+   */
+  resumeRealtimeSubscription() {
+    console.log('[UnifiedWebSocket] resumeRealtimeSubscription: Resuming subscription');
+    if (this.currentChatId) {
+      this.setupRealtimeSubscription(this.currentChatId);
+    }
+  }
+
+  /**
+   * Send message directly (stub for compatibility)
+   */
+  sendMessageDirect(text: string, mode?: string) {
+    console.log('[UnifiedWebSocket] sendMessageDirect: This is a stub method');
+    console.warn('[UnifiedWebSocket] sendMessageDirect should be implemented by the actual message sending service');
+  }
+
+  /**
+   * Set TTS mode (stub for compatibility)
+   */
+  setTtsMode(enabled: boolean) {
+    console.log('[UnifiedWebSocket] setTtsMode:', enabled ? 'enabled' : 'disabled');
+    // This is a stub - TTS mode handling should be done elsewhere
   }
 
   /**
@@ -72,6 +120,10 @@ class UnifiedWebSocketService {
     try {
       this.subscriptionRetryCount = 0;
 
+      // Store callbacks in local variables to preserve context
+      const onMessageCallback = this.onMessage;
+      const onErrorCallback = this.onError;
+
       this.realtimeChannel = supabase
         .channel(`unified-messages:${chat_id}`)
         .on(
@@ -85,10 +137,10 @@ class UnifiedWebSocketService {
           (payload) => {
             const newMessage = this.transformDatabaseMessage(payload.new);
             console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
-            if (this.onMessage) {
-              this.onMessage(newMessage);
+            if (onMessageCallback && typeof onMessageCallback === 'function') {
+              onMessageCallback(newMessage);
             } else {
-              console.warn('[UnifiedWebSocket] onMessage callback not set, message ignored');
+              console.warn('[UnifiedWebSocket] onMessage callback not set or not a function, message ignored');
             }
           }
         )
@@ -103,10 +155,10 @@ class UnifiedWebSocketService {
           (payload) => {
             const updatedMessage = this.transformDatabaseMessage(payload.new);
             console.log('[UnifiedWebSocket] Message updated:', updatedMessage.id);
-            if (this.onMessage) {
-              this.onMessage(updatedMessage);
+            if (onMessageCallback && typeof onMessageCallback === 'function') {
+              onMessageCallback(updatedMessage);
             } else {
-              console.warn('[UnifiedWebSocket] onMessage callback not set, update ignored');
+              console.warn('[UnifiedWebSocket] onMessage callback not set or not a function, update ignored');
             }
           }
         )
@@ -121,13 +173,18 @@ class UnifiedWebSocketService {
             const delay = Math.min(1000 * Math.pow(2, retry), 8000);
             console.warn(`[UnifiedWebSocket] Realtime ${status}. Retrying in ${delay}ms (attempt ${retry})`);
             setTimeout(() => {
-              this.setupRealtimeSubscription(chat_id);
+              if (this.currentChatId === chat_id) {
+                this.setupRealtimeSubscription(chat_id);
+              }
             }, delay);
           }
         });
     } catch (error) {
       console.error('[UnifiedWebSocket] Failed to setup realtime subscription:', error);
-      this.onError?.(error.message || 'Failed to setup WebSocket connection');
+      const onErrorCallback = this.onError;
+      if (onErrorCallback && typeof onErrorCallback === 'function') {
+        onErrorCallback(error.message || 'Failed to setup WebSocket connection');
+      }
     }
   }
 

@@ -137,8 +137,8 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     
     try {
       console.log('[MessageStore] Setting up WebSocket callbacks...');
-      await unifiedWebSocketService.initialize(
-        (message) => {
+      await unifiedWebSocketService.initialize('early-init', {
+        onMessageReceived: (message) => {
           console.log('[MessageStore] WebSocket message received in callback:', {
             id: message.id,
             role: message.role,
@@ -147,11 +147,11 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
           get().addMessage(message);
           set({ wsConnected: true });
         },
-        (error) => {
-          console.warn('[MessageStore] WebSocket error:', error);
-          set({ wsConnected: false, error });
+        onStatusChange: (status) => {
+          console.log('[MessageStore] WebSocket status:', status);
+          set({ wsConnected: status === 'SUBSCRIBED' });
         }
-      );
+      });
       set({ wsConnected: true });
       console.log('[MessageStore] WebSocket initialized successfully');
     } catch (e: any) {
