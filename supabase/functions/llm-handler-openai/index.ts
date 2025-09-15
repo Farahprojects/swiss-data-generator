@@ -187,7 +187,7 @@ Content Rules:
           chat_id,
           text: sanitizedText,
           client_msg_id: crypto.randomUUID(),
-          mode: 'conversation_assistant_only'
+          role: 'assistant'
         })
       }).catch(() => {}); // Silent error handling
     }

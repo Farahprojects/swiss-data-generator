@@ -104,19 +104,36 @@ serve(async (req) => {
       });
     }
 
-    // For conversation_user_only mode, just save user message and return
-    if (mode === 'conversation_user_only') {
-      console.log('[chat-send] Conversation user-only mode: User message saved');
+    // For conversation mode, save user message and call LLM async
+    if (mode === 'conversation') {
+      console.log('[chat-send] Conversation mode: User message saved, calling LLM async');
+      
+      // Fire-and-forget LLM call
+      fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: text,
+          mode: 'conversation'
+        })
+      }).catch((error) => {
+        console.error('[chat-send] LLM call failed:', error);
+      });
+
       return new Response(JSON.stringify({
-        message: "User message saved successfully",
+        message: "User message saved, LLM processing started",
         user_message: userMessageData
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    // For conversation_assistant_only mode, just save assistant message and return
-    if (mode === 'conversation_assistant_only') {
+    // For assistant messages (from LLM), just save to DB
+    if (role === 'assistant') {
       const assistantMessageData = {
         chat_id,
         role: "assistant",
@@ -145,7 +162,7 @@ serve(async (req) => {
         });
       }
 
-      console.log('[chat-send] Conversation assistant-only mode: Assistant message saved');
+      console.log('[chat-send] Assistant message saved');
       return new Response(JSON.stringify({
         message: "Assistant message saved successfully",
         assistant_message: assistantMessageData
