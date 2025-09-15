@@ -17,9 +17,7 @@ export interface STTRecorderOptions {
 
 export class UniversalSTTRecorder {
   // Recording components
-  private mediaRecorder: MediaRecorder | null = null;
   private mediaStream: MediaStream | null = null;
-  private audioBlob: Blob | null = null;
   
   // Energy monitoring components (separate from recording)
   private audioContext: AudioContext | null = null;
@@ -29,8 +27,6 @@ export class UniversalSTTRecorder {
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
   private bandpassFilter: BiquadFilterNode | null = null;
-  private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
-  private filteredStream: MediaStream | null = null;
   private scriptProcessor: ScriptProcessorNode | null = null;
   private silentGain: GainNode | null = null;
   
@@ -45,10 +41,7 @@ export class UniversalSTTRecorder {
   private baselineEnergyCount = 0;
   private vadArmUntilTs: number = 0; // time after which VAD can arm (post-baseline guard)
 
-  // Chunked recording state for simple pre-roll and segmentation
-  private preRollChunks: Blob[] = [];
-  private activeChunks: Blob[] = [];
-  private maxPreRollChunks: number = 3; // computed from preRollMs/timesliceMs
+  // VAD state
   private vadActive: boolean = false; // currently capturing a speech segment
 
   // PCM capture state for WAV-per-segment path
@@ -94,13 +87,7 @@ export class UniversalSTTRecorder {
       // Step 2: Setup filtered audio chain and energy monitoring
       this.setupEnergyMonitoring();
       
-      // Step 3: Setup MediaRecorder against filtered output stream (falls back to raw if needed)
-      this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
-      
-      // Step 4: Start recorder with timeslices so we can maintain a small pre-roll buffer
-      const slice = Math.max(20, this.options.timesliceMs || 100);
-      this.maxPreRollChunks = Math.max(1, Math.ceil((this.options.preRollMs || 300) / slice));
-      this.mediaRecorder!.start(slice);
+      // Step 3-4: Switch to WAV capture path only
       this.isRecording = true;
 
     } catch (error) {
@@ -133,31 +120,25 @@ export class UniversalSTTRecorder {
   }
 
   stop(): void {
-    if (!this.isRecording || !this.mediaRecorder) return;
-
-    this.mediaRecorder.stop();
+    if (!this.isRecording) return;
     this.isRecording = false;
-    // Intentionally DO NOT cleanup here so energy monitoring continues
+    // Finalize any active segment immediately
+    if (this.vadActive) {
+      this.finalizeActiveSegment();
+    }
   }
 
-  // Start a new recording segment quickly using existing MediaRecorder/stream
+  // Start a new recording segment quickly using existing stream
   startNewRecording(): void {
-    if (!this.mediaRecorder || this.isRecording) return;
+    if (this.isRecording) return;
     try {
-      // Ensure input is enabled
       this.resumeInput();
-      // Reset baseline and VAD state on quick restarts
       this.resetBaselineCapture();
       this.vadActive = false;
-      this.preRollChunks = [];
-      this.activeChunks = [];
       if (this.silenceTimer) {
         clearTimeout(this.silenceTimer);
         this.silenceTimer = null;
       }
-      const slice = Math.max(20, this.options.timesliceMs || 100);
-      this.maxPreRollChunks = Math.max(1, Math.ceil((this.options.preRollMs || 300) / slice));
-      this.mediaRecorder.start(slice);
       this.isRecording = true;
     } catch (e) {
       console.error('[UniversalSTTRecorder] Failed to start new recording segment:', e);
@@ -180,42 +161,7 @@ export class UniversalSTTRecorder {
     });
   }
 
-  private setupMediaRecorder(stream: MediaStream): void {
-    const mimeType = this.getSupportedMimeType();
-    
-    this.mediaRecorder = new MediaRecorder(stream, {
-      mimeType: mimeType
-    });
-
-    // Chunked storage via timeslice for pre-roll and segmentation
-    this.audioBlob = null;
-    this.preRollChunks = [];
-    this.activeChunks = [];
-    this.vadActive = false;
-    this.mediaRecorder.ondataavailable = (event) => {
-      if (!event.data || event.data.size === 0) return;
-      if (this.vadActive) {
-        this.activeChunks.push(event.data);
-      } else {
-        // Maintain rolling pre-roll buffer
-        this.preRollChunks.push(event.data);
-        if (this.preRollChunks.length > this.maxPreRollChunks) {
-          this.preRollChunks.shift();
-        }
-      }
-    };
-
-    this.mediaRecorder.onstop = () => {
-      // If there's an active segment when stopped, finalize it
-      if (this.activeChunks.length > 0) {
-        this.finalizeActiveSegment();
-      }
-    };
-
-    this.mediaRecorder.onerror = (event) => {
-      console.error('[UniversalSTTRecorder] MediaRecorder error:', event);
-    };
-  }
+  // MediaRecorder path removed; using PCM WAV per-segment
 
   private setupEnergyMonitoring(): void {
     if (!this.mediaStream) {
@@ -246,13 +192,9 @@ export class UniversalSTTRecorder {
     this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0; // No smoothing - we'll handle it ourselves
 
-    // Destination for MediaRecorder (record filtered audio)
-    this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
-
-    // Simplified graph: source -> HPF -> LPF -> analyser & destination
+    // Simplified graph: source -> HPF -> LPF -> analyser
     sourceNode.connect(this.highPassFilter);
     lastFilterNode.connect(this.analyser);
-    lastFilterNode.connect(this.mediaStreamDestination);
 
     // Lightweight PCM tap for WAV-per-segment encoding
     try {
@@ -293,9 +235,6 @@ export class UniversalSTTRecorder {
     } catch (e) {
       console.warn('[UniversalSTTRecorder] PCM tap unavailable:', e);
     }
-
-    // Expose filtered stream for recording
-    this.filteredStream = this.mediaStreamDestination.stream;
 
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
@@ -399,9 +338,7 @@ export class UniversalSTTRecorder {
   }
 
   private beginActiveSegment(): void {
-    // Seed active segment with pre-roll
-    this.activeChunks = this.preRollChunks.slice();
-    // Also seed PCM samples
+    // Seed PCM samples from pre-roll
     this.activeSampleChunks = this.preRollSampleChunks.slice();
     this.activeTotalSamples = this.preRollTotalSamples;
     this.vadActive = true;
@@ -447,23 +384,7 @@ export class UniversalSTTRecorder {
     }
   }
 
-  private processRecording(): void {
-    // Deprecated in chunked-mode. Left for compatibility if needed.
-    if (this.audioBlob && this.audioBlob.size > 0) {
-      const blob = this.audioBlob;
-      this.audioBlob = null;
-      try { this.options.onProcessingStart?.(); } catch {}
-      try {
-        if (typeof queueMicrotask === 'function') {
-          queueMicrotask(() => { this.sendToSTT(blob).catch(() => {}); });
-        } else {
-          setTimeout(() => { this.sendToSTT(blob).catch(() => {}); }, 0);
-        }
-      } catch {
-        setTimeout(() => { this.sendToSTT(blob).catch(() => {}); }, 0);
-      }
-    }
-  }
+  private processRecording(): void {}
 
   private async sendToSTT(audioBlob: Blob): Promise<void> {
     try {
@@ -507,22 +428,7 @@ export class UniversalSTTRecorder {
     }
   }
 
-  private getSupportedMimeType(): string {
-    const types = [
-      'audio/wav',
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/mp4'
-    ];
-
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
-    }
-
-    return 'audio/webm';
-  }
+  private getSupportedMimeType(): string { return 'audio/wav'; }
 
   // Resample Float32 mono buffer from inputSampleRate to 16kHz using linear interpolation
   private resampleTo16k(input: Float32Array, inputSampleRate: number): Int16Array {
@@ -620,13 +526,7 @@ export class UniversalSTTRecorder {
     this.highPassFilter = null;
     this.lowPassFilter = null;
     this.bandpassFilter = null;
-    this.mediaStreamDestination = null;
-    this.filteredStream = null;
     this.dataArray = null;
-    this.mediaRecorder = null;
-    this.audioBlob = null;
-    this.preRollChunks = [];
-    this.activeChunks = [];
     this.vadActive = false;
     
     // Reset baseline capture state
