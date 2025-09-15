@@ -25,6 +25,7 @@ export class UniversalSTTRecorder {
   private analyser: AnalyserNode | null = null;
   private animationFrame: number | null = null;
   private dataArray: Float32Array | null = null;
+  private freqData: Uint8Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
   private bandpassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
@@ -258,8 +259,9 @@ export class UniversalSTTRecorder {
     // Expose filtered stream for recording
     this.filteredStream = this.mediaStreamDestination.stream;
 
-    // Prepare data array and start monitoring
+    // Prepare data arrays and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
+    this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
     
     // Initialize baseline capture
     this.resetBaselineCapture();
@@ -285,6 +287,17 @@ export class UniversalSTTRecorder {
     let triggered = false;
     let rmsEma = 0;
     const rmsAlpha = 0.15;
+    // Frequency-band baseline (300–3400 Hz)
+    const sampleRate = this.audioContext ? this.audioContext.sampleRate : 48000;
+    const fftSize = this.analyser!.fftSize;
+    const binHz = sampleRate / fftSize;
+    const bandStartHz = 300;
+    const bandEndHz = 3400;
+    const binStart = Math.max(0, Math.floor(bandStartHz / binHz));
+    const binEnd = Math.min(this.analyser!.frequencyBinCount - 1, Math.ceil(bandEndHz / binHz));
+    let bandBaselineSum = 0;
+    let bandBaselineCount = 0;
+    let bandBaseline = 0;
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -294,6 +307,9 @@ export class UniversalSTTRecorder {
       const tempArray = new Float32Array(this.analyser.fftSize);
       this.analyser.getFloatTimeDomainData(tempArray);
       this.dataArray = tempArray;
+      if (this.freqData) {
+        this.analyser.getByteFrequencyData(this.freqData);
+      }
       
       // Calculate RMS energy (lightweight)
       let sum = 0;
@@ -303,16 +319,21 @@ export class UniversalSTTRecorder {
       const rms = Math.sqrt(sum / this.dataArray.length);
       rmsEma = rmsEma * (1 - rmsAlpha) + rms * rmsAlpha;
       
-      // Handle baseline energy capture during first ~1 second
+      // Handle baseline energy capture during first ~1 second (time-domain baseline retained for silence; also compute band baseline for start)
       const now = Date.now();
       if (this.baselineCapturing) {
         this.baselineEnergySum += rms;
         this.baselineEnergyCount++;
-        
+        if (this.freqData) {
+          let bandSum = 0;
+          for (let i = binStart; i <= binEnd; i++) bandSum += this.freqData[i];
+          bandBaselineSum += bandSum;
+          bandBaselineCount++;
+        }
         if (now - this.baselineStartTime >= this.options.baselineCaptureDuration!) {
-          this.baselineEnergy = this.baselineEnergySum / this.baselineEnergyCount;
+          this.baselineEnergy = this.baselineEnergySum / Math.max(1, this.baselineEnergyCount);
+          bandBaseline = bandBaselineSum / Math.max(1, bandBaselineCount);
           this.baselineCapturing = false;
-          console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
         }
       }
       
@@ -352,12 +373,19 @@ export class UniversalSTTRecorder {
         }
 
         if (armed && !triggered && this.options.voiceTriggeredStart) {
-          if (candidate) {
+          // Frequency-band spike start: require 30% increase over 1s band baseline
+          let bandNow = 0;
+          if (this.freqData) {
+            for (let i = binStart; i <= binEnd; i++) bandNow += this.freqData[i];
+          }
+          const startCandidate = bandBaseline > 0 && bandNow >= bandBaseline * 1.3;
+          if (startCandidate) {
             speechAccumMs += dt;
             if (speechAccumMs >= 250) {
-              // Trigger: start collecting main chunks
               triggered = true;
               this.voiceTriggeredActive = true;
+              // Recompute baseline reference for potential future use
+              bandBaseline = bandNow;
             }
           } else {
             speechAccumMs = 0;
