@@ -346,6 +346,19 @@ export const ConversationOverlay: React.FC = () => {
   // Reset to tap-to-start when entering connecting state (idempotent cleanup)
   useEffect(() => {
     if (state === 'connecting') {
+      // Hard-reset flags to avoid stuck guards
+      isStartingRef.current = false;
+      isActiveRef.current = false;
+      isProcessingRef.current = false;
+      isShuttingDown.current = false;
+      wasSubscribedRef.current = false;
+      hasStarted.current = false;
+
+      // Disable TTS mode proactively
+      import('@/features/chat/ChatController').then(({ chatController }) => {
+        try { chatController.setTtsMode(false); } catch {}
+      }).catch(() => {});
+
       // Idempotent cleanup when returning to tap-to-start
       if (connectionRef.current) {
         connectionRef.current.unsubscribe().catch(() => {});
