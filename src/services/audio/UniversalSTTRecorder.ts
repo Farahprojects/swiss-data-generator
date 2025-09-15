@@ -197,7 +197,7 @@ export class UniversalSTTRecorder {
 
     // Analyser for energy monitoring with simplified settings
     this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 1024;
+    this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0; // No smoothing - we'll handle it ourselves
 
     // Destination for MediaRecorder (record filtered audio)
@@ -213,6 +213,9 @@ export class UniversalSTTRecorder {
 
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
+    
+    // Initialize baseline capture
+    this.resetBaselineCapture();
     this.startEnergyMonitoring();
   }
 
@@ -229,15 +232,6 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
-    const isMobile = this.isMobileDevice();
-    const threshold = isMobile ? 0.03 : 0.05; // fixed platform thresholds (raised)
-    const armingDelayMs = 300;
-    const minSpeechMs = 250; // require longer continuous speech
-    let armed = false;
-    let speechAccumMs = 0;
-    let lastTs = performance.now();
-    let rmsEma = 0; // EMA of RMS for detection stability
-    const rmsAlpha = 0.15; // detection EMA weight
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -254,20 +248,17 @@ export class UniversalSTTRecorder {
         sum += this.dataArray[i] * this.dataArray[i];
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
-      rmsEma = rmsEma * (1 - rmsAlpha) + rms * rmsAlpha;
       
-      // Minimal VAD: fixed threshold with arming and min-speech gate
-      const nowTs = performance.now();
-      const dt = Math.max(0, nowTs - lastTs);
-      lastTs = nowTs;
-      if (!armed) {
-        // Arming delay to avoid startup pops/clicks
-        if (dt > 0) {
-          speechAccumMs += dt;
-          if (speechAccumMs >= armingDelayMs) {
-            armed = true;
-            speechAccumMs = 0;
-          }
+      // Handle baseline energy capture during first ~1 second
+      const now = Date.now();
+      if (this.baselineCapturing) {
+        this.baselineEnergySum += rms;
+        this.baselineEnergyCount++;
+        
+        if (now - this.baselineStartTime >= this.options.baselineCaptureDuration!) {
+          this.baselineEnergy = this.baselineEnergySum / this.baselineEnergyCount;
+          this.baselineCapturing = false;
+          console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
         }
       }
       
@@ -279,36 +270,30 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Only run VAD while recording and after arming
-      if (this.isRecording && armed) {
-        // Zero-Crossing Rate (ZCR) gate to reject low-frequency hum/steady noise
-        let crossings = 0;
-        for (let i = 1; i < this.dataArray.length; i++) {
-          const a = this.dataArray[i - 1];
-          const b = this.dataArray[i];
-          if (a * b < 0 && (Math.abs(a) > 0.01 || Math.abs(b) > 0.01)) {
-            crossings++;
-          }
+      // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
+      if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
+        // Dynamic threshold: baseline energy × (1 - margin)
+        const dynamicThreshold = this.baselineEnergy * (1 - this.options.silenceMargin!);
+        const isSpeaking = rms > dynamicThreshold;
+        
+        // Log occasionally for debugging
+        if (Math.random() < 0.01) {
+          console.log('[UniversalSTTRecorder] Current RMS:', rms.toFixed(6), 'Threshold:', dynamicThreshold.toFixed(6), 'Speaking:', isSpeaking);
         }
-        const zcr = crossings / (this.dataArray.length - 1);
-
-        const candidate = rmsEma >= threshold && zcr > 0.05;
-
-        if (candidate) {
-          // Require short sustained speech before fully cancelling hangover
-          speechAccumMs += dt;
-          if (speechAccumMs >= minSpeechMs) {
-            if (this.silenceTimer) {
-              clearTimeout(this.silenceTimer);
-              this.silenceTimer = null;
-            }
-          }
-        } else {
-          speechAccumMs = 0;
+        
+        if (!isSpeaking) {
+          // Start silence timer
           if (!this.silenceTimer) {
             this.silenceTimer = setTimeout(() => {
+              console.log('[UniversalSTTRecorder] 🔇 Silence detected - stopping recording');
               this.stop();
             }, this.options.silenceHangover);
+          }
+        } else {
+          // Clear silence timer (voice detected)
+          if (this.silenceTimer) {
+            clearTimeout(this.silenceTimer);
+            this.silenceTimer = null;
           }
         }
       }
