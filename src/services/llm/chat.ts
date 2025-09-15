@@ -66,26 +66,7 @@ class LlmService {
     } as unknown as Message;
   }
 
-  // Legacy method - kept for compatibility if needed
-  async chat(request: LlmRequest): Promise<Message> {
-    const { data, error } = await supabase.functions.invoke('llm-handler', {
-      body: {
-        chat_id: request.chat_id,
-        userMessage: request.userMessage,
-        requestAudio: request.requestAudio,
-      },
-    });
-
-    if (error) {
-      throw new Error(`Error invoking llm-handler: ${error.message}`);
-    }
-
-    if (data.error) {
-      throw new Error(`llm-handler returned an error: ${data.error}`);
-    }
-
-    return data as Message;
-  }
+  // Legacy chat() removed; llm-handler deprecated
 
 }
 
