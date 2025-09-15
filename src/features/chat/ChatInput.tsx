@@ -93,7 +93,10 @@ export const ChatInput = () => {
       // DIRECT INVOKE - No service layers, fastest possible
       const client_msg_id = crypto.randomUUID();
       
-      // Show optimistic message immediately in UI
+      // Clear input immediately for instant feedback
+      setText('');
+      
+      // Show optimistic message immediately in UI - instant display
       const optimisticMessage: Message = {
         id: client_msg_id,
         chat_id: chat_id!,
@@ -104,9 +107,11 @@ export const ChatInput = () => {
         client_msg_id
       };
       
-      // Add message to unified store (will deduplicate by message_number when DB response arrives)
-      const { addMessage } = useMessageStore.getState();
-      addMessage(optimisticMessage);
+      // Add message to unified store immediately (microtask for instant UI)
+      queueMicrotask(() => {
+        const { addMessage } = useMessageStore.getState();
+        addMessage(optimisticMessage);
+      });
       
       // Fire-and-forget direct invoke - no queueMicrotask delay
       supabase.functions.invoke('chat-send', {

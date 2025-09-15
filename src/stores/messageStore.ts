@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import type { Message } from '@/core/types';
 
 interface MessageStore {
@@ -15,8 +16,11 @@ interface MessageStore {
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   clearMessages: () => void;
-  fetchMessages: () => Promise<void>;
+  fetchMessagesWithFallback: () => Promise<void>;
+  fetchMessagesViaWebSocket: () => Promise<void>;
+  fetchMessagesDirect: () => Promise<void>;
   loadOlder: () => Promise<void>;
+  setupRealtimeSubscription: () => void;
 }
 
 const mapDbToMessage = (db: any): Message => ({
@@ -44,8 +48,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
   setChatId: (id: string | null) => {
     set({ chat_id: id, messages: [], error: null });
     if (id) {
-      get().fetchMessages();
-      get().setupRealtimeSubscription();
+      get().fetchMessagesWithFallback();
     }
   },
 
@@ -79,13 +82,67 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     set({ messages: [], error: null });
   },
 
-  // Fetch messages from database
-  fetchMessages: async () => {
+  // Fetch messages with WebSocket fallback to direct Supabase
+  fetchMessagesWithFallback: async () => {
     const { chat_id } = get();
     if (!chat_id) return;
 
     set({ loading: true, error: null });
     
+    try {
+      // Try WebSocket first
+      console.log('[MessageStore] Trying WebSocket for messages...');
+      await get().fetchMessagesViaWebSocket();
+      
+      // Set up fallback timer
+      const fallbackTimer = setTimeout(() => {
+        console.log('[MessageStore] WebSocket timeout, falling back to direct Supabase...');
+        get().fetchMessagesDirect();
+      }, 3000); // 3 second timeout
+      
+      // Clear timer if WebSocket succeeds quickly
+      const originalMessages = get().messages;
+      const checkSuccess = () => {
+        if (get().messages.length > originalMessages.length) {
+          clearTimeout(fallbackTimer);
+          console.log('[MessageStore] WebSocket succeeded, canceling fallback');
+        }
+      };
+      
+      // Check after 100ms
+      setTimeout(checkSuccess, 100);
+      
+    } catch (e: any) {
+      console.log('[MessageStore] WebSocket failed, falling back to direct Supabase...');
+      await get().fetchMessagesDirect();
+    }
+  },
+
+  // Fetch messages via WebSocket
+  fetchMessagesViaWebSocket: async () => {
+    const { chat_id } = get();
+    if (!chat_id) return;
+
+    // Initialize WebSocket connection
+    await unifiedWebSocketService.initialize(chat_id, {
+      onMessage: (message: Message) => {
+        console.log('[MessageStore] WebSocket message received:', message.message_number);
+        get().addMessage(message);
+      },
+      onError: (error: string) => {
+        console.error('[MessageStore] WebSocket error:', error);
+        set({ error });
+      }
+    });
+    
+    set({ loading: false });
+  },
+
+  // Fetch messages directly from Supabase (fallback)
+  fetchMessagesDirect: async () => {
+    const { chat_id } = get();
+    if (!chat_id) return;
+
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -102,6 +159,10 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
         loading: false,
         hasOlder: (data?.length || 0) === 50
       });
+      
+      // Also set up direct real-time subscription as fallback
+      get().setupRealtimeSubscription();
+      
     } catch (e: any) {
       set({ 
         error: e?.message || 'Failed to load messages', 
