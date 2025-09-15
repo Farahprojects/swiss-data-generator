@@ -102,7 +102,8 @@ class TTSPlaybackService {
     directBarsAnimationService.start();
     const frequencyData = new Uint8Array(analyser.frequencyBinCount);
     const step = () => {
-      if (!this.currentSource) {
+      // Continue while either HTMLMediaElement or BufferSource is active
+      if (!this.currentSource && !this.bufferSource) {
         this.animationTimer = null;
         return;
       }
@@ -158,17 +159,7 @@ class TTSPlaybackService {
 
     source.onended = () => {
       window.clearTimeout(startTimer);
-      this.stopAnimation();
-      if (this.analyser) {
-        try { this.analyser.disconnect(); } catch {}
-      }
-      this.analyser = null;
-      this.bufferSource = null;
-      this.isPlaying = false;
-      this.isPaused = false;
-      audioArbitrator.releaseControl('tts');
-      this.notify();
-      if (onEnded) onEnded();
+      this.finalizePlayback(onEnded);
     };
 
     source.start(0);
@@ -225,34 +216,8 @@ class TTSPlaybackService {
         this.startAnimation(analyser);
       };
 
-      const cleanupElement = () => {
-        this.stopAnimation();
-        if (this.mediaElementNode) {
-          try { this.mediaElementNode.disconnect(); } catch {}
-        }
-        this.mediaElementNode = null;
-        if (this.analyser) {
-          try { this.analyser.disconnect(); } catch {}
-        }
-        this.analyser = null;
-        if (this.currentUrl) {
-          try { URL.revokeObjectURL(this.currentUrl); } catch {}
-        }
-        this.currentUrl = null;
-        this.currentSource = null;
-      };
-
-      const finalize = () => {
-        cleanupElement();
-        this.isPlaying = false;
-        this.isPaused = false;
-        
-        // 🎵 RELEASE AUDIO CONTROL when TTS finishes
-        audioArbitrator.releaseControl('tts');
-        
-        this.notify();
-        if (onEnded) onEnded();
-      };
+      const cleanupElement = () => this.cleanupGraph();
+      const finalize = () => this.finalizePlayback(onEnded);
 
       audioEl.onended = finalize;
       audioEl.onerror = async () => {
@@ -314,12 +279,12 @@ class TTSPlaybackService {
       this.bufferSource.onended = null; // Clear callback to prevent restart
       try { this.bufferSource.stop(0); } catch {}
     }
-    if (this.currentUrl) {
-      try { URL.revokeObjectURL(this.currentUrl); } catch {}
-    }
-    this.currentUrl = null;
-    this.currentSource = null;
-    this.bufferSource = null;
+    this.cleanupGraph();
+  }
+
+  // Consolidated graph cleanup (no state changes beyond graph + URL + animation)
+  private cleanupGraph(): void {
+    this.stopAnimation();
     if (this.mediaElementNode) {
       try { this.mediaElementNode.disconnect(); } catch {}
     }
@@ -328,10 +293,22 @@ class TTSPlaybackService {
       try { this.analyser.disconnect(); } catch {}
     }
     this.analyser = null;
-    this.stopAnimation();
+    if (this.currentUrl) {
+      try { URL.revokeObjectURL(this.currentUrl); } catch {}
+    }
+    this.currentUrl = null;
+    this.currentSource = null;
+    this.bufferSource = null;
+  }
+
+  // Consolidated finalize: cleanup + state reset + release control + notify
+  private finalizePlayback(onEnded?: () => void): void {
+    this.cleanupGraph();
     this.isPlaying = false;
     this.isPaused = false;
+    audioArbitrator.releaseControl('tts');
     this.notify();
+    if (onEnded) onEnded();
   }
 
   stop(): void {
