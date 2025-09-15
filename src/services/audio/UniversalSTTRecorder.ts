@@ -31,6 +31,8 @@ export class UniversalSTTRecorder {
   private bandpassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private filteredStream: MediaStream | null = null;
+  private scriptProcessor: ScriptProcessorNode | null = null;
+  private silentGain: GainNode | null = null;
   
   // Simplified VAD state
   private silenceTimer: NodeJS.Timeout | null = null;
@@ -48,6 +50,13 @@ export class UniversalSTTRecorder {
   private activeChunks: Blob[] = [];
   private maxPreRollChunks: number = 3; // computed from preRollMs/timesliceMs
   private vadActive: boolean = false; // currently capturing a speech segment
+
+  // PCM capture state for WAV-per-segment path
+  private preRollSampleChunks: Float32Array[] = [];
+  private preRollTotalSamples: number = 0;
+  private preRollMaxSamples: number = 0;
+  private activeSampleChunks: Float32Array[] = [];
+  private activeTotalSamples: number = 0;
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
@@ -245,6 +254,46 @@ export class UniversalSTTRecorder {
     lastFilterNode.connect(this.analyser);
     lastFilterNode.connect(this.mediaStreamDestination);
 
+    // Lightweight PCM tap for WAV-per-segment encoding
+    try {
+      this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
+      this.silentGain = this.audioContext.createGain();
+      this.silentGain.gain.value = 0;
+      lastFilterNode.connect(this.scriptProcessor);
+      // Keep node alive by connecting to destination via silent gain
+      this.scriptProcessor.connect(this.silentGain);
+      this.silentGain.connect(this.audioContext.destination);
+
+      // Compute pre-roll capacity in samples
+      this.preRollMaxSamples = Math.max(1, Math.floor((this.options.preRollMs || 300) * (this.audioContext.sampleRate / 1000)));
+      this.preRollSampleChunks = [];
+      this.preRollTotalSamples = 0;
+      this.activeSampleChunks = [];
+      this.activeTotalSamples = 0;
+
+      this.scriptProcessor.onaudioprocess = (ev: any) => {
+        if (!ev || !ev.inputBuffer) return;
+        const input: Float32Array = ev.inputBuffer.getChannelData(0);
+        // Copy buffer because WebAudio reuses internal buffers
+        const copy = new Float32Array(input.length);
+        copy.set(input);
+        if (this.vadActive) {
+          this.activeSampleChunks.push(copy);
+          this.activeTotalSamples += copy.length;
+        } else {
+          this.preRollSampleChunks.push(copy);
+          this.preRollTotalSamples += copy.length;
+          // Trim pre-roll to max samples
+          while (this.preRollTotalSamples > this.preRollMaxSamples && this.preRollSampleChunks.length > 0) {
+            const removed = this.preRollSampleChunks.shift()!;
+            this.preRollTotalSamples -= removed.length;
+          }
+        }
+      };
+    } catch (e) {
+      console.warn('[UniversalSTTRecorder] PCM tap unavailable:', e);
+    }
+
     // Expose filtered stream for recording
     this.filteredStream = this.mediaStreamDestination.stream;
 
@@ -352,6 +401,9 @@ export class UniversalSTTRecorder {
   private beginActiveSegment(): void {
     // Seed active segment with pre-roll
     this.activeChunks = this.preRollChunks.slice();
+    // Also seed PCM samples
+    this.activeSampleChunks = this.preRollSampleChunks.slice();
+    this.activeTotalSamples = this.preRollTotalSamples;
     this.vadActive = true;
   }
 
@@ -362,15 +414,25 @@ export class UniversalSTTRecorder {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
     }
-    const chunks = this.activeChunks;
-    this.activeChunks = [];
-    if (!chunks || chunks.length === 0) return;
-    // Ignore tiny segments (likely noise or click) to avoid empty conversation triggers
-    const totalBytes = chunks.reduce((sum, b) => sum + b.size, 0);
-    if (totalBytes < 5000) { // ~small blip
+    // Build PCM buffer from collected samples
+    const totalSamples = this.activeTotalSamples;
+    this.activeTotalSamples = 0;
+    const sampleChunks = this.activeSampleChunks;
+    this.activeSampleChunks = [];
+    if (!sampleChunks || sampleChunks.length === 0 || totalSamples <= 0) return;
+    // Ignore tiny segments (<100ms)
+    const inputSampleRate = this.audioContext?.sampleRate || 48000;
+    if (totalSamples < Math.floor(inputSampleRate * 0.1)) {
       return;
     }
-    const blob = new Blob(chunks, { type: this.getSupportedMimeType() });
+    const merged = new Float32Array(totalSamples);
+    let offset = 0;
+    for (const ch of sampleChunks) {
+      merged.set(ch, offset);
+      offset += ch.length;
+    }
+    const resampled16k = this.resampleTo16k(merged, inputSampleRate);
+    const blob = this.encodeWavPCM16Mono(resampled16k, 16000);
     // Signal processing start for UI
     try { this.options.onProcessingStart?.(); } catch {}
     // Send without blocking UI
@@ -447,10 +509,10 @@ export class UniversalSTTRecorder {
 
   private getSupportedMimeType(): string {
     const types = [
+      'audio/wav',
       'audio/webm;codecs=opus',
       'audio/webm',
-      'audio/mp4',
-      'audio/wav'
+      'audio/mp4'
     ];
 
     for (const type of types) {
@@ -460,6 +522,77 @@ export class UniversalSTTRecorder {
     }
 
     return 'audio/webm';
+  }
+
+  // Resample Float32 mono buffer from inputSampleRate to 16kHz using linear interpolation
+  private resampleTo16k(input: Float32Array, inputSampleRate: number): Int16Array {
+    const targetRate = 16000;
+    if (inputSampleRate === targetRate) {
+      // Direct convert to Int16
+      const out = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        let s = Math.max(-1, Math.min(1, input[i]));
+        out[i] = (s < 0 ? s * 0x8000 : s * 0x7FFF) | 0;
+      }
+      return out;
+    }
+    const ratio = inputSampleRate / targetRate;
+    const newLength = Math.floor(input.length / ratio);
+    const out = new Int16Array(newLength);
+    let pos = 0;
+    for (let i = 0; i < newLength; i++) {
+      const idx = i * ratio;
+      const i0 = Math.floor(idx);
+      const i1 = Math.min(i0 + 1, input.length - 1);
+      const frac = idx - i0;
+      const s = input[i0] + (input[i1] - input[i0]) * frac;
+      const clamped = Math.max(-1, Math.min(1, s));
+      out[i] = (clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF) | 0;
+    }
+    return out;
+  }
+
+  // Encode mono Int16 PCM into a RIFF/WAV (44-byte header)
+  private encodeWavPCM16Mono(pcm: Int16Array, sampleRate: number): Blob {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+    const blockAlign = (numChannels * bitsPerSample) / 8;
+    const dataSize = pcm.length * 2;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    let offset = 0;
+    const writeString = (s: string) => {
+      for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i));
+      offset += s.length;
+    };
+    const writeUint32 = (v: number) => { view.setUint32(offset, v, true); offset += 4; };
+    const writeUint16 = (v: number) => { view.setUint16(offset, v, true); offset += 2; };
+
+    // RIFF header
+    writeString('RIFF');
+    writeUint32(36 + dataSize);
+    writeString('WAVE');
+    // fmt chunk
+    writeString('fmt ');
+    writeUint32(16); // PCM
+    writeUint16(1); // format = PCM
+    writeUint16(numChannels);
+    writeUint32(sampleRate);
+    writeUint32(byteRate);
+    writeUint16(blockAlign);
+    writeUint16(bitsPerSample);
+    // data chunk
+    writeString('data');
+    writeUint32(dataSize);
+    // PCM data
+    let p = 44;
+    for (let i = 0; i < pcm.length; i++, p += 2) {
+      view.setInt16(p, pcm[i], true);
+    }
+
+    return new Blob([view], { type: 'audio/wav' });
   }
 
   private cleanup(): void {
