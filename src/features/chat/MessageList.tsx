@@ -11,10 +11,9 @@ import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
-import { useMessages } from '@/hooks/useMessages';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
-const renderMessages = (messages: Message[], directAssistantMessage: Message | null) => {
+const renderMessages = (messages: Message[]) => {
   const elements: React.ReactNode[] = [];
   
   for (let i = 0; i < messages.length; i++) {
@@ -69,23 +68,7 @@ const renderMessages = (messages: Message[], directAssistantMessage: Message | n
     }
   }
   
-  // Add direct assistant message at the end if it exists and isn't already in the messages
-  if (directAssistantMessage) {
-    const isAlreadyRendered = messages.some(m => m.id === directAssistantMessage.id);
-    if (!isAlreadyRendered) {
-      elements.push(
-        <div key={`direct-assistant-${directAssistantMessage.id}`} className="flex items-end gap-3 justify-start mb-8">
-          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
-            <p className="text-base font-light leading-relaxed text-left selectable-text">
-              <span className="whitespace-pre-wrap">
-                {directAssistantMessage.text || ''}
-              </span>
-            </p>
-          </div>
-        </div>
-      );
-    }
-  }
+  // Unified store handles all messages - no need for direct assistant message logic
   
   return elements;
 };
@@ -103,23 +86,7 @@ export const MessageList = () => {
     setChatId 
   } = useMessageStore();
   
-  // Direct assistant message state - bypasses store for immediate UI update
-  const [directAssistantMessage, setDirectAssistantMessage] = useState<Message | null>(null);
-  
-  // Listen for direct assistant messages
-  useEffect(() => {
-    const handleDirectAssistantMessage = (event: CustomEvent) => {
-      const message = event.detail as Message;
-      console.log('[MessageList] 🚀 Direct assistant message received:', message.id);
-      setDirectAssistantMessage(message);
-    };
-    
-    window.addEventListener('assistantMessage', handleDirectAssistantMessage as EventListener);
-    
-    return () => {
-      window.removeEventListener('assistantMessage', handleDirectAssistantMessage as EventListener);
-    };
-  }, []);
+  // Unified store handles all messages via real-time subscriptions
   
   // Auth detection
   const { user } = useAuth();
@@ -174,13 +141,7 @@ export const MessageList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
-  // Auto-scroll once on direct assistant arrival (not on clear)
-  React.useEffect(() => {
-    if (directAssistantMessage) {
-      onContentChange();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [directAssistantMessage?.id]);
+  // Auto-scroll handled by messages.length changes
 
   // Render messages directly in message_number order - no complex turn grouping needed
 
@@ -250,7 +211,7 @@ export const MessageList = () => {
             <div className="flex flex-col p-4">
               {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
-              {renderMessages(messages, directAssistantMessage)}
+              {renderMessages(messages)}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
               <div style={{ height: '80px' }} />

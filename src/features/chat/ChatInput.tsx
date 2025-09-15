@@ -13,7 +13,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
-// Removed - using single source of truth in useChatStore
+// Using unified message store for all message management
 
 // Stop icon component
 const StopIcon = () => (

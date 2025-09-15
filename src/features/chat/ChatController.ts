@@ -5,7 +5,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
-// Removed - using universal mic system
+// Using unified message store for all message management
 
 
 import { getMessagesForConversation } from '@/services/api/messages';
@@ -19,7 +19,7 @@ class ChatController {
   private resetTimeout: NodeJS.Timeout | null = null;
   private lastFailedMessage: { text: string; mode?: string } | null = null;
   private isUnlocked = false; // New flag to control microphone access
-  // Removed - using universal mic system
+  // Using unified message store for all message management
   private isProcessingRef = false;
 
 
