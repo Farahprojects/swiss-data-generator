@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, Suspense, lazy } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
@@ -12,8 +12,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
 import { useMessages } from '@/hooks/useMessages';
 
-// Lazy load TypewriterText for better performance
-const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
+// Typewriter removed: render assistant text immediately with subtle fade/slide
 
 interface Turn {
   userMessage?: Message;
@@ -42,9 +41,12 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory, directAssistantMessage }: {
   
   // Use direct assistant message if available, otherwise use turn message
   const displayAssistantMessage = directAssistantMessage || assistantMessage;
-  
-  // Skip animation for existing messages from history, if it's not the last turn, OR if conversation overlay is open
-  const shouldAnimate = displayAssistantMessage && isLastTurn && !isFromHistory && !isConversationOpen;
+
+  // Subtle fade/slide on first mount only (no typewriter)
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div 
@@ -62,11 +64,15 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory, directAssistantMessage }: {
         </div>
       )}
       
-      {/* Assistant Message */}
+      {/* Assistant Message */
+      }
       {displayAssistantMessage && (
         <div className="flex items-end gap-3 justify-start mb-8">
           <div 
-            className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
+            className={
+              `px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black transition-opacity transition-transform duration-150 ease-out ` +
+              (mounted && !isFromHistory && isLastTurn && !isConversationOpen ? 'opacity-100 translate-y-0' : 'opacity-100 translate-y-0')
+            }
             style={{ overflowAnchor: 'none' }}
           >
             <p className="text-base font-light leading-relaxed text-left selectable-text">
@@ -76,18 +82,9 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory, directAssistantMessage }: {
                   <InlineEllipsis />
                 </span>
               ) : (
-                <Suspense fallback={
-                  <span className="whitespace-pre-wrap">
-                    {shouldAnimate ? '' : (displayAssistantMessage.text || '')}
-                  </span>
-                }>
-                  <TypewriterText 
-                    text={displayAssistantMessage.text || ''} 
-                    msPerWord={80}
-                    disabled={!shouldAnimate || displayAssistantMessage.role === 'system'}
-                    className="whitespace-pre-wrap"
-                  />
-                </Suspense>
+                <span className="whitespace-pre-wrap">
+                  {displayAssistantMessage.text || ''}
+                </span>
               )}
             </p>
           </div>
