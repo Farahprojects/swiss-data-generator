@@ -249,13 +249,12 @@ export const MessageList = () => {
   }, [mergedMessages.length]);
 
   // Auto-scroll once on direct assistant arrival (not on clear)
-  // COMMENTED OUT FOR TESTING - inconsistent jumping behavior
-  // React.useEffect(() => {
-  //   if (directAssistantMessage) {
-  //     onContentChange();
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [directAssistantMessage?.id]);
+  React.useEffect(() => {
+    if (directAssistantMessage) {
+      onContentChange();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directAssistantMessage?.id]);
 
   // Group messages into turns
   const turns = groupMessagesIntoTurns(mergedMessages);

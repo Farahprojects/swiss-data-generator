@@ -202,21 +202,7 @@ class ChatController {
 
   // addOptimisticMessages removed - handled by unifiedWebSocketService.sendMessageDirect()
 
-  private scrollToNewTurn(userMessageId: string) {
-    // Use double requestAnimationFrame to ensure DOM is fully updated
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const container = document.getElementById('chat-scroll-container');
-        const turn = document.querySelector(`[data-turn-id="${userMessageId}"]`) as HTMLElement;
-        
-        if (container && turn) {
-          const containerTop = container.offsetTop;
-          const turnTop = turn.offsetTop;
-          container.scrollTop = turnTop - containerTop;
-        }
-      });
-    });
-  }
+  // REMOVED: scrollToNewTurn - redundant with MessageList auto-scroll
 
 
   private initializeConversationService() {

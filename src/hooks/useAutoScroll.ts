@@ -30,8 +30,15 @@ export function useAutoScroll() {
 
   // Call this whenever messages length changes (or streaming chunk arrives)
   const onContentChange = useCallback(() => {
-    if (autoScroll) scrollToBottom();
-  }, [autoScroll, scrollToBottom]);
+    if (autoScroll) {
+      // Use double rAF to ensure DOM is stable before scrolling
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ block: "end" });
+        });
+      });
+    }
+  }, [autoScroll]);
 
   return { containerRef, bottomRef, onContentChange, scrollToBottom };
 }
