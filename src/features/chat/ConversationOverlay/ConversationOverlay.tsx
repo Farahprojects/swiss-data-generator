@@ -260,7 +260,7 @@ export const ConversationOverlay: React.FC = () => {
       // 6. STEP 4: Initialize Universal Recorder
       recorderRef.current = new UniversalSTTRecorder({
         mode: 'conversation',
-        silenceHangover: 600,
+        silenceHangover: 900,
         onTranscriptReady: (transcript: string) => {
           if (isShuttingDown.current || isProcessingRef.current) {
             return;
