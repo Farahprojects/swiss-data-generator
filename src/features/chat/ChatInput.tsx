@@ -103,19 +103,9 @@ export const ChatInput = () => {
         client_msg_id
       };
       
-      // Update UI directly through store and scroll immediately
+      // Update UI directly through store (MessageList manages auto-scroll)
       const { addMessage } = useChatStore.getState();
       addMessage(optimisticMessage);
-      // Force immediate scroll when user message appears
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const container = document.getElementById('chat-scroll-container');
-          const bottom = document.querySelector('#chat-scroll-container > div:last-child') as HTMLElement;
-          if (container && bottom) {
-            bottom.scrollIntoView({ block: 'end' });
-          }
-        });
-      });
       
       // Fire-and-forget direct invoke - no queueMicrotask delay
       supabase.functions.invoke('chat-send', {

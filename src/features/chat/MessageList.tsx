@@ -216,10 +216,11 @@ export const MessageList = () => {
     }
   }, [optimisticStoreMessages, astroChoiceMade]);
 
-  // Auto-scroll when messages change (window)
+  // Auto-scroll when DB window grows or direct assistant arrives
   React.useEffect(() => {
     onContentChange();
-  }, [windowMessages.length, onContentChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowMessages.length, directAssistantMessage]);
   
   // Combine window messages with optimistic ones (append optimistic at end)
   const mergedMessages = React.useMemo(() => {
