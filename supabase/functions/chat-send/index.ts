@@ -54,16 +54,15 @@ serve(async (req) => {
 
 
 
-    // Get the next message number for this chat
-    const { data: lastMessage } = await supabase
+    // Get the next message number for this chat using MAX() to ignore NULLs
+    const { data: userAgg } = await supabase
       .from("messages")
-      .select("message_number")
+      .select("max(message_number)")
       .eq("chat_id", chat_id)
-      .order("message_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .single();
 
-    const nextMessageNumber = (lastMessage?.message_number || 0) + 1;
+    const userLast = (userAgg as any)?.max ?? 0;
+    const nextMessageNumber = (userLast || 0) + 1;
 
     // Save message to DB (fire and forget)
     const userMessageData = {
@@ -118,13 +117,22 @@ serve(async (req) => {
         const { assistantMessageData } = llmData;
         
         if (assistantMessageData) {
-          // Try using userNext + 1 first (optimistic approach)
+          // Always fetch the latest number for this chat and assign next
+          const { data: assistantAgg } = await supabase
+            .from("messages")
+            .select("max(message_number)")
+            .eq("chat_id", chat_id)
+            .single();
+
+          const assistantLast = (assistantAgg as any)?.max ?? 0;
+          const assistantNextNumber = (assistantLast || 0) + 1;
+
           const assistantMessageWithNumber = {
             ...assistantMessageData,
-            message_number: nextMessageNumber + 1
+            message_number: assistantNextNumber
           };
-          
-          const { error: insertError } = await supabase
+
+          await supabase
             .from("messages")
             .insert(assistantMessageWithNumber, {
               onConflict: "client_msg_id",
@@ -132,32 +140,7 @@ serve(async (req) => {
               returning: "minimal"
             });
 
-          // Only query for next number if insert failed due to conflict
-          if (insertError && insertError.code === '23505') {
-            const { data: lastMessage } = await supabase
-              .from("messages")
-              .select("message_number")
-              .eq("chat_id", chat_id)
-              .order("message_number", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            const actualNextNumber = (lastMessage?.message_number || 0) + 1;
-            
-            await supabase
-              .from("messages")
-              .upsert({
-                ...assistantMessageWithNumber,
-                message_number: actualNextNumber
-              }, {
-                onConflict: "client_msg_id",
-                ignoreDuplicates: true,
-                returning: "minimal"
-              });
-            console.log('[chat-send] done');
-          } else {
-            console.log('[chat-send] done');
-          }
+          console.log('[chat-send] done');
         }
       }).catch(() => {}); // Silent error handling
 
@@ -194,46 +177,29 @@ serve(async (req) => {
         return;
       }
 
-      // Try using userNext + 1 first (optimistic approach)
+      // Always fetch latest number and assign next
+      const { data: assistantAgg } = await supabase
+        .from("messages")
+        .select("max(message_number)")
+        .eq("chat_id", chat_id)
+        .single();
+
+      const assistantLast = (assistantAgg as any)?.max ?? 0;
+      const assistantNextNumber = (assistantLast || 0) + 1;
+
       const assistantMessageWithNumber = {
         ...assistantMessageData,
-        message_number: nextMessageNumber + 1
+        message_number: assistantNextNumber
       };
 
-      const { error: insertError } = await supabase
+      await supabase
         .from("messages")
         .insert(assistantMessageWithNumber, {
           onConflict: "client_msg_id",
           ignoreDuplicates: true,
           returning: "minimal"
         });
-
-      // Only query for next number if insert failed due to conflict
-      if (insertError && insertError.code === '23505') {
-        const { data: lastMessage } = await supabase
-          .from("messages")
-          .select("message_number")
-          .eq("chat_id", chat_id)
-          .order("message_number", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const actualNextNumber = (lastMessage?.message_number || 0) + 1;
-        
-        await supabase
-          .from("messages")
-          .upsert({
-            ...assistantMessageWithNumber,
-            message_number: actualNextNumber
-          }, {
-            onConflict: "client_msg_id",
-            ignoreDuplicates: true,
-            returning: "minimal"
-          });
-        console.log('[chat-send] done');
-      } else {
-        console.log('[chat-send] done');
-      }
+      console.log('[chat-send] done');
     }).catch(() => {}); // Silent error handling
 
     // Return immediate acknowledgment
