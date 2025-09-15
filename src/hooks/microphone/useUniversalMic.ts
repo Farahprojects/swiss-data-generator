@@ -102,7 +102,6 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         baselineCaptureDuration: 1000, // 1 second baseline capture
         silenceMargin: 0.15, // 15% below baseline
         silenceHangover: 600, // 600ms silence detection (slight hang)
-        enableBandpass: true, // Human speech filter 100-4000Hz
       });
 
       await recorderRef.current.start();

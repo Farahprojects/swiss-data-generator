@@ -7,12 +7,10 @@ export interface STTRecorderOptions {
   baselineCaptureDuration?: number; // ms to capture baseline energy (default: 1000)
   silenceMargin?: number; // percentage below baseline to trigger silence (default: 0.15)
   silenceHangover?: number; // ms before triggering silence (default: 300)
-  enableBandpass?: boolean; // enable 100-4000Hz human speech filter (default: true)
   mode?: string; // e.g., 'conversation'
   onProcessingStart?: () => void; // fired when recording stops and processing begins
   triggerPercent?: number; // percentage above baseline to start capture (default: 0.2)
   preRollMs?: number; // how much audio before trigger to include (default: 300)
-  timesliceMs?: number; // MediaRecorder timeslice for chunking (default: 100)
 }
 
 export class UniversalSTTRecorder {
@@ -26,7 +24,7 @@ export class UniversalSTTRecorder {
   private dataArray: Float32Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
-  private bandpassFilter: BiquadFilterNode | null = null;
+  private bandpassFilter: BiquadFilterNode | null = null; // unused (kept for backward type compat if imported elsewhere)
   private adaptiveGain: GainNode | null = null; // desktop-only dynamic gain
   private scriptProcessor: ScriptProcessorNode | null = null;
   private silentGain: GainNode | null = null;
@@ -71,10 +69,8 @@ export class UniversalSTTRecorder {
       baselineCaptureDuration: 1000, // 1 second to capture baseline
       silenceMargin: 0.15, // 15% below baseline
       silenceHangover: 300, // 300ms before triggering silence
-      enableBandpass: true, // enable human speech filter
       triggerPercent: 0.2, // 20% above baseline to start
       preRollMs: 300,
-      timesliceMs: 100,
       ...options
     };
 
