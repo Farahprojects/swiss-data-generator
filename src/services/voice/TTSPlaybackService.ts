@@ -11,6 +11,7 @@ class TTSPlaybackService {
   private animationTimer: number | null = null;
   private isPlaying = false;
   private isPaused = false;
+  private isStopping = false;
   private listeners = new Set<() => void>();
   private currentUrl: string | null = null;
   private bufferSource: AudioBufferSourceNode | null = null; // fallback path tracking
@@ -221,6 +222,9 @@ class TTSPlaybackService {
 
       audioEl.onended = finalize;
       audioEl.onerror = async () => {
+        if (this.isStopping) {
+          return; // Ignore errors triggered by manual stop/teardown
+        }
         // Safari sometimes fails blob URLs; fallback to buffer decode path
         cleanupElement();
         try {
@@ -269,8 +273,12 @@ class TTSPlaybackService {
   }
 
   private internalStop(): void {
+    this.isStopping = true;
     // Stop media element playback if present
     if (this.currentSource) {
+      // Remove handlers BEFORE altering src to avoid triggering fallback onerror
+      try { this.currentSource.onended = null; } catch {}
+      try { (this.currentSource as any).onerror = null; } catch {}
       try { this.currentSource.pause(); } catch {}
       try { (this.currentSource as any).src = ''; } catch {}
     }
@@ -280,6 +288,7 @@ class TTSPlaybackService {
       try { this.bufferSource.stop(0); } catch {}
     }
     this.cleanupGraph();
+    this.isStopping = false;
   }
 
   // Consolidated graph cleanup (no state changes beyond graph + URL + animation)
