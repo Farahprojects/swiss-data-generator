@@ -116,8 +116,7 @@ export const ChatInput = () => {
         body: {
           chat_id: chat_id!,
           text: text.trim(),
-          client_msg_id,
-          mode: 'text'
+          client_msg_id
         }
       }).catch((error) => {
         console.error('[ChatInput] Direct invoke failed:', error);

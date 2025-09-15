@@ -22,7 +22,6 @@ class LlmService {
     chat_id: string; 
     text: string; 
     client_msg_id?: string;
-    mode?: string; // 🔥 CONVERSATION MODE: Flag for orchestrated flow
   }): Promise<Message> {
     // Fire-and-forget invoke (no await) to minimize perceived latency
     try {
@@ -33,7 +32,6 @@ class LlmService {
               chat_id: request.chat_id,
               text: request.text,
               client_msg_id: request.client_msg_id,
-              mode: request.mode,
             },
           }).catch((error) => {
             networkErrorHandler.handleError(error, 'LlmService.sendMessage');
@@ -46,7 +44,6 @@ class LlmService {
               chat_id: request.chat_id,
               text: request.text,
               client_msg_id: request.client_msg_id,
-              mode: request.mode,
             },
           }).catch((error) => {
             networkErrorHandler.handleError(error, 'LlmService.sendMessage');
