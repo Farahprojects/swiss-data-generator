@@ -123,7 +123,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     const { chat_id } = get();
     if (!chat_id) return;
 
-    // Initialize WebSocket connection
+    // Initialize WebSocket connection for message fetching
     await unifiedWebSocketService.initialize(chat_id, {
       onMessage: (message: Message) => {
         console.log('[MessageStore] WebSocket message received:', message.message_number);
