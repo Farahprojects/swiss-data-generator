@@ -24,7 +24,6 @@ export class UniversalSTTRecorder {
   private dataArray: Float32Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
-  private bandpassFilter: BiquadFilterNode | null = null; // unused (kept for backward type compat if imported elsewhere)
   private adaptiveGain: GainNode | null = null; // desktop-only dynamic gain
   private scriptProcessor: ScriptProcessorNode | null = null;
   private silentGain: GainNode | null = null;
@@ -464,7 +463,6 @@ export class UniversalSTTRecorder {
     }
   }
 
-  private processRecording(): void {}
 
   private async sendToSTT(audioBlob: Blob): Promise<void> {
     try {
@@ -508,7 +506,6 @@ export class UniversalSTTRecorder {
     }
   }
 
-  private getSupportedMimeType(): string { return 'audio/wav'; }
 
   // Resample Float32 mono buffer from inputSampleRate to 16kHz using linear interpolation
   private resampleTo16k(input: Float32Array, inputSampleRate: number): Int16Array {
@@ -605,7 +602,6 @@ export class UniversalSTTRecorder {
     this.analyser = null;
     this.highPassFilter = null;
     this.lowPassFilter = null;
-    this.bandpassFilter = null;
     this.dataArray = null;
     this.vadActive = false;
     
