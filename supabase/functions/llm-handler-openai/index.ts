@@ -163,6 +163,7 @@ Content Rules:
 
     // Fire-and-forget TTS call - ONLY for conversation mode
     if (mode === 'conversation') {
+      console.log('[llm-handler-openai] conversation: sending assistant message to chat-send');
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers: {
@@ -187,8 +188,11 @@ Content Rules:
           chat_id,
           text: sanitizedText,
           client_msg_id: crypto.randomUUID(),
-          role: 'assistant'
+          role: 'assistant',
+          mode: 'conversation'
         })
+      }).then(() => {
+        console.log('[llm-handler-openai] conversation: assistant message sent to chat-send');
       }).catch(() => {}); // Silent error handling
     }
 

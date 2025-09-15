@@ -39,7 +39,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, client_msg_id, mode, sessionId } = body;
+    const { chat_id, text, client_msg_id, mode, role, sessionId } = body;
 
     if (!chat_id || !text) {
       return new Response(JSON.stringify({
@@ -73,7 +73,52 @@ serve(async (req) => {
 
     const nextMessageNumber = userMessageNumber;
 
-    // Save message to DB (fire and forget)
+    // If this is an assistant message (e.g., from LLM in conversation mode), save assistant only
+    if (role === 'assistant') {
+      if (mode === 'conversation') {
+        console.log('[chat-send] Conversation mode: Assistant message received. Saving to DB...');
+      } else {
+        console.log('[chat-send] Assistant message received. Saving to DB...');
+      }
+
+      const assistantMessageData = {
+        chat_id,
+        role: "assistant",
+        text: text,
+        client_msg_id: client_msg_id || crypto.randomUUID(),
+        status: "complete",
+        message_number: nextMessageNumber,
+        meta: {}
+      };
+
+      const { error: assistantError } = await supabase
+        .from("messages")
+        .insert(assistantMessageData, {
+          onConflict: "client_msg_id",
+          ignoreDuplicates: true,
+          returning: "minimal"
+        });
+
+      if (assistantError) {
+        console.error('[chat-send] Failed to save assistant message:', assistantError);
+        return new Response(JSON.stringify({
+          error: "Failed to save assistant message"
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      console.log('[chat-send] Assistant message saved');
+      return new Response(JSON.stringify({
+        message: "Assistant message saved successfully",
+        assistant_message: assistantMessageData
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Otherwise, treat as a user message save
     const userMessageData = {
       chat_id,
       role: "user",
@@ -115,44 +160,7 @@ serve(async (req) => {
       });
     }
 
-    // For assistant messages (from LLM), just save to DB
-    if (role === 'assistant') {
-      const assistantMessageData = {
-        chat_id,
-        role: "assistant",
-        text: text,
-        client_msg_id: client_msg_id || crypto.randomUUID(),
-        status: "complete",
-        message_number: nextMessageNumber,
-        meta: {}
-      };
-
-      const { error: assistantError } = await supabase
-        .from("messages")
-        .insert(assistantMessageData, {
-          onConflict: "client_msg_id",
-          ignoreDuplicates: true,
-          returning: "minimal"
-        });
-
-      if (assistantError) {
-        console.error('[chat-send] Failed to save assistant message:', assistantError);
-        return new Response(JSON.stringify({
-          error: "Failed to save assistant message"
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-
-      console.log('[chat-send] Assistant message saved');
-      return new Response(JSON.stringify({
-        message: "Assistant message saved successfully",
-        assistant_message: assistantMessageData
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+    // (Assistant path handled above)
 
     // For non-conversation modes, call LLM handler and save assistant response
     try {
