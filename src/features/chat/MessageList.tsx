@@ -216,12 +216,6 @@ export const MessageList = () => {
     }
   }, [optimisticStoreMessages, astroChoiceMade]);
 
-  // Auto-scroll when DB window grows or direct assistant arrives
-  React.useEffect(() => {
-    onContentChange();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [windowMessages.length, directAssistantMessage]);
-  
   // Combine window messages with optimistic ones (append optimistic at end)
   const mergedMessages = React.useMemo(() => {
     // 1) Start with DB window (already message_number-ed)
@@ -247,6 +241,21 @@ export const MessageList = () => {
     });
     return all;
   }, [windowMessages, optimisticStoreMessages]);
+
+  // Auto-scroll when merged content grows (DB + optimistic)
+  React.useEffect(() => {
+    onContentChange();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mergedMessages.length]);
+
+  // Auto-scroll once on direct assistant arrival (not on clear)
+  // COMMENTED OUT FOR TESTING - inconsistent jumping behavior
+  // React.useEffect(() => {
+  //   if (directAssistantMessage) {
+  //     onContentChange();
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [directAssistantMessage?.id]);
 
   // Group messages into turns
   const turns = groupMessagesIntoTurns(mergedMessages);
