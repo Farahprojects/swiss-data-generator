@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { useChatInputState } from '@/hooks/useChatInputState';
 import { useChatStore } from '@/core/store';
+import { useMessageStore } from '@/stores/messageStore';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
@@ -103,8 +104,8 @@ export const ChatInput = () => {
         client_msg_id
       };
       
-      // Update UI directly through store (MessageList manages auto-scroll)
-      const { addMessage } = useChatStore.getState();
+      // Add message to unified store (will deduplicate by message_number when DB response arrives)
+      const { addMessage } = useMessageStore.getState();
       addMessage(optimisticMessage);
       
       // Fire-and-forget direct invoke - no queueMicrotask delay

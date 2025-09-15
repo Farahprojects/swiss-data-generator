@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useChatStore } from '@/core/store';
+import { useMessageStore } from '@/stores/messageStore';
 import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
@@ -68,19 +69,22 @@ const renderMessages = (messages: Message[], directAssistantMessage: Message | n
     }
   }
   
-  // Add direct assistant message at the end if it exists
+  // Add direct assistant message at the end if it exists and isn't already in the messages
   if (directAssistantMessage) {
-    elements.push(
-      <div key={`direct-assistant-${directAssistantMessage.id}`} className="flex items-end gap-3 justify-start mb-8">
-        <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
-          <p className="text-base font-light leading-relaxed text-left selectable-text">
-            <span className="whitespace-pre-wrap">
-              {directAssistantMessage.text || ''}
-            </span>
-          </p>
+    const isAlreadyRendered = messages.some(m => m.id === directAssistantMessage.id);
+    if (!isAlreadyRendered) {
+      elements.push(
+        <div key={`direct-assistant-${directAssistantMessage.id}`} className="flex items-end gap-3 justify-start mb-8">
+          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+            <p className="text-base font-light leading-relaxed text-left selectable-text">
+              <span className="whitespace-pre-wrap">
+                {directAssistantMessage.text || ''}
+              </span>
+            </p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
   
   return elements;
@@ -88,14 +92,19 @@ const renderMessages = (messages: Message[], directAssistantMessage: Message | n
 
 export const MessageList = () => {
   const chat_id = useChatStore((state) => state.chat_id);
-  // Sliding window from DB + realtime
-  const { messages: windowMessages, error: windowError, hasOlder, loadOlder } = useMessages(chat_id, 50);
+  
+  // Use unified message store
+  const { 
+    messages, 
+    loading, 
+    error: windowError, 
+    hasOlder, 
+    loadOlder, 
+    setChatId 
+  } = useMessageStore();
   
   // Direct assistant message state - bypasses store for immediate UI update
   const [directAssistantMessage, setDirectAssistantMessage] = useState<Message | null>(null);
-  
-  // Read optimistic user messages from store only (transient, not persisted)
-  const optimisticStoreMessages = useChatStore((state) => state.messages);
   
   // Listen for direct assistant messages
   useEffect(() => {
@@ -133,16 +142,23 @@ export const MessageList = () => {
     console.log('User chose to add astro data');
   };
   
-  // Track initial message count to determine which messages are from history (window-based now)
-  React.useEffect(() => {
-    if (initialMessageCount === null && windowMessages.length > 0) {
-      setInitialMessageCount(windowMessages.length);
+  // Set chat ID when it changes
+  useEffect(() => {
+    if (chat_id) {
+      setChatId(chat_id);
     }
-  }, [windowMessages.length, initialMessageCount]);
+  }, [chat_id, setChatId]);
 
-  // Check if user has sent a message (from optimistic store messages)
+  // Track initial message count to determine which messages are from history
   React.useEffect(() => {
-    const userMessages = optimisticStoreMessages.filter(m => m.role === 'user');
+    if (initialMessageCount === null && messages.length > 0) {
+      setInitialMessageCount(messages.length);
+    }
+  }, [messages.length, initialMessageCount]);
+
+  // Check if user has sent a message
+  React.useEffect(() => {
+    const userMessages = messages.filter(m => m.role === 'user');
     if (userMessages.length > 0) {
       setHasUserSentMessage(true);
       // Auto-assume "without" if user starts typing
@@ -150,51 +166,13 @@ export const MessageList = () => {
         setAstroChoiceMade(true);
       }
     }
-  }, [optimisticStoreMessages, astroChoiceMade]);
+  }, [messages, astroChoiceMade]);
 
-  // Combine window messages with optimistic ones (only user messages can be optimistic)
-  const mergedMessages = React.useMemo(() => {
-    // 1) Start with DB window (already message_number-ed)
-    const db = [...windowMessages];
-    
-    // 2) Add optimistic USER messages only (assistant messages always come from DB)
-    const dbClientIds = new Set(db.map(m => m.client_msg_id));
-    const optimisticUsers = optimisticStoreMessages
-      .filter(m => m.role === 'user' && !dbClientIds.has(m.client_msg_id));
-
-    // Assign temporary numbers to optimistic users just after current max
-    const currentMax = db.reduce((mx, m) => Math.max(mx, m.message_number ?? 0), 0);
-    let tempOffset = 1;
-    const withTemps = optimisticUsers.map(m => ({ ...m, message_number: currentMax + (tempOffset++) }));
-
-    const all = [...db, ...withTemps];
-    
-    // 3) Sort by message_number asc (primary), then createdAt asc (fallback), then id (tiebreaker)
-    all.sort((a, b) => {
-      const an = a.message_number ?? 0;
-      const bn = b.message_number ?? 0;
-      if (an !== bn) return an - bn;
-      if (a.createdAt !== b.createdAt) return a.createdAt.localeCompare(b.createdAt);
-      return a.id.localeCompare(b.id);
-    });
-    
-    // 4) Deduplicate by message_number (keep first occurrence)
-    const seen = new Set<number>();
-    const deduplicated = all.filter(m => {
-      const num = m.message_number ?? 0;
-      if (seen.has(num)) return false;
-      seen.add(num);
-      return true;
-    });
-    
-    return deduplicated;
-  }, [windowMessages, optimisticStoreMessages]);
-
-  // Auto-scroll when merged content grows (DB + optimistic)
+  // Auto-scroll when content grows
   React.useEffect(() => {
     onContentChange();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mergedMessages.length]);
+  }, [messages.length]);
 
   // Auto-scroll once on direct assistant arrival (not on clear)
   React.useEffect(() => {
@@ -218,7 +196,7 @@ export const MessageList = () => {
       id="chat-scroll-container"
     >
       {/* Error state for message loading (window-based) */}
-      {windowError && windowMessages.length === 0 && (
+      {windowError && messages.length === 0 && (
         <div className="flex-1 flex flex-col justify-center items-center p-4">
           <AlertTriangle className="h-8 w-8 text-orange-500 mb-2" />
           <p className="text-gray-600 text-center mb-4">
@@ -242,7 +220,7 @@ export const MessageList = () => {
       {/* Empty state or content */}
       {!windowError && (
         <>
-          {windowMessages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
                 {!astroChoiceMade && !chat_id ? (
@@ -272,7 +250,7 @@ export const MessageList = () => {
             <div className="flex flex-col p-4">
               {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
-              {renderMessages(mergedMessages, directAssistantMessage)}
+              {renderMessages(messages, directAssistantMessage)}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
               <div style={{ height: '80px' }} />

@@ -35,11 +35,12 @@ interface ChatState {
   // Chat actions (unified for both auth and guest)
   startConversation: (chat_id: string, guest_id?: string) => void;
   startNewConversation: (user_id?: string) => Promise<string>;
-  // Only for optimistic user messages (UI immediacy); not persisted for history
-  loadMessages: (messages: Message[]) => void; // deprecated path; kept for compat
-  addMessage: (message: Message) => void;      // user-only optimistic
-  updateMessage: (id: string, updates: Partial<Message>) => void; // user-only optimistic
-  removeMessage: (id: string) => void;         // user-only optimistic
+  // DEPRECATED: Message management moved to useMessageStore
+  // These are kept for backward compatibility but should not be used
+  loadMessages: (messages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  updateMessage: (id: string, updates: Partial<Message>) => void;
+  removeMessage: (id: string) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;

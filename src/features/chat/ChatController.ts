@@ -1,6 +1,7 @@
 // src/features/chat/ChatController.ts
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
+import { useMessageStore } from '@/stores/messageStore';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
@@ -80,7 +81,7 @@ class ChatController {
    * Handle incoming messages from unified WebSocket
    */
   private handleMessageReceived(message: Message) {
-    const { messages, updateMessage, addMessage } = useChatStore.getState();
+    const { messages, updateMessage, addMessage } = useMessageStore.getState();
     
     // Reconciliation logic: check if this is updating an optimistic message
     if (message.role === 'user' && message.client_msg_id) {
@@ -103,7 +104,7 @@ class ChatController {
    */
   private handleMessageUpdated(message: Message) {
     console.log('[ChatController] ♻️ UPDATE message received from unified WebSocket');
-    const { messages, updateMessage, addMessage } = useChatStore.getState();
+    const { messages, updateMessage, addMessage } = useMessageStore.getState();
     
     // Skip context_injected system updates
     if (message.role === 'assistant' && message.context_injected) {
@@ -154,7 +155,7 @@ class ChatController {
    * Handle optimistic messages (immediate UI updates)
    */
   private handleOptimisticMessage(message: Message) {
-    const { addMessage } = useChatStore.getState();
+    const { addMessage } = useMessageStore.getState();
     addMessage(message);
     console.log('[ChatController] Added optimistic message:', message.text);
   }
@@ -295,7 +296,8 @@ class ChatController {
    * Payment Flow Control Methods
    */
   public showPaymentFlowProgress(message: string): void {
-    const { chat_id, addMessage } = useChatStore.getState();
+    const { chat_id } = useChatStore.getState();
+    const { addMessage } = useMessageStore.getState();
     if (!chat_id) return;
 
     const progressMessage: Message = {
