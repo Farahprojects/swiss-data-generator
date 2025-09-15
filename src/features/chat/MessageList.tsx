@@ -162,11 +162,6 @@ export const MessageList = () => {
       const message = event.detail as Message;
       console.log('[MessageList] 🚀 Direct assistant message received:', message.id);
       setDirectAssistantMessage(message);
-      
-      // Clear after a delay to allow store to catch up
-      setTimeout(() => {
-        setDirectAssistantMessage(null);
-      }, 1000);
     };
     
     window.addEventListener('assistantMessage', handleDirectAssistantMessage as EventListener);
