@@ -86,7 +86,7 @@ export const ChatInput = () => {
         return;
       }
       
-      // Immediately show stop icon when sending message
+      // Immediately show stop icon when sending message (will auto-flip off when assistant text arrives)
       setAssistantTyping(true);
       
       // DIRECT INVOKE - No service layers, fastest possible
@@ -103,9 +103,19 @@ export const ChatInput = () => {
         client_msg_id
       };
       
-      // Update UI directly through store
+      // Update UI directly through store and scroll immediately
       const { addMessage } = useChatStore.getState();
       addMessage(optimisticMessage);
+      // Force immediate scroll when user message appears
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const container = document.getElementById('chat-scroll-container');
+          const bottom = document.querySelector('#chat-scroll-container > div:last-child') as HTMLElement;
+          if (container && bottom) {
+            bottom.scrollIntoView({ block: 'end' });
+          }
+        });
+      });
       
       // Fire-and-forget direct invoke - no queueMicrotask delay
       supabase.functions.invoke('chat-send', {

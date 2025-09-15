@@ -132,6 +132,10 @@ class ChatController {
       detail: message 
     });
     window.dispatchEvent(event);
+
+    // Flip stop button back to wave as soon as assistant text appears
+    const { setAssistantTyping } = useChatStore.getState();
+    setAssistantTyping(false);
   }
 
   /**
