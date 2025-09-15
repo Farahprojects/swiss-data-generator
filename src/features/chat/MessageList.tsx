@@ -34,9 +34,6 @@ const renderMessages = (messages: Message[]) => {
             <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
               {message.text || ''}
             </p>
-            {message.pending && (
-              <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
-            )}
           </div>
         </div>
       );
