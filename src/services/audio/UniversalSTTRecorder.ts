@@ -10,8 +10,6 @@ export interface STTRecorderOptions {
   enableBandpass?: boolean; // enable 100-4000Hz human speech filter (default: true)
   mode?: string; // e.g., 'conversation'
   onProcessingStart?: () => void; // fired when recording stops and processing begins
-  voiceTriggeredStart?: boolean; // start main capture only after voice spike trigger
-  preRollMs?: number; // how much audio before trigger to include (default 300ms)
 }
 
 export class UniversalSTTRecorder {
@@ -29,14 +27,6 @@ export class UniversalSTTRecorder {
   private bandpassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private filteredStream: MediaStream | null = null;
-  private mimeType: string = 'audio/webm';
-  // Voice-trigger pre-roll buffers (timesliced MediaRecorder)
-  private preRollChunks: Blob[] = [];
-  private activeChunks: Blob[] = [];
-  private preRollLimit: number = 3; // derived from preRollMs / timeslice
-  private timesliceMs: number = 100;
-  private voiceTriggeredActive: boolean = false;
-  private freqData: Uint8Array | null = null;
   
   // Simplified VAD state
   private silenceTimer: NodeJS.Timeout | null = null;
@@ -54,7 +44,6 @@ export class UniversalSTTRecorder {
       silenceMargin: 0.15, // 15% below baseline
       silenceHangover: 300, // 300ms before triggering silence
       enableBandpass: true, // enable human speech filter
-      preRollMs: 300,
       ...options
     };
 
@@ -161,42 +150,16 @@ export class UniversalSTTRecorder {
     this.mediaRecorder = new MediaRecorder(stream, {
       mimeType: mimeType
     });
-    this.mimeType = mimeType;
-    // Configure pre-roll ring buffer size based on desired preRollMs
-    this.preRollLimit = Math.max(1, Math.ceil((this.options.preRollMs || 300) / this.timesliceMs));
 
     // Single blob storage (not chunks)
     this.audioBlob = null;
     this.mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size === 0) return;
-      if (this.options.voiceTriggeredStart) {
-        // Before trigger: accumulate into pre-roll ring buffer
-        if (!this.voiceTriggeredActive) {
-          this.preRollChunks.push(event.data);
-          if (this.preRollChunks.length > this.preRollLimit) this.preRollChunks.shift();
-        } else {
-          // After trigger: record active chunks until stop()
-          this.activeChunks.push(event.data);
-        }
-      } else {
-        // Default: keep last available chunk as blob
-        this.audioBlob = event.data;
+      if (event.data.size > 0) {
+        this.audioBlob = event.data; // Store the entire recording as one blob
       }
     };
 
     this.mediaRecorder.onstop = () => {
-      // Assemble pre-roll + active chunks when using voice trigger
-      if (this.options.voiceTriggeredStart) {
-        const chunks: Blob[] = [];
-        if (this.preRollChunks.length) chunks.push(...this.preRollChunks);
-        if (this.activeChunks.length) chunks.push(...this.activeChunks);
-        if (chunks.length) {
-          this.audioBlob = new Blob(chunks, { type: this.mimeType });
-        }
-        this.preRollChunks = [];
-        this.activeChunks = [];
-        this.voiceTriggeredActive = false;
-      }
       this.processRecording();
     };
 
@@ -250,7 +213,6 @@ export class UniversalSTTRecorder {
 
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
-    this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
     
     // Initialize baseline capture
     this.resetBaselineCapture();
@@ -270,13 +232,6 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
-    // Voice start timing guards
-    const armingDelayMs = 300;
-    const sustainMs = 250;
-    let armed = false;
-    let accumMs = 0;
-    let lastTs = performance.now();
-    let triggered = false;
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -286,9 +241,6 @@ export class UniversalSTTRecorder {
       const tempArray = new Float32Array(this.analyser.fftSize);
       this.analyser.getFloatTimeDomainData(tempArray);
       this.dataArray = tempArray;
-      if (this.freqData) {
-        this.analyser.getByteFrequencyData(this.freqData);
-      }
       
       // Calculate RMS energy (lightweight)
       let sum = 0;
@@ -302,24 +254,11 @@ export class UniversalSTTRecorder {
       if (this.baselineCapturing) {
         this.baselineEnergySum += rms;
         this.baselineEnergyCount++;
-        // Also compute 1s band baseline for voice start
-        if (this.freqData) {
-          // Frequency band 300–3400 Hz
-          const sampleRate = this.audioContext ? this.audioContext.sampleRate : 48000;
-          const fftSize = this.analyser!.fftSize;
-          const binHz = sampleRate / fftSize;
-          const binStart = Math.max(0, Math.floor(300 / binHz));
-          const binEnd = Math.min(this.analyser!.frequencyBinCount - 1, Math.ceil(3400 / binHz));
-          let bandSum = 0;
-          for (let i = binStart; i <= binEnd; i++) bandSum += this.freqData[i];
-          // Keep running average in baselineEnergyCount domain via separate sums
-          // We’ll reuse baselineEnergy as-is for silence detection; band baseline stays implicit via initial average
-        }
         
         if (now - this.baselineStartTime >= this.options.baselineCaptureDuration!) {
           this.baselineEnergy = this.baselineEnergySum / this.baselineEnergyCount;
           this.baselineCapturing = false;
-          // No console noise in production; baseline captured
+          console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
         }
       }
       
@@ -331,7 +270,7 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Only run detection while recording and after baseline
+      // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
       if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
         // Dynamic threshold: baseline energy × (1 - margin)
         const dynamicThreshold = this.baselineEnergy * (1 - this.options.silenceMargin!);
@@ -355,41 +294,6 @@ export class UniversalSTTRecorder {
           if (this.silenceTimer) {
             clearTimeout(this.silenceTimer);
             this.silenceTimer = null;
-          }
-        }
-
-        // Voice-triggered start: use 1s band baseline and 30% spike rule
-        if (this.options.voiceTriggeredStart) {
-          const nowTs = performance.now();
-          const dt = Math.max(0, nowTs - lastTs);
-          lastTs = nowTs;
-          if (!armed) {
-            accumMs += dt;
-            if (accumMs >= armingDelayMs) { armed = true; accumMs = 0; }
-          } else if (!triggered && this.freqData) {
-            // Compute band energy 300–3400 Hz using current spectrum
-            const sampleRate = this.audioContext ? this.audioContext.sampleRate : 48000;
-            const fftSize = this.analyser!.fftSize;
-            const binHz = sampleRate / fftSize;
-            const binStart = Math.max(0, Math.floor(300 / binHz));
-            const binEnd = Math.min(this.analyser!.frequencyBinCount - 1, Math.ceil(3400 / binHz));
-            let bandNow = 0;
-            for (let i = binStart; i <= binEnd; i++) bandNow += this.freqData[i];
-            // Estimate baseline band energy from the first 1s using the same sampling period
-            // If baselineEnergyCount > 0, approximate band baseline as average magnitude across bins in quiet
-            // For simplicity, use dynamicThreshold as proxy floor: require strong band spike relative to floor
-            const bandFloor = Math.max(1, this.baselineEnergy * 1000); // scale to byte magnitude domain
-            const startCandidate = bandNow >= bandFloor * 1.3;
-            if (startCandidate) {
-              accumMs += dt;
-              if (accumMs >= sustainMs) {
-                triggered = true;
-                this.voiceTriggeredActive = true;
-                // From this moment, MediaRecorder is already capturing timeslices including pre-roll
-              }
-            } else {
-              accumMs = 0;
-            }
           }
         }
       }
