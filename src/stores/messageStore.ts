@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
+import { useChatStore } from '@/core/store';
 import type { Message } from '@/core/types';
 
 interface MessageStore {
@@ -75,6 +76,12 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
       
       return { messages: newMessages };
     });
+
+    // Flip stop button back to wave icon when assistant message appears
+    if (message.role === 'assistant') {
+      const { setAssistantTyping } = useChatStore.getState();
+      setAssistantTyping(false);
+    }
   },
 
   // Add optimistic message with temporary number for instant UI

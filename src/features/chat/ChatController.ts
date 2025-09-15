@@ -134,9 +134,7 @@ class ChatController {
     });
     window.dispatchEvent(event);
 
-    // Flip stop button back to wave as soon as assistant text appears
-    const { setAssistantTyping } = useChatStore.getState();
-    setAssistantTyping(false);
+    // Stop button flip-back is now handled in useMessageStore when assistant messages are added
   }
 
   /**
