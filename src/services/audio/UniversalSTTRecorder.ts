@@ -197,7 +197,7 @@ export class UniversalSTTRecorder {
 
     // Analyser for energy monitoring with simplified settings
     this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 256;
+    this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0; // No smoothing - we'll handle it ourselves
 
     // Destination for MediaRecorder (record filtered audio)
@@ -213,9 +213,6 @@ export class UniversalSTTRecorder {
 
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
-    
-    // Initialize baseline capture
-    this.resetBaselineCapture();
     this.startEnergyMonitoring();
   }
 
@@ -232,6 +229,13 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
+    const isMobile = this.isMobileDevice();
+    const threshold = isMobile ? 0.012 : 0.020; // fixed platform thresholds
+    const armingDelayMs = 300;
+    const minSpeechMs = 150;
+    let armed = false;
+    let speechAccumMs = 0;
+    let lastTs = performance.now();
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -249,16 +253,18 @@ export class UniversalSTTRecorder {
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
       
-      // Handle baseline energy capture during first ~1 second
-      const now = Date.now();
-      if (this.baselineCapturing) {
-        this.baselineEnergySum += rms;
-        this.baselineEnergyCount++;
-        
-        if (now - this.baselineStartTime >= this.options.baselineCaptureDuration!) {
-          this.baselineEnergy = this.baselineEnergySum / this.baselineEnergyCount;
-          this.baselineCapturing = false;
-          console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
+      // Minimal VAD: fixed threshold with arming and min-speech gate
+      const nowTs = performance.now();
+      const dt = Math.max(0, nowTs - lastTs);
+      lastTs = nowTs;
+      if (!armed) {
+        // Arming delay to avoid startup pops/clicks
+        if (dt > 0) {
+          speechAccumMs += dt;
+          if (speechAccumMs >= armingDelayMs) {
+            armed = true;
+            speechAccumMs = 0;
+          }
         }
       }
       
@@ -270,30 +276,25 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
-      if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
-        // Dynamic threshold: baseline energy × (1 - margin)
-        const dynamicThreshold = this.baselineEnergy * (1 - this.options.silenceMargin!);
-        const isSpeaking = rms > dynamicThreshold;
-        
-        // Log occasionally for debugging
-        if (Math.random() < 0.01) {
-          console.log('[UniversalSTTRecorder] Current RMS:', rms.toFixed(6), 'Threshold:', dynamicThreshold.toFixed(6), 'Speaking:', isSpeaking);
-        }
-        
-        if (!isSpeaking) {
-          // Start silence timer
-          if (!this.silenceTimer) {
-            this.silenceTimer = setTimeout(() => {
-              console.log('[UniversalSTTRecorder] 🔇 Silence detected - stopping recording');
-              this.stop();
-            }, this.options.silenceHangover);
+      // Only run VAD while recording and after arming
+      if (this.isRecording && armed) {
+        const candidate = rms >= threshold;
+
+        if (candidate) {
+          // Require short sustained speech before fully cancelling hangover
+          speechAccumMs += dt;
+          if (speechAccumMs >= minSpeechMs) {
+            if (this.silenceTimer) {
+              clearTimeout(this.silenceTimer);
+              this.silenceTimer = null;
+            }
           }
         } else {
-          // Clear silence timer (voice detected)
-          if (this.silenceTimer) {
-            clearTimeout(this.silenceTimer);
-            this.silenceTimer = null;
+          speechAccumMs = 0;
+          if (!this.silenceTimer) {
+            this.silenceTimer = setTimeout(() => {
+              this.stop();
+            }, this.options.silenceHangover);
           }
         }
       }
