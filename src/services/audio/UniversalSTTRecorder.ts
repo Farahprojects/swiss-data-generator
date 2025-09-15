@@ -27,6 +27,7 @@ export class UniversalSTTRecorder {
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
   private bandpassFilter: BiquadFilterNode | null = null;
+  private adaptiveGain: GainNode | null = null; // desktop-only dynamic gain
   private scriptProcessor: ScriptProcessorNode | null = null;
   private silentGain: GainNode | null = null;
   
@@ -40,6 +41,8 @@ export class UniversalSTTRecorder {
   private baselineEnergySum = 0;
   private baselineEnergyCount = 0;
   private vadArmUntilTs: number = 0; // time after which VAD can arm (post-baseline guard)
+  private currentGain: number = 1; // smoothed adaptive gain (desktop)
+  private desktopTargetRMS: number = 0.12; // desktop loudness target
 
   // VAD state
   private vadActive: boolean = false; // currently capturing a speech segment
@@ -185,14 +188,18 @@ export class UniversalSTTRecorder {
     this.lowPassFilter.frequency.value = 4000; // Hz
     this.lowPassFilter.Q.value = 0.7;
     this.highPassFilter.connect(this.lowPassFilter);
-    const lastFilterNode = this.lowPassFilter;
+    // Desktop-only adaptive gain stage (mobile stays at 1.0)
+    this.adaptiveGain = this.audioContext.createGain();
+    this.adaptiveGain.gain.value = 1;
+    this.lowPassFilter.connect(this.adaptiveGain);
+    const lastFilterNode = this.adaptiveGain;
 
     // Analyser for energy monitoring with simplified settings
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0; // No smoothing - we'll handle it ourselves
 
-    // Simplified graph: source -> HPF -> LPF -> analyser
+    // Simplified graph: source -> HPF -> LPF -> [adaptiveGain] -> analyser
     sourceNode.connect(this.highPassFilter);
     lastFilterNode.connect(this.analyser);
 
@@ -273,6 +280,12 @@ export class UniversalSTTRecorder {
         sum += this.dataArray[i] * this.dataArray[i];
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
+      // Track peak for simple headroom computation
+      let peak = 0;
+      for (let i = 0; i < this.dataArray.length; i++) {
+        const v = Math.abs(this.dataArray[i]);
+        if (v > peak) peak = v;
+      }
       
       // Handle baseline energy capture during first ~1 second
       const now = Date.now();
@@ -286,6 +299,13 @@ export class UniversalSTTRecorder {
           // Arm VAD slightly after baseline to avoid UI click/glitch triggers
           this.vadArmUntilTs = now + 250;
           console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
+          // Desktop-only: initialize adaptive gain from baseline
+          if (!this.isMobileDevice() && this.adaptiveGain) {
+            const target = this.desktopTargetRMS;
+            const rawGain = target / Math.max(1e-6, this.baselineEnergy);
+            this.currentGain = Math.max(0.5, Math.min(6, rawGain));
+            this.adaptiveGain.gain.value = this.currentGain;
+          }
         }
       }
       
@@ -296,6 +316,18 @@ export class UniversalSTTRecorder {
 
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
+
+      // Desktop-only dynamic gain update (EMA smoothing + headroom clamp)
+      if (!this.isMobileDevice() && this.adaptiveGain) {
+        const target = this.desktopTargetRMS;
+        const desired = target / Math.max(1e-6, rms);
+        // Headroom: keep peaks under ~0.9
+        const headroom = peak > 0 ? 0.9 / peak : 6;
+        const clamped = Math.max(0.5, Math.min(6, Math.min(desired, headroom)));
+        // EMA smoothing (~300ms): alpha depends on RAF cadence; approximate alpha=0.1
+        this.currentGain = this.currentGain * 0.9 + clamped * 0.1;
+        this.adaptiveGain.gain.value = this.currentGain;
+      }
 
       // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
       if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
