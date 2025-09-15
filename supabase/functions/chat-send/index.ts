@@ -104,28 +104,11 @@ serve(async (req) => {
       });
     }
 
-    // For conversation mode, save user message and call LLM async
+    // For conversation mode, just save user message (STT handles LLM call separately)
     if (mode === 'conversation') {
-      console.log('[chat-send] Conversation mode: User message saved, calling LLM async');
-      
-      // Fire-and-forget LLM call
-      fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        },
-        body: JSON.stringify({
-          chat_id,
-          text: text,
-          mode: 'conversation'
-        })
-      }).catch((error) => {
-        console.error('[chat-send] LLM call failed:', error);
-      });
-
+      console.log('[chat-send] Conversation mode: User message saved');
       return new Response(JSON.stringify({
-        message: "User message saved, LLM processing started",
+        message: "User message saved successfully",
         user_message: userMessageData
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }

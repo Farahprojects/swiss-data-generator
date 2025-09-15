@@ -124,11 +124,11 @@ serve(async (req) => {
       );
     }
 
-    // For conversation mode: Fire and forget to LLM, then broadcast thinking-mode
+    // For conversation mode: Save user message and call LLM separately
     if (mode === 'conversation' && chat_id) {
-      console.log('[openai-whisper] 🔄 CONVERSATION MODE: Calling LLM and broadcasting thinking-mode');
+      console.log('[openai-whisper] 🔄 CONVERSATION MODE: Saving user message and calling LLM');
       
-      // Fire and forget to LLM
+      // Save user message to chat-send
       try {
         await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
           method: 'POST',
@@ -140,6 +140,25 @@ serve(async (req) => {
             chat_id,
             text: transcript,
             client_msg_id: crypto.randomUUID(),
+            mode: 'conversation'
+          })
+        });
+        console.log('[openai-whisper] ✅ User message saved');
+      } catch (error) {
+        console.error('[openai-whisper] ❌ User message save failed:', error);
+      }
+
+      // Fire and forget to LLM
+      try {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id,
+            text: transcript,
             mode: 'conversation'
           })
         });
