@@ -11,6 +11,8 @@ interface MessageStore {
   loading: boolean;
   error: string | null;
   hasOlder: boolean;
+  wsConnected: boolean;
+  wsInitialized: boolean;
   
   // Actions
   setChatId: (id: string | null) => void;
@@ -22,6 +24,7 @@ interface MessageStore {
   fetchMessagesViaWebSocket: () => Promise<void>;
   fetchMessagesDirect: () => Promise<void>;
   loadOlder: () => Promise<void>;
+  initializeWebSocket: () => Promise<void>;
   setupRealtimeSubscription: () => void;
 }
 
@@ -45,11 +48,18 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
   loading: false,
   error: null,
   hasOlder: false,
+  wsConnected: false,
+  wsInitialized: false,
 
   // Set chat ID and auto-fetch messages
   setChatId: (id: string | null) => {
     set({ chat_id: id, messages: [], error: null });
     if (id) {
+      // Initialize WebSocket early if not already done
+      if (!get().wsInitialized) {
+        get().initializeWebSocket();
+      }
+      // Fetch messages with proper fallback strategy
       get().fetchMessagesWithFallback();
     }
   },
@@ -120,60 +130,77 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     set({ messages: [], error: null });
   },
 
-  // Fetch messages with WebSocket fallback to direct Supabase
+  // Initialize WebSocket early and keep it hot
+  initializeWebSocket: async () => {
+    if (get().wsInitialized) return;
+    
+    set({ wsInitialized: true });
+    console.log('[MessageStore] Initializing WebSocket early...');
+    
+    try {
+      await unifiedWebSocketService.initialize(
+        (message) => {
+          console.log('[MessageStore] WebSocket message received:', message);
+          get().addMessage(message);
+          set({ wsConnected: true });
+        },
+        (error) => {
+          console.warn('[MessageStore] WebSocket error:', error);
+          set({ wsConnected: false, error });
+        }
+      );
+      set({ wsConnected: true });
+    } catch (e: any) {
+      console.warn('[MessageStore] WebSocket initialization failed:', e.message);
+      set({ wsConnected: false, error: e.message });
+    }
+  },
+
+  // Smart fetch: Use hot WebSocket if available, otherwise direct fetch
   fetchMessagesWithFallback: async () => {
-    const { chat_id } = get();
+    const { chat_id, wsConnected } = get();
     if (!chat_id) return;
 
     set({ loading: true, error: null });
-    
+
     try {
-      // Try WebSocket first
-      console.log('[MessageStore] Trying WebSocket for messages...');
-      await get().fetchMessagesViaWebSocket();
-      
-      // Set up fallback timer
-      const fallbackTimer = setTimeout(() => {
-        console.log('[MessageStore] WebSocket timeout, falling back to direct Supabase...');
-        get().fetchMessagesDirect();
-      }, 3000); // 3 second timeout
-      
-      // Clear timer if WebSocket succeeds quickly
-      const originalMessages = get().messages;
-      const checkSuccess = () => {
-        if (get().messages.length > originalMessages.length) {
-          clearTimeout(fallbackTimer);
-          console.log('[MessageStore] WebSocket succeeded, canceling fallback');
-        }
-      };
-      
-      // Check after 100ms
-      setTimeout(checkSuccess, 100);
-      
+      if (wsConnected) {
+        console.log('[MessageStore] Using hot WebSocket for messages...');
+        await get().fetchMessagesViaWebSocket();
+      } else {
+        console.log('[MessageStore] WebSocket not connected, using direct fetch...');
+        await get().fetchMessagesDirect();
+      }
     } catch (e: any) {
-      console.log('[MessageStore] WebSocket failed, falling back to direct Supabase...');
+      console.warn('[MessageStore] Primary fetch failed, trying direct fallback:', e.message);
       await get().fetchMessagesDirect();
     }
   },
 
-  // Fetch messages via WebSocket
+  // Fetch messages via hot WebSocket connection
   fetchMessagesViaWebSocket: async () => {
-    const { chat_id } = get();
+    const { chat_id, wsConnected } = get();
     if (!chat_id) return;
 
-    // Initialize WebSocket connection for message fetching
-    await unifiedWebSocketService.initialize(chat_id, {
-      onMessage: (message: Message) => {
-        console.log('[MessageStore] WebSocket message received:', message.message_number);
-        get().addMessage(message);
-      },
-      onError: (error: string) => {
-        console.error('[MessageStore] WebSocket error:', error);
-        set({ error });
-      }
-    });
-    
-    set({ loading: false });
+    if (!wsConnected) {
+      throw new Error('WebSocket not connected');
+    }
+
+    try {
+      // Use the already hot WebSocket connection
+      console.log('[MessageStore] Subscribing to chat via hot WebSocket...');
+      
+      // Subscribe to this specific chat using the hot connection
+      await unifiedWebSocketService.subscribeToChat(chat_id);
+      
+      set({ loading: false });
+    } catch (e: any) {
+      set({ 
+        error: `WebSocket fetch failed: ${e.message}`,
+        loading: false 
+      });
+      throw e;
+    }
   },
 
   // Fetch messages directly from Supabase (fallback)
@@ -238,43 +265,11 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     }
   },
 
-  // Setup realtime subscription
+  // Setup realtime subscription (now handled by WebSocket service)
   setupRealtimeSubscription: () => {
-    const { chat_id } = get();
-    if (!chat_id) return;
-
-    // Clean up existing subscription
-    const existingChannel = (useMessageStore as any)._channel;
-    if (existingChannel) {
-      supabase.removeChannel(existingChannel);
-    }
-
-    const channel = supabase
-      .channel(`messages-${chat_id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `chat_id=eq.${chat_id}`
-      }, (payload) => {
-        const newMessage = mapDbToMessage(payload.new);
-        console.log('[MessageStore] Real-time INSERT:', newMessage.message_number);
-        get().addMessage(newMessage);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: `chat_id=eq.${chat_id}`
-      }, (payload) => {
-        const updatedMessage = mapDbToMessage(payload.new);
-        console.log('[MessageStore] Real-time UPDATE:', updatedMessage.id);
-        get().updateMessage(updatedMessage.id, updatedMessage);
-      })
-      .subscribe();
-
-    // Store channel reference for cleanup
-    (useMessageStore as any)._channel = channel;
+    // This method is now handled by the WebSocket service
+    // No need to duplicate the subscription logic
+    console.log('[MessageStore] Realtime subscription handled by WebSocket service');
   }
 }));
 

@@ -19,15 +19,15 @@ class UnifiedWebSocketService {
   }
 
   /**
-   * Initialize the WebSocket service for message fetching only
+   * Initialize the WebSocket service early (without specific chat_id)
+   * This creates a hot connection that can be used for any chat
    */
-  async initialize(chat_id: string, callbacks: {
-    onMessage?: (message: Message) => void;
-    onError?: (error: string) => void;
-  }) {
-    this.currentChatId = chat_id;
-    this.onMessage = callbacks.onMessage;
-    this.onError = callbacks.onError;
+  async initialize(
+    onMessage?: (message: Message) => void,
+    onError?: (error: string) => void
+  ) {
+    this.onMessage = onMessage;
+    this.onError = onError;
 
     // Clean up existing subscription
     if (this.realtimeChannel) {
@@ -35,7 +35,23 @@ class UnifiedWebSocketService {
       this.realtimeChannel = null;
     }
 
-    // Setup realtime subscription for DB changes
+    // Connect to Supabase realtime early
+    console.log('[UnifiedWebSocket] Connecting to Supabase realtime...');
+  }
+
+  /**
+   * Subscribe to a specific chat (called when chat_id is known)
+   */
+  async subscribeToChat(chat_id: string) {
+    this.currentChatId = chat_id;
+    
+    // Clean up existing subscription
+    if (this.realtimeChannel) {
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+
+    // Setup realtime subscription for this specific chat
     this.setupRealtimeSubscription(chat_id);
   }
 
