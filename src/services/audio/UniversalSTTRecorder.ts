@@ -10,6 +10,8 @@ export interface STTRecorderOptions {
   enableBandpass?: boolean; // enable 100-4000Hz human speech filter (default: true)
   mode?: string; // e.g., 'conversation'
   onProcessingStart?: () => void; // fired when recording stops and processing begins
+  voiceTriggeredStart?: boolean; // if true, only start collecting when voice detected
+  preRollMs?: number; // amount of audio before trigger to include (default: 300ms)
 }
 
 export class UniversalSTTRecorder {
@@ -27,6 +29,13 @@ export class UniversalSTTRecorder {
   private bandpassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private filteredStream: MediaStream | null = null;
+  private mimeType: string = 'audio/webm';
+  // Voice-trigger buffers
+  private preRollChunks: Blob[] = [];
+  private activeChunks: Blob[] = [];
+  private preRollLimit: number = 3; // derived from preRollMs/timeslice
+  private timesliceMs: number = 100;
+  private voiceTriggeredActive: boolean = false;
   
   // Simplified VAD state
   private silenceTimer: NodeJS.Timeout | null = null;
@@ -44,6 +53,7 @@ export class UniversalSTTRecorder {
       silenceMargin: 0.15, // 15% below baseline
       silenceHangover: 300, // 300ms before triggering silence
       enableBandpass: true, // enable human speech filter
+      preRollMs: 300,
       ...options
     };
 
@@ -75,7 +85,12 @@ export class UniversalSTTRecorder {
       this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
       
       // Step 4: Start recording
-      this.mediaRecorder!.start();
+      // If voice-triggered start is enabled, record in timeslices to build pre-roll
+      if (this.options.voiceTriggeredStart) {
+        this.mediaRecorder!.start(this.timesliceMs);
+      } else {
+        this.mediaRecorder!.start();
+      }
       this.isRecording = true;
 
     } catch (error) {
@@ -150,16 +165,48 @@ export class UniversalSTTRecorder {
     this.mediaRecorder = new MediaRecorder(stream, {
       mimeType: mimeType
     });
+    this.mimeType = mimeType;
+    // Configure pre-roll ring size
+    this.preRollLimit = Math.max(1, Math.ceil((this.options.preRollMs || 300) / this.timesliceMs));
 
     // Single blob storage (not chunks)
     this.audioBlob = null;
     this.mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        this.audioBlob = event.data; // Store the entire recording as one blob
+      if (event.data.size === 0) return;
+      if (this.options.voiceTriggeredStart) {
+        // Before trigger: keep limited pre-roll ring buffer
+        if (!this.voiceTriggeredActive) {
+          this.preRollChunks.push(event.data);
+          if (this.preRollChunks.length > this.preRollLimit) {
+            this.preRollChunks.shift();
+          }
+        } else {
+          // After trigger: collect active chunks
+          this.activeChunks.push(event.data);
+        }
+      } else {
+        // Default behavior: keep last data as single blob
+        this.audioBlob = event.data;
       }
     };
 
     this.mediaRecorder.onstop = () => {
+      // If voice-triggered, assemble pre-roll + active into one blob
+      if (this.options.voiceTriggeredStart) {
+        const chunks: Blob[] = [];
+        if (this.preRollChunks.length) chunks.push(...this.preRollChunks);
+        if (this.activeChunks.length) chunks.push(...this.activeChunks);
+        if (chunks.length) {
+          this.audioBlob = new Blob(chunks, { type: this.mimeType });
+        } else {
+          // Fallback to last chunk if available
+          if (!this.audioBlob) this.audioBlob = new Blob([], { type: this.mimeType });
+        }
+        // Reset buffers
+        this.preRollChunks = [];
+        this.activeChunks = [];
+        this.voiceTriggeredActive = false;
+      }
       this.processRecording();
     };
 
@@ -232,6 +279,12 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
+    let armed = false;
+    let speechAccumMs = 0;
+    let lastTs = performance.now();
+    let triggered = false;
+    let rmsEma = 0;
+    const rmsAlpha = 0.15;
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -248,6 +301,7 @@ export class UniversalSTTRecorder {
         sum += this.dataArray[i] * this.dataArray[i];
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
+      rmsEma = rmsEma * (1 - rmsAlpha) + rms * rmsAlpha;
       
       // Handle baseline energy capture during first ~1 second
       const now = Date.now();
@@ -270,30 +324,61 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
+      // Only run VAD while actively recording AND after baseline is captured
       if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
         // Dynamic threshold: baseline energy × (1 - margin)
         const dynamicThreshold = this.baselineEnergy * (1 - this.options.silenceMargin!);
-        const isSpeaking = rms > dynamicThreshold;
+        // Simple ZCR
+        let crossings = 0;
+        for (let i = 1; i < this.dataArray.length; i++) {
+          const a = this.dataArray[i - 1];
+          const b = this.dataArray[i];
+          if (a * b < 0 && (Math.abs(a) > 0.01 || Math.abs(b) > 0.01)) crossings++;
+        }
+        const zcr = crossings / (this.dataArray.length - 1);
+        const candidate = (rmsEma > dynamicThreshold) && (zcr >= 0.05 && zcr <= 0.25);
         
         // Log occasionally for debugging
         if (Math.random() < 0.01) {
-          console.log('[UniversalSTTRecorder] Current RMS:', rms.toFixed(6), 'Threshold:', dynamicThreshold.toFixed(6), 'Speaking:', isSpeaking);
+          console.log('[UniversalSTTRecorder] rmsEma:', rmsEma.toFixed(6), 'thr:', dynamicThreshold.toFixed(6), 'zcr:', zcr.toFixed(3), 'cand:', candidate, 'trig:', triggered);
         }
-        
-        if (!isSpeaking) {
-          // Start silence timer
-          if (!this.silenceTimer) {
-            this.silenceTimer = setTimeout(() => {
-              console.log('[UniversalSTTRecorder] 🔇 Silence detected - stopping recording');
-              this.stop();
-            }, this.options.silenceHangover);
+        // Arming delay before trigger
+        const nowTs = performance.now();
+        const dt = Math.max(0, nowTs - lastTs);
+        lastTs = nowTs;
+        if (!armed) {
+          speechAccumMs += dt;
+          if (speechAccumMs >= 300) { armed = true; speechAccumMs = 0; }
+        }
+
+        if (armed && !triggered && this.options.voiceTriggeredStart) {
+          if (candidate) {
+            speechAccumMs += dt;
+            if (speechAccumMs >= 250) {
+              // Trigger: start collecting main chunks
+              triggered = true;
+              this.voiceTriggeredActive = true;
+            }
+          } else {
+            speechAccumMs = 0;
           }
-        } else {
-          // Clear silence timer (voice detected)
-          if (this.silenceTimer) {
-            clearTimeout(this.silenceTimer);
-            this.silenceTimer = null;
+        }
+
+        // Silence handling only after trigger (or if voiceTriggeredStart is off)
+        const allowSilence = !this.options.voiceTriggeredStart || triggered;
+        if (allowSilence) {
+          if (!candidate) {
+            if (!this.silenceTimer) {
+              this.silenceTimer = setTimeout(() => {
+                console.log('[UniversalSTTRecorder] 🔇 Silence detected - stopping recording');
+                this.stop();
+              }, this.options.silenceHangover);
+            }
+          } else {
+            if (this.silenceTimer) {
+              clearTimeout(this.silenceTimer);
+              this.silenceTimer = null;
+            }
           }
         }
       }
