@@ -43,6 +43,18 @@ export class UniversalSTTRecorder {
   private vadArmUntilTs: number = 0; // time after which VAD can arm (post-baseline guard)
   private currentGain: number = 1; // smoothed adaptive gain (desktop)
   private desktopTargetRMS: number = 0.12; // desktop loudness target
+  // Persistent baseline adaptation
+  private ambientEma: number = 0;
+  private ambientStableSince: number = 0;
+  private baselineLastUpdated: number = 0;
+  private readonly desktopBaselineTrigger = 0.25; // 25%
+  private readonly mobileBaselineTrigger = 0.30; // 30%
+  private readonly desktopAmbientStableMs = 1000; // 1.0s
+  private readonly mobileAmbientStableMs = 1200; // 1.2s
+  private readonly desktopBaselineFloor = 0.002;
+  private readonly desktopBaselineCeiling = 0.08;
+  private readonly mobileBaselineFloor = 0.003;
+  private readonly mobileBaselineCeiling = 0.10;
 
   // VAD state
   private vadActive: boolean = false; // currently capturing a speech segment
@@ -246,8 +258,13 @@ export class UniversalSTTRecorder {
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
     
-    // Initialize baseline capture
-    this.resetBaselineCapture();
+    // Initialize or reuse baseline
+    if (this.baselineEnergy > 0) {
+      this.baselineCapturing = false;
+      this.vadArmUntilTs = Date.now() + 250; // guard clicks
+    } else {
+      this.resetBaselineCapture();
+    }
     this.startEnergyMonitoring();
   }
 
@@ -360,6 +377,41 @@ export class UniversalSTTRecorder {
               this.silenceTimer = null;
             }
           }
+        }
+
+        // Baseline adaptation during silence only (freeze while speaking)
+        const isSilent = rms <= stopThreshold;
+        if (isSilent) {
+          // Update ambient EMA
+          const ambientAlpha = 0.1; // slow
+          this.ambientEma = this.ambientEma === 0 ? rms : (this.ambientEma * (1 - ambientAlpha) + rms * ambientAlpha);
+          const trigger = this.isMobileDevice() ? this.mobileBaselineTrigger : this.desktopBaselineTrigger;
+          const stableMs = this.isMobileDevice() ? this.mobileAmbientStableMs : this.desktopAmbientStableMs;
+          const dev = Math.abs(this.ambientEma - this.baselineEnergy) / Math.max(1e-6, this.baselineEnergy);
+          if (dev > trigger) {
+            if (this.ambientStableSince === 0) this.ambientStableSince = Date.now();
+            if (Date.now() - this.ambientStableSince >= stableMs) {
+              // Apply asymmetric EMA to baseline
+              const upward = this.ambientEma > this.baselineEnergy;
+              const alpha = upward ? 0.3 : 0.1;
+              let newBaseline = this.baselineEnergy * (1 - alpha) + this.ambientEma * alpha;
+              // Clamp to platform-specific bounds
+              const floor = this.isMobileDevice() ? this.mobileBaselineFloor : this.desktopBaselineFloor;
+              const ceil = this.isMobileDevice() ? this.mobileBaselineCeiling : this.desktopBaselineCeiling;
+              newBaseline = Math.min(Math.max(newBaseline, floor), ceil);
+              this.baselineEnergy = newBaseline;
+              this.baselineLastUpdated = Date.now();
+              // Re-arm briefly to avoid immediate retrigger after shift
+              this.vadArmUntilTs = Date.now() + 200;
+              // Reset stable window to avoid repeated updates
+              this.ambientStableSince = 0;
+            }
+          } else {
+            this.ambientStableSince = 0;
+          }
+        } else {
+          // Speaking/noise: do not adapt baseline
+          this.ambientStableSince = 0;
         }
       }
 
