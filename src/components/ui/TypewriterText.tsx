@@ -10,6 +10,7 @@ interface TypewriterTextProps {
   showCursor?: boolean;
   cursorChar?: string;
   disabled?: boolean; // Skip animation entirely
+  // onAdvance and reserveHeight removed to simplify
 }
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({

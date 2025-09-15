@@ -29,6 +29,7 @@ export function useMessages(chatId: string | null, windowSize: number = 50): Use
 		client_msg_id: db.client_msg_id,
 		status: db.status,
 		context_injected: db.context_injected,
+		message_number: db.message_number,
 	});
 
 	const fetchLastN = async () => {

@@ -16,6 +16,7 @@ interface ChatState {
   // Current active chat
   chat_id: string | null;
   guest_id: string | null;
+  // Transient only: optimistic user messages (assistant messages do not persist here)
   messages: Message[];
   status: ChatStatus;
   error: string | null;
@@ -34,10 +35,11 @@ interface ChatState {
   // Chat actions (unified for both auth and guest)
   startConversation: (chat_id: string, guest_id?: string) => void;
   startNewConversation: (user_id?: string) => Promise<string>;
-  loadMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  updateMessage: (id: string, updates: Partial<Message>) => void;
-  removeMessage: (id: string) => void;
+  // Only for optimistic user messages (UI immediacy); not persisted for history
+  loadMessages: (messages: Message[]) => void; // deprecated path; kept for compat
+  addMessage: (message: Message) => void;      // user-only optimistic
+  updateMessage: (id: string, updates: Partial<Message>) => void; // user-only optimistic
+  removeMessage: (id: string) => void;         // user-only optimistic
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;

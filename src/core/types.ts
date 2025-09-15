@@ -15,6 +15,7 @@ export interface Message {
   client_msg_id?: string;
   status?: 'thinking' | 'complete' | 'error';
   context_injected?: boolean;
+  message_number?: number; // Global per-chat ordering key
 }
 
 export interface Conversation {

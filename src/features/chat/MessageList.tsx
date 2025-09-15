@@ -226,18 +226,28 @@ export const MessageList = () => {
   
   // Combine window messages with optimistic ones (append optimistic at end)
   const mergedMessages = React.useMemo(() => {
-    // Deduplicate by id, prefer window (DB) messages over optimistic
-    const byId = new Map<string, Message>();
-    for (const m of windowMessages) {
-      byId.set(m.id, m);
-    }
-    for (const m of optimisticStoreMessages) {
-      if (m.role !== 'user') continue; // only optimistic users live in store
-      if (!byId.has(m.id)) {
-        byId.set(m.id, m);
-      }
-    }
-    return Array.from(byId.values());
+    // 1) Start with DB window (already message_number-ed)
+    const db = [...windowMessages];
+    // 2) Add optimistic users that aren't in DB yet (by client_msg_id)
+    const dbClientIds = new Set(db.map(m => m.client_msg_id));
+    const optimisticUsers = optimisticStoreMessages
+      .filter(m => m.role === 'user' && !dbClientIds.has(m.client_msg_id));
+
+    // Assign temporary numbers to optimistic users just after current max
+    const currentMax = db.reduce((mx, m) => Math.max(mx, m.message_number ?? 0), 0);
+    let tempOffset = 1;
+    const withTemps = optimisticUsers.map(m => ({ ...m, message_number: currentMax + (tempOffset++) }));
+
+    const all = [...db, ...withTemps];
+    // 3) Sort by message_number asc, then createdAt asc, then id
+    all.sort((a, b) => {
+      const an = a.message_number ?? 0;
+      const bn = b.message_number ?? 0;
+      if (an !== bn) return an - bn;
+      if (a.createdAt !== b.createdAt) return a.createdAt.localeCompare(b.createdAt);
+      return a.id.localeCompare(b.id);
+    });
+    return all;
   }, [windowMessages, optimisticStoreMessages]);
 
   // Group messages into turns
