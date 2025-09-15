@@ -48,6 +48,7 @@ export class UniversalSTTRecorder {
   private activeChunks: Blob[] = [];
   private maxPreRollChunks: number = 3; // computed from preRollMs/timesliceMs
   private vadActive: boolean = false; // currently capturing a speech segment
+  private initialHeaderChunk: Blob | null = null; // first container header chunk
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
@@ -183,8 +184,13 @@ export class UniversalSTTRecorder {
     this.preRollChunks = [];
     this.activeChunks = [];
     this.vadActive = false;
+    this.initialHeaderChunk = null;
     this.mediaRecorder.ondataavailable = (event) => {
       if (!event.data || event.data.size === 0) return;
+      if (!this.initialHeaderChunk) {
+        // Capture the very first chunk as container header for all subsequent segments
+        this.initialHeaderChunk = event.data;
+      }
       if (this.vadActive) {
         this.activeChunks.push(event.data);
       } else {
@@ -370,7 +376,12 @@ export class UniversalSTTRecorder {
     if (totalBytes < 5000) { // ~small blip
       return;
     }
-    const blob = new Blob(chunks, { type: this.getSupportedMimeType() });
+    const parts: BlobPart[] = [];
+    if (this.initialHeaderChunk) {
+      parts.push(this.initialHeaderChunk);
+    }
+    for (const c of chunks) parts.push(c);
+    const blob = new Blob(parts, { type: this.getSupportedMimeType() });
     // Signal processing start for UI
     try { this.options.onProcessingStart?.(); } catch {}
     // Send without blocking UI
