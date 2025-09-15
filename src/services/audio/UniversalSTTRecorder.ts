@@ -232,17 +232,6 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
-    // Adaptive VAD state
-    let noiseFloor = 0.001; // start with tiny floor; will adapt
-    const alphaQuiet = 0.02; // faster adaptation when quiet
-    const alphaSpeaking = 0.002; // very slow adaptation while speaking
-    const thresholdFactor = 3.0; // dynamic threshold multiplier
-    const minThresholdFloor = 0.005; // clamp to avoid too-low thresholds
-    const minZcr = 0.03; // minimal zero-crossing rate for speech-like signal
-    const minSpeechMs = 120; // require short sustained speech before considering active
-    let speechActive = false;
-    let speechAccumMs = 0;
-    let lastTs = performance.now();
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -281,63 +270,31 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Only run VAD while actively recording
-      if (this.isRecording) {
-        const nowTs = performance.now();
-        const dt = Math.max(0, nowTs - lastTs);
-        lastTs = nowTs;
-
-        // Prefer initial baseline if captured; then adapt
-        if (!this.baselineCapturing && this.baselineEnergy > 0 && noiseFloor < 0.002) {
-          noiseFloor = this.baselineEnergy;
+      // Only run simplified VAD/silence detection while actively recording AND after baseline is captured
+      if (this.isRecording && !this.baselineCapturing && this.baselineEnergy > 0) {
+        // Dynamic threshold: baseline energy × (1 - margin)
+        const dynamicThreshold = this.baselineEnergy * (1 - this.options.silenceMargin!);
+        const isSpeaking = rms > dynamicThreshold;
+        
+        // Log occasionally for debugging
+        if (Math.random() < 0.01) {
+          console.log('[UniversalSTTRecorder] Current RMS:', rms.toFixed(6), 'Threshold:', dynamicThreshold.toFixed(6), 'Speaking:', isSpeaking);
         }
-
-        // Compute Zero-Crossing Rate (ZCR)
-        let crossings = 0;
-        for (let i = 1; i < this.dataArray.length; i++) {
-          const a = this.dataArray[i - 1];
-          const b = this.dataArray[i];
-          // Count sign changes with small deadband to avoid float noise
-          if (a * b < 0 && (Math.abs(a) > 0.005 || Math.abs(b) > 0.005)) {
-            crossings++;
-          }
-        }
-        const zcr = crossings / (this.dataArray.length - 1);
-
-        // Dynamic threshold from adaptive noise floor
-        const speechThreshold = Math.max(noiseFloor * thresholdFactor, minThresholdFloor);
-        const isCandidate = rms > speechThreshold && zcr > minZcr;
-
-        // Update noise floor with EMA (freeze mostly during speech)
-        const alpha = (speechActive || isCandidate) ? alphaSpeaking : alphaQuiet;
-        noiseFloor = noiseFloor * (1 - alpha) + rms * alpha;
-
-        // Speech gate: require short sustained candidate before considered speaking
-        if (isCandidate) {
-          speechAccumMs += dt;
-          if (!speechActive && speechAccumMs >= minSpeechMs) {
-            speechActive = true;
-          }
-        } else {
-          speechAccumMs = 0;
-          // Start silence hangover timer when not speaking or candidate ended
+        
+        if (!isSpeaking) {
+          // Start silence timer
           if (!this.silenceTimer) {
             this.silenceTimer = setTimeout(() => {
-              // End of speech detected after hangover
+              console.log('[UniversalSTTRecorder] 🔇 Silence detected - stopping recording');
               this.stop();
             }, this.options.silenceHangover);
           }
-        }
-
-        // Clear hangover timer if speech is active (candidate continues)
-        if (isCandidate && this.silenceTimer) {
-          clearTimeout(this.silenceTimer);
-          this.silenceTimer = null;
-        }
-
-        // Occasionally log for debugging
-        if (Math.random() < 0.01) {
-          console.log('[UniversalSTTRecorder] rms=', rms.toFixed(5), 'nf=', noiseFloor.toFixed(5), 'thr=', speechThreshold.toFixed(5), 'zcr=', zcr.toFixed(3), 'speak=', (speechActive || isCandidate));
+        } else {
+          // Clear silence timer (voice detected)
+          if (this.silenceTimer) {
+            clearTimeout(this.silenceTimer);
+            this.silenceTimer = null;
+          }
         }
       }
 
