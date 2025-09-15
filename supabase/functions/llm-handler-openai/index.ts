@@ -196,30 +196,13 @@ Content Rules:
       }).catch(() => {}); // Silent error handling
     }
 
-    // Return response with assistant message data for chat-send to save
+    // Non-conversation: assistant is sent to chat-send by LLM itself (above). Return minimal info.
     console.log('[llm-handler-openai] done');
     return new Response(JSON.stringify({ 
       text: sanitizedText,
       usage,
       llm_latency_ms: llmLatency_ms,
-      total_latency_ms: totalLatency_ms,
-      assistantMessageData: {
-        chat_id,
-        role: "assistant",
-        text: sanitizedText,
-        client_msg_id: crypto.randomUUID(),
-        status: "complete",
-        meta: { 
-          llm_provider: "openai", 
-          model: "gpt-4.1-mini-2025-04-14",
-          llm_latency_ms: llmLatency_ms,
-          total_latency_ms: totalLatency_ms,
-          input_tokens: usage.input_tokens,
-          output_tokens: usage.output_tokens,
-          total_tokens: usage.total_tokens,
-          mode: mode || 'text'
-        }
-      }
+      total_latency_ms: totalLatency_ms
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
