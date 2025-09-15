@@ -73,8 +73,15 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            console.log('[UnifiedWebSocket] Raw payload received:', payload);
             const newMessage = this.transformDatabaseMessage(payload.new);
-            console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
+            console.log('[UnifiedWebSocket] Transformed message:', {
+              id: newMessage.id,
+              role: newMessage.role,
+              message_number: newMessage.message_number,
+              text: newMessage.text?.substring(0, 50) + '...'
+            });
+            console.log('[UnifiedWebSocket] Calling onMessage callback...');
             this.onMessage?.(newMessage);
           }
         )

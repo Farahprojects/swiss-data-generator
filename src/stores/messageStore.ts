@@ -21,11 +21,10 @@ interface MessageStore {
   updateMessage: (id: string, updates: Partial<Message>) => void;
   clearMessages: () => void;
   fetchMessagesWithFallback: () => Promise<void>;
-  fetchMessagesViaWebSocket: () => Promise<void>;
   fetchMessagesDirect: () => Promise<void>;
   loadOlder: () => Promise<void>;
   initializeWebSocket: () => Promise<void>;
-  setupRealtimeSubscription: () => void;
+  setupRealtimeSubscription: () => Promise<void>;
 }
 
 const mapDbToMessage = (db: any): Message => ({
@@ -70,7 +69,6 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
       // Check if message already exists by message_number
       const exists = state.messages.some(m => m.message_number === message.message_number);
       if (exists) {
-        console.log('[MessageStore] Updating existing message:', message.message_number);
         // Update existing message (remove pending status if it was optimistic)
         const updatedMessages = state.messages.map(m => 
           m.message_number === message.message_number 
@@ -138,9 +136,14 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     console.log('[MessageStore] Initializing WebSocket early...');
     
     try {
+      console.log('[MessageStore] Setting up WebSocket callbacks...');
       await unifiedWebSocketService.initialize(
         (message) => {
-          console.log('[MessageStore] WebSocket message received:', message);
+          console.log('[MessageStore] WebSocket message received in callback:', {
+            id: message.id,
+            role: message.role,
+            message_number: message.message_number
+          });
           get().addMessage(message);
           set({ wsConnected: true });
         },
@@ -150,13 +153,14 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
         }
       );
       set({ wsConnected: true });
+      console.log('[MessageStore] WebSocket initialized successfully');
     } catch (e: any) {
       console.warn('[MessageStore] WebSocket initialization failed:', e.message);
       set({ wsConnected: false, error: e.message });
     }
   },
 
-  // Smart fetch: Use hot WebSocket if available, otherwise direct fetch
+  // Smart fetch: Always use direct query for initial load, WebSocket for real-time
   fetchMessagesWithFallback: async () => {
     const { chat_id, wsConnected } = get();
     if (!chat_id) return;
@@ -164,44 +168,23 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      // Always fetch existing messages via direct query (fast, reliable)
+      console.log('[MessageStore] Fetching existing messages via direct query...');
+      await get().fetchMessagesDirect();
+      
+      // Then set up WebSocket for real-time updates (if connected)
       if (wsConnected) {
-        console.log('[MessageStore] Using hot WebSocket for messages...');
-        await get().fetchMessagesViaWebSocket();
+        console.log('[MessageStore] Setting up WebSocket for real-time updates...');
+        await get().setupRealtimeSubscription();
       } else {
-        console.log('[MessageStore] WebSocket not connected, using direct fetch...');
-        await get().fetchMessagesDirect();
+        console.log('[MessageStore] WebSocket not connected, real-time updates disabled');
       }
     } catch (e: any) {
-      console.warn('[MessageStore] Primary fetch failed, trying direct fallback:', e.message);
-      await get().fetchMessagesDirect();
+      console.warn('[MessageStore] Failed to fetch messages:', e.message);
+      set({ error: e.message, loading: false });
     }
   },
 
-  // Fetch messages via hot WebSocket connection
-  fetchMessagesViaWebSocket: async () => {
-    const { chat_id, wsConnected } = get();
-    if (!chat_id) return;
-
-    if (!wsConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    try {
-      // Use the already hot WebSocket connection
-      console.log('[MessageStore] Subscribing to chat via hot WebSocket...');
-      
-      // Subscribe to this specific chat using the hot connection
-      await unifiedWebSocketService.subscribeToChat(chat_id);
-      
-      set({ loading: false });
-    } catch (e: any) {
-      set({ 
-        error: `WebSocket fetch failed: ${e.message}`,
-        loading: false 
-      });
-      throw e;
-    }
-  },
 
   // Fetch messages directly from Supabase (fallback)
   fetchMessagesDirect: async () => {
@@ -265,11 +248,17 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     }
   },
 
-  // Setup realtime subscription (now handled by WebSocket service)
-  setupRealtimeSubscription: () => {
-    // This method is now handled by the WebSocket service
-    // No need to duplicate the subscription logic
-    console.log('[MessageStore] Realtime subscription handled by WebSocket service');
+  // Setup realtime subscription for new messages
+  setupRealtimeSubscription: async () => {
+    const { chat_id, wsConnected } = get();
+    if (!chat_id || !wsConnected) return;
+
+    try {
+      console.log('[MessageStore] Setting up real-time subscription for chat:', chat_id);
+      await unifiedWebSocketService.subscribeToChat(chat_id);
+    } catch (e: any) {
+      console.warn('[MessageStore] Failed to setup real-time subscription:', e.message);
+    }
   }
 }));
 
