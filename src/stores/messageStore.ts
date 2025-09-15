@@ -14,6 +14,7 @@ interface MessageStore {
   // Actions
   setChatId: (id: string | null) => void;
   addMessage: (message: Message) => void;
+  addOptimisticMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   clearMessages: () => void;
   fetchMessagesWithFallback: () => Promise<void>;
@@ -52,18 +53,48 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     }
   },
 
-  // Add message with deduplication by message_number
+  // Add message with deduplication by message_number and optimistic handling
   addMessage: (message: Message) => {
     set((state) => {
       // Check if message already exists by message_number
       const exists = state.messages.some(m => m.message_number === message.message_number);
       if (exists) {
-        console.log('[MessageStore] Ignoring duplicate message:', message.message_number);
-        return state;
+        console.log('[MessageStore] Updating existing message:', message.message_number);
+        // Update existing message (remove pending status if it was optimistic)
+        const updatedMessages = state.messages.map(m => 
+          m.message_number === message.message_number 
+            ? { ...m, ...message, pending: false }
+            : m
+        );
+        return { messages: updatedMessages };
       }
       
-      // Add message and sort by message_number
+      // Add new message and sort by message_number
       const newMessages = [...state.messages, message];
+      newMessages.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
+      
+      return { messages: newMessages };
+    });
+  },
+
+  // Add optimistic message with temporary number for instant UI
+  addOptimisticMessage: (message: Message) => {
+    set((state) => {
+      // Get next optimistic number
+      const currentMax = state.messages.reduce((max, m) => Math.max(max, m.message_number ?? 0), 0);
+      const nextOptimisticNumber = currentMax + 1;
+      
+      const optimisticMessage = {
+        ...message,
+        message_number: nextOptimisticNumber,
+        pending: true,
+        tempId: message.id // Keep original ID for reconciliation
+      };
+      
+      console.log('[MessageStore] Adding optimistic message:', nextOptimisticNumber);
+      
+      // Add optimistic message and sort
+      const newMessages = [...state.messages, optimisticMessage];
       newMessages.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
       
       return { messages: newMessages };

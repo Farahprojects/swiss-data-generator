@@ -107,11 +107,9 @@ export const ChatInput = () => {
         client_msg_id
       };
       
-      // Add message to unified store immediately (microtask for instant UI)
-      queueMicrotask(() => {
-        const { addMessage } = useMessageStore.getState();
-        addMessage(optimisticMessage);
-      });
+      // Add optimistic message instantly with temporary number
+      const { addOptimisticMessage } = useMessageStore.getState();
+      addOptimisticMessage(optimisticMessage);
       
       // Fire-and-forget direct invoke - no queueMicrotask delay
       supabase.functions.invoke('chat-send', {

@@ -16,6 +16,8 @@ export interface Message {
   status?: 'thinking' | 'complete' | 'error';
   context_injected?: boolean;
   message_number?: number; // Global per-chat ordering key
+  pending?: boolean; // Optimistic message flag
+  tempId?: string; // Temporary ID for reconciliation
 }
 
 export interface Conversation {

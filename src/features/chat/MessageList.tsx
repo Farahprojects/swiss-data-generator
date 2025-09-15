@@ -28,10 +28,15 @@ const renderMessages = (messages: Message[]) => {
     if (message.role === 'user') {
       elements.push(
         <div key={`user-${message.id}`} className="flex items-end gap-3 justify-end mb-4">
-          <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
+          <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
+            message.pending ? 'bg-gray-300 opacity-75' : 'bg-gray-200'
+          }`}>
             <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
               {message.text || ''}
             </p>
+            {message.pending && (
+              <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
+            )}
           </div>
         </div>
       );
