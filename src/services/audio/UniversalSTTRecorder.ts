@@ -48,7 +48,6 @@ export class UniversalSTTRecorder {
   private activeChunks: Blob[] = [];
   private maxPreRollChunks: number = 3; // computed from preRollMs/timesliceMs
   private vadActive: boolean = false; // currently capturing a speech segment
-  private initialHeaderChunk: Blob | null = null; // first container header chunk
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
@@ -85,12 +84,6 @@ export class UniversalSTTRecorder {
       
       // Step 2: Setup filtered audio chain and energy monitoring
       this.setupEnergyMonitoring();
-      // Step 2.5: Proactively capture a valid container header using a short temp recorder
-      try {
-        await this.captureContainerHeader();
-      } catch (e) {
-        console.warn('[UniversalSTTRecorder] Failed to pre-capture container header:', e);
-      }
       
       // Step 3: Setup MediaRecorder against filtered output stream (falls back to raw if needed)
       this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
@@ -190,13 +183,8 @@ export class UniversalSTTRecorder {
     this.preRollChunks = [];
     this.activeChunks = [];
     this.vadActive = false;
-    this.initialHeaderChunk = null;
     this.mediaRecorder.ondataavailable = (event) => {
       if (!event.data || event.data.size === 0) return;
-      if (!this.initialHeaderChunk) {
-        // Capture the very first chunk as container header for all subsequent segments
-        this.initialHeaderChunk = event.data;
-      }
       if (this.vadActive) {
         this.activeChunks.push(event.data);
       } else {
@@ -218,42 +206,6 @@ export class UniversalSTTRecorder {
     this.mediaRecorder.onerror = (event) => {
       console.error('[UniversalSTTRecorder] MediaRecorder error:', event);
     };
-  }
-
-  // Capture a valid WebM/Opus container header by starting and stopping a short temp recorder.
-  // This produces a self-contained blob whose initial bytes include EBML headers that Whisper expects.
-  private captureContainerHeader(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        const stream = this.filteredStream || this.mediaStream;
-        if (!stream) return resolve();
-        const mimeType = this.getSupportedMimeType();
-        const temp = new MediaRecorder(stream, { mimeType });
-        let captured: Blob | null = null;
-        temp.ondataavailable = (ev) => {
-          if (ev.data && ev.data.size > 0) {
-            captured = ev.data;
-          }
-        };
-        temp.onerror = (e) => {
-          // Not fatal; continue without header
-          resolve();
-        };
-        temp.onstop = () => {
-          if (captured) {
-            this.initialHeaderChunk = captured;
-          }
-          resolve();
-        };
-        temp.start();
-        // Stop shortly after to finalize a minimal valid container
-        setTimeout(() => {
-          try { temp.stop(); } catch {}
-        }, 80);
-      } catch (err) {
-        resolve();
-      }
-    });
   }
 
   private setupEnergyMonitoring(): void {
@@ -418,12 +370,7 @@ export class UniversalSTTRecorder {
     if (totalBytes < 5000) { // ~small blip
       return;
     }
-    const parts: BlobPart[] = [];
-    if (this.initialHeaderChunk) {
-      parts.push(this.initialHeaderChunk);
-    }
-    for (const c of chunks) parts.push(c);
-    const blob = new Blob(parts, { type: this.getSupportedMimeType() });
+    const blob = new Blob(chunks, { type: this.getSupportedMimeType() });
     // Signal processing start for UI
     try { this.options.onProcessingStart?.(); } catch {}
     // Send without blocking UI
