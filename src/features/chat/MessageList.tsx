@@ -12,137 +12,78 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
 import { useMessages } from '@/hooks/useMessages';
 
-// Typewriter removed: render assistant text immediately with subtle fade/slide
-
-interface Turn {
-  userMessage?: Message;
-  assistantMessage?: Message;
-}
-
-const InlineEllipsis = () => {
-  const [dots, setDots] = React.useState('');
-  React.useEffect(() => {
-    const id = setInterval(() => {
-      setDots((prev) => (prev.length >= 3 ? '' : prev + '.'));
-    }, 500);
-    return () => clearInterval(id);
-  }, []);
-  return <span aria-hidden="true">{dots}</span>;
-};
-
-const TurnItem = ({ turn, isLastTurn, isFromHistory, directAssistantMessage }: { 
-  turn: Turn; 
-  isLastTurn: boolean; 
-  isFromHistory?: boolean;
-  directAssistantMessage?: Message | null;
-}) => {
-  const { userMessage, assistantMessage } = turn;
-  const { isConversationOpen } = useConversationUIStore();
-  
-  // Use direct assistant message if available, otherwise use turn message
-  const displayAssistantMessage = directAssistantMessage || assistantMessage;
-
-  // Subtle fade/slide on first mount only (no typewriter)
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  return (
-    <div 
-      className="turn" 
-      data-turn-id={userMessage?.id || assistantMessage?.id}
-    >
-      {/* User Message */}
-      {userMessage && (
-        <div className="flex items-end gap-3 justify-end mb-4">
-          <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
-            <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
-              {userMessage.text || ''}
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {/* Assistant Message */
-      }
-      {displayAssistantMessage && (
-        <div className="flex items-end gap-3 justify-start mb-8">
-          <div 
-            className={
-              `px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black transition-opacity transition-transform duration-150 ease-out ` +
-              (mounted && !isFromHistory && isLastTurn && !isConversationOpen ? 'opacity-100 translate-y-0' : 'opacity-100 translate-y-0')
-            }
-            style={{ overflowAnchor: 'none' }}
-          >
-            <p className="text-base font-light leading-relaxed text-left selectable-text">
-              {displayAssistantMessage.meta?.type === 'payment-progress' ? (
-                <span className="whitespace-pre-wrap">
-                  {(displayAssistantMessage.text || 'Generating your personal space')}
-                  <InlineEllipsis />
-                </span>
-              ) : (
-                <span className="whitespace-pre-wrap">
-                  {displayAssistantMessage.text || ''}
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Helper function to group messages into turns (lossless)
-const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
-  const turns: Turn[] = [];
+// Simple message rendering - no complex turn grouping needed with message_number ordering
+const renderMessages = (messages: Message[], directAssistantMessage: Message | null) => {
+  const elements: React.ReactNode[] = [];
   
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
     
-    // Handle system messages as standalone turns (but skip context-injected messages)
-    if (message.role === 'system') {
-      // Skip context-injected messages (they're for the AI, not for display)
-      if (message.context_injected) {
-        continue;
-      }
-      turns.push({
-        assistantMessage: message // Treat system messages as assistant messages for display
-      });
+    // Skip context-injected system messages
+    if (message.role === 'system' && message.context_injected) {
       continue;
     }
     
+    // Render user messages
     if (message.role === 'user') {
-      // Look for the next assistant message
-      const nextMessage = messages[i + 1];
-      const assistantMessage = nextMessage?.role === 'assistant' ? nextMessage : undefined;
-      
-      turns.push({
-        userMessage: message,
-        assistantMessage
-      });
-      
-      // Skip the assistant message in the next iteration if we found one
-      if (assistantMessage) {
-        i++;
-      }
-    } else if (message.role === 'assistant') {
-      // Check if this assistant message was already paired with a user message
-      const lastTurn = turns[turns.length - 1];
-      if (!lastTurn || lastTurn.assistantMessage) {
-        // This is an orphaned assistant message, create a turn for it
-        turns.push({
-          assistantMessage: message
-        });
-      } else {
-        // This assistant message should be paired with the last user message
-        lastTurn.assistantMessage = message;
-      }
+      elements.push(
+        <div key={`user-${message.id}`} className="flex items-end gap-3 justify-end mb-4">
+          <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
+            <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
+              {message.text || ''}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Render assistant messages
+    if (message.role === 'assistant') {
+      elements.push(
+        <div key={`assistant-${message.id}`} className="flex items-end gap-3 justify-start mb-8">
+          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+            <p className="text-base font-light leading-relaxed text-left selectable-text">
+              <span className="whitespace-pre-wrap">
+                {message.text || ''}
+              </span>
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Render system messages as assistant messages
+    if (message.role === 'system') {
+      elements.push(
+        <div key={`system-${message.id}`} className="flex items-end gap-3 justify-start mb-8">
+          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+            <p className="text-base font-light leading-relaxed text-left selectable-text">
+              <span className="whitespace-pre-wrap">
+                {message.text || ''}
+              </span>
+            </p>
+          </div>
+        </div>
+      );
     }
   }
   
-  return turns;
+  // Add direct assistant message at the end if it exists
+  if (directAssistantMessage) {
+    elements.push(
+      <div key={`direct-assistant-${directAssistantMessage.id}`} className="flex items-end gap-3 justify-start mb-8">
+        <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+          <p className="text-base font-light leading-relaxed text-left selectable-text">
+            <span className="whitespace-pre-wrap">
+              {directAssistantMessage.text || ''}
+            </span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  return elements;
 };
 
 export const MessageList = () => {
@@ -263,17 +204,7 @@ export const MessageList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directAssistantMessage?.id]);
 
-  // Group messages into turns
-  const turns = groupMessagesIntoTurns(mergedMessages);
-  
-  // Determine which turns are from history
-  const getIsFromHistory = (turn: Turn): boolean => {
-    if (initialMessageCount === null) return false;
-    const messageToCheck = turn.userMessage || turn.assistantMessage;
-    if (!messageToCheck) return false;
-    const messageIndex = mergedMessages.findIndex(m => m.id === messageToCheck.id);
-    return messageIndex < initialMessageCount;
-  };
+  // Render messages directly in message_number order - no complex turn grouping needed
 
   return (
     <>
@@ -341,21 +272,7 @@ export const MessageList = () => {
             <div className="flex flex-col p-4">
               {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
-              {turns.map((turn, index) => {
-                const isFromHistory = getIsFromHistory(turn);
-                const isLastTurn = index === turns.length - 1;
-                const turnKey = `${turn.userMessage?.id ?? 'u'}-${turn.assistantMessage?.id ?? 'a'}-${index}`;
-                
-                return (
-                  <TurnItem 
-                    key={turnKey} 
-                    turn={turn}
-                    isLastTurn={isLastTurn}
-                    isFromHistory={isFromHistory}
-                    directAssistantMessage={directAssistantMessage}
-                  />
-                );
-              })}
+              {renderMessages(mergedMessages, directAssistantMessage)}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
               <div style={{ height: '80px' }} />
