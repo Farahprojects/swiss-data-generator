@@ -183,7 +183,8 @@ class UnifiedWebSocketService {
       meta: dbMessage.meta,
       client_msg_id: dbMessage.client_msg_id,
       status: dbMessage.status,
-      context_injected: dbMessage.context_injected
+      context_injected: dbMessage.context_injected,
+      message_number: dbMessage.message_number
     };
   }
 
@@ -191,15 +192,9 @@ class UnifiedWebSocketService {
    * Process incoming message from DB
    */
   private processMessage(message: Message) {
-    // Skip user messages that we already showed optimistically
-    if (message.role === 'user' && message.client_msg_id) {
-      console.log(`[UnifiedWebSocket] Skipping user message from DB - already shown optimistically: ${message.client_msg_id}`);
-      return;
-    }
-    
-    // Direct UI update for assistant messages - no store delay
+    // Assistant messages ALWAYS come from DB with message_number - never optimistic
     if (message.role === 'assistant') {
-      console.log(`[UnifiedWebSocket] Direct UI update for assistant message: ${message.id}`);
+      console.log(`[UnifiedWebSocket] Assistant message from DB (message_number: ${message.message_number}): ${message.id}`);
       this.onAssistantMessage?.(message);
       
       // Async store update for persistence (don't block UI)
@@ -209,7 +204,13 @@ class UnifiedWebSocketService {
       return;
     }
     
-    // User messages go through normal flow
+    // User messages: skip if already shown optimistically (by client_msg_id)
+    if (message.role === 'user' && message.client_msg_id) {
+      console.log(`[UnifiedWebSocket] Skipping user message from DB - already shown optimistically: ${message.client_msg_id}`);
+      return;
+    }
+    
+    // Other user messages go through normal flow
     this.onMessageReceived?.(message);
   }
 

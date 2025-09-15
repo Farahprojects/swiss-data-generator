@@ -211,11 +211,12 @@ export const MessageList = () => {
     }
   }, [optimisticStoreMessages, astroChoiceMade]);
 
-  // Combine window messages with optimistic ones (append optimistic at end)
+  // Combine window messages with optimistic ones (only user messages can be optimistic)
   const mergedMessages = React.useMemo(() => {
     // 1) Start with DB window (already message_number-ed)
     const db = [...windowMessages];
-    // 2) Add optimistic users that aren't in DB yet (by client_msg_id)
+    
+    // 2) Add optimistic USER messages only (assistant messages always come from DB)
     const dbClientIds = new Set(db.map(m => m.client_msg_id));
     const optimisticUsers = optimisticStoreMessages
       .filter(m => m.role === 'user' && !dbClientIds.has(m.client_msg_id));
@@ -226,7 +227,8 @@ export const MessageList = () => {
     const withTemps = optimisticUsers.map(m => ({ ...m, message_number: currentMax + (tempOffset++) }));
 
     const all = [...db, ...withTemps];
-    // 3) Sort by message_number asc, then createdAt asc, then id
+    
+    // 3) Sort by message_number asc (primary), then createdAt asc (fallback), then id (tiebreaker)
     all.sort((a, b) => {
       const an = a.message_number ?? 0;
       const bn = b.message_number ?? 0;
@@ -234,7 +236,17 @@ export const MessageList = () => {
       if (a.createdAt !== b.createdAt) return a.createdAt.localeCompare(b.createdAt);
       return a.id.localeCompare(b.id);
     });
-    return all;
+    
+    // 4) Deduplicate by message_number (keep first occurrence)
+    const seen = new Set<number>();
+    const deduplicated = all.filter(m => {
+      const num = m.message_number ?? 0;
+      if (seen.has(num)) return false;
+      seen.add(num);
+      return true;
+    });
+    
+    return deduplicated;
   }, [windowMessages, optimisticStoreMessages]);
 
   // Auto-scroll when merged content grows (DB + optimistic)

@@ -100,9 +100,11 @@ export function useMessages(chatId: string | null, windowSize: number = 50): Use
 			.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => {
 				const newMsg = mapDbToMessage(payload.new);
 				setMessages(prev => {
-					// dedupe by id
-					if (prev.find(m => m.id === newMsg.id)) return prev;
+					// dedupe by id and message_number
+					if (prev.find(m => m.id === newMsg.id || m.message_number === newMsg.message_number)) return prev;
 					const next = [...prev, newMsg];
+					// sort by message_number to maintain order
+					next.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
 					// cap window to windowSize (keep most recent at bottom)
 					if (next.length > windowSize) {
 						return next.slice(next.length - windowSize);
