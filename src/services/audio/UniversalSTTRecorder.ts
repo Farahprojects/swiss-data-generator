@@ -85,6 +85,12 @@ export class UniversalSTTRecorder {
       
       // Step 2: Setup filtered audio chain and energy monitoring
       this.setupEnergyMonitoring();
+      // Step 2.5: Proactively capture a valid container header using a short temp recorder
+      try {
+        await this.captureContainerHeader();
+      } catch (e) {
+        console.warn('[UniversalSTTRecorder] Failed to pre-capture container header:', e);
+      }
       
       // Step 3: Setup MediaRecorder against filtered output stream (falls back to raw if needed)
       this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
@@ -212,6 +218,42 @@ export class UniversalSTTRecorder {
     this.mediaRecorder.onerror = (event) => {
       console.error('[UniversalSTTRecorder] MediaRecorder error:', event);
     };
+  }
+
+  // Capture a valid WebM/Opus container header by starting and stopping a short temp recorder.
+  // This produces a self-contained blob whose initial bytes include EBML headers that Whisper expects.
+  private captureContainerHeader(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        const stream = this.filteredStream || this.mediaStream;
+        if (!stream) return resolve();
+        const mimeType = this.getSupportedMimeType();
+        const temp = new MediaRecorder(stream, { mimeType });
+        let captured: Blob | null = null;
+        temp.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) {
+            captured = ev.data;
+          }
+        };
+        temp.onerror = (e) => {
+          // Not fatal; continue without header
+          resolve();
+        };
+        temp.onstop = () => {
+          if (captured) {
+            this.initialHeaderChunk = captured;
+          }
+          resolve();
+        };
+        temp.start();
+        // Stop shortly after to finalize a minimal valid container
+        setTimeout(() => {
+          try { temp.stop(); } catch {}
+        }, 80);
+      } catch (err) {
+        resolve();
+      }
+    });
   }
 
   private setupEnergyMonitoring(): void {
