@@ -230,12 +230,14 @@ export class UniversalSTTRecorder {
 
     let lastLevel = 0;
     const isMobile = this.isMobileDevice();
-    const threshold = isMobile ? 0.012 : 0.020; // fixed platform thresholds
+    const threshold = isMobile ? 0.03 : 0.05; // fixed platform thresholds (raised)
     const armingDelayMs = 300;
-    const minSpeechMs = 150;
+    const minSpeechMs = 250; // require longer continuous speech
     let armed = false;
     let speechAccumMs = 0;
     let lastTs = performance.now();
+    let rmsEma = 0; // EMA of RMS for detection stability
+    const rmsAlpha = 0.15; // detection EMA weight
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -252,6 +254,7 @@ export class UniversalSTTRecorder {
         sum += this.dataArray[i] * this.dataArray[i];
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
+      rmsEma = rmsEma * (1 - rmsAlpha) + rms * rmsAlpha;
       
       // Minimal VAD: fixed threshold with arming and min-speech gate
       const nowTs = performance.now();
@@ -278,7 +281,18 @@ export class UniversalSTTRecorder {
 
       // Only run VAD while recording and after arming
       if (this.isRecording && armed) {
-        const candidate = rms >= threshold;
+        // Zero-Crossing Rate (ZCR) gate to reject low-frequency hum/steady noise
+        let crossings = 0;
+        for (let i = 1; i < this.dataArray.length; i++) {
+          const a = this.dataArray[i - 1];
+          const b = this.dataArray[i];
+          if (a * b < 0 && (Math.abs(a) > 0.01 || Math.abs(b) > 0.01)) {
+            crossings++;
+          }
+        }
+        const zcr = crossings / (this.dataArray.length - 1);
+
+        const candidate = rmsEma >= threshold && zcr > 0.05;
 
         if (candidate) {
           // Require short sustained speech before fully cancelling hangover
