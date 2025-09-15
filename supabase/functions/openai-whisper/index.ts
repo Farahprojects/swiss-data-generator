@@ -128,44 +128,38 @@ serve(async (req) => {
     if (mode === 'conversation' && chat_id) {
       console.log('[openai-whisper] 🔄 CONVERSATION MODE: Saving user message and calling LLM');
       
-      // Save user message to chat-send
-      try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chat_id,
-            text: transcript,
-            client_msg_id: crypto.randomUUID(),
-            mode: 'conversation'
-          })
-        });
-        console.log('[openai-whisper] ✅ User message saved');
-      } catch (error) {
+      // Fire and forget: Save user message to chat-send
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: transcript,
+          client_msg_id: crypto.randomUUID(),
+          mode: 'conversation'
+        })
+      }).catch((error) => {
         console.error('[openai-whisper] ❌ User message save failed:', error);
-      }
+      });
 
-      // Fire and forget to LLM
-      try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chat_id,
-            text: transcript,
-            mode: 'conversation'
-          })
-        });
-        console.log('[openai-whisper] ✅ LLM call sent (fire and forget)');
-      } catch (error) {
+      // Fire and forget: Call LLM
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: transcript,
+          mode: 'conversation'
+        })
+      }).catch((error) => {
         console.error('[openai-whisper] ❌ LLM call failed:', error);
-      }
+      });
 
       // Broadcast thinking-mode to WebSocket
       try {
