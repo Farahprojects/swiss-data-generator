@@ -27,79 +27,258 @@ const sanitizeHeaders = (headers: any): string => {
 
 // ── Domain Slug Validation Function ──
 const isValidDomainSlug = async (domain: string, slug: string): Promise<boolean> => {
+  console.log(`[inboundMessenger] 🔍 DOMAIN/SLUG LOOKUP: domain=${domain}, slug=${slug}`);
+  
   const { data, error } = await supabase
     .from("domain_slugs")
     .select(slug)
     .eq("domain", domain)
     .single();
 
+  console.log(`[inboundMessenger] 📋 DOMAIN/SLUG LOOKUP RESULT:`, { 
+    domain, 
+    slug, 
+    data, 
+    error: error ? {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    } : null
+  });
+
   if (error || !data) {
+    console.log(`[inboundMessenger] ❌ DOMAIN/SLUG LOOKUP FAILED:`, { domain, slug, error, data });
     return false;
   }
 
-  return data[slug] === true;
+  const isValid = data[slug] === true;
+  console.log(`[inboundMessenger] ✅ DOMAIN/SLUG VALIDATION:`, { domain, slug, isValid, slugValue: data[slug] });
+  return isValid;
+};
+
+// ── Logging Function ──
+const logMessage = (message: string, data: any = {}) => {
+  const logObject = {
+    timestamp: new Date().toISOString(),
+    function: 'inboundMessenger',
+    message,
+    data
+  };
+  console.log(JSON.stringify(logObject));
 };
 
 // ── Main ──
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  logMessage("🚀 INBOUND MESSENGER REQUEST STARTED", { 
+    requestId, 
+    method: req.method,
+    userAgent: req.headers.get('user-agent') || 'unknown'
+  });
+
   if (req.method !== "POST") {
+    logMessage("❌ METHOD NOT ALLOWED", { 
+      requestId, 
+      method: req.method, 
+      allowedMethods: ['POST'] 
+    });
     return new Response("Method not allowed", {
       status: 405
     });
   }
 
-  const payload = await req.json();
+  let payload;
+  try {
+    payload = await req.json();
+    logMessage("📥 PAYLOAD RECEIVED", { 
+      requestId, 
+      payloadKeys: Object.keys(payload),
+      payloadSize: JSON.stringify(payload).length
+    });
+  } catch (error) {
+    logMessage("❌ INVALID JSON PAYLOAD", { 
+      requestId, 
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return new Response("Invalid JSON payload", {
+      status: 400
+    });
+  }
+
   const { from_email, to_email, subject, body, raw_headers, direction } = payload;
 
   // Input validation and sanitization
+  logMessage("🔍 STARTING INPUT VALIDATION", { 
+    requestId, 
+    from_email: from_email ? 'present' : 'missing',
+    to_email: to_email ? 'present' : 'missing',
+    subject: subject ? 'present' : 'missing',
+    body: body ? 'present' : 'missing',
+    direction: direction ? 'present' : 'missing',
+    raw_headers: raw_headers ? 'present' : 'missing'
+  });
+
   if (!from_email || !to_email || !body || !direction) {
+    logMessage("❌ MISSING REQUIRED FIELDS", { 
+      requestId, 
+      missingFields: {
+        from_email: !from_email,
+        to_email: !to_email,
+        body: !body,
+        direction: !direction
+      }
+    });
     return new Response("Missing required fields", {
       status: 400
     });
   }
 
   // Validate email formats
-  if (!isValidEmail(from_email) || !isValidEmail(to_email)) {
+  const fromEmailValid = isValidEmail(from_email);
+  const toEmailValid = isValidEmail(to_email);
+  
+  logMessage("📧 EMAIL FORMAT VALIDATION", { 
+    requestId, 
+    from_email: from_email.substring(0, 50) + '...',
+    to_email: to_email.substring(0, 50) + '...',
+    fromEmailValid,
+    toEmailValid
+  });
+
+  if (!fromEmailValid || !toEmailValid) {
+    logMessage("❌ INVALID EMAIL FORMAT", { 
+      requestId, 
+      fromEmailValid,
+      toEmailValid,
+      from_email: from_email.substring(0, 100),
+      to_email: to_email.substring(0, 100)
+    });
     return new Response("Invalid email format", {
       status: 400
     });
   }
 
   // Validate direction
+  logMessage("🧭 DIRECTION VALIDATION", { 
+    requestId, 
+    direction,
+    validDirections: ['incoming', 'outgoing']
+  });
+
   if (!['incoming', 'outgoing'].includes(direction)) {
+    logMessage("❌ INVALID DIRECTION", { 
+      requestId, 
+      direction,
+      expectedDirections: ['incoming', 'outgoing']
+    });
     return new Response("Invalid direction", {
       status: 400
     });
   }
 
   // Sanitize all inputs
+  logMessage("🧹 STARTING INPUT SANITIZATION", { 
+    requestId,
+    originalSizes: {
+      from_email: from_email.length,
+      to_email: to_email.length,
+      subject: (subject || '').length,
+      body: body.length,
+      raw_headers: typeof raw_headers === 'string' ? raw_headers.length : JSON.stringify(raw_headers).length
+    }
+  });
+
   const sanitizedFromEmail = sanitizeString(from_email, 254);
   const sanitizedToEmail = sanitizeString(to_email, 254);
   const sanitizedSubject = sanitizeString(subject || '', 998); // RFC 5322 limit
   const sanitizedBody = sanitizeString(body, 1000000); // 1MB limit
   const sanitizedHeaders = sanitizeHeaders(raw_headers);
 
+  logMessage("✅ INPUT SANITIZATION COMPLETE", { 
+    requestId,
+    sanitizedSizes: {
+      from_email: sanitizedFromEmail.length,
+      to_email: sanitizedToEmail.length,
+      subject: sanitizedSubject.length,
+      body: sanitizedBody.length,
+      raw_headers: sanitizedHeaders.length
+    }
+  });
+
   // Parse slug and domain from recipient
   const [slug, domain] = sanitizedToEmail.toLowerCase().split("@");
   
+  logMessage("🔍 PARSING EMAIL ADDRESS", { 
+    requestId,
+    to_email: sanitizedToEmail,
+    parsedSlug: slug,
+    parsedDomain: domain,
+    slugLength: slug?.length || 0,
+    domainLength: domain?.length || 0
+  });
+  
   // Additional validation for slug and domain
   if (!slug || !domain || slug.length > 64 || domain.length > 253) {
+    logMessage("❌ INVALID SLUG/DOMAIN FORMAT", { 
+      requestId,
+      slug,
+      domain,
+      slugLength: slug?.length || 0,
+      domainLength: domain?.length || 0,
+      maxSlugLength: 64,
+      maxDomainLength: 253
+    });
     return new Response("Invalid email format", {
       status: 400
     });
   }
   
   // Validate domain and slug combination
+  logMessage("🔍 VALIDATING DOMAIN/SLUG COMBINATION", { 
+    requestId,
+    domain,
+    slug,
+    checkingTable: 'domain_slugs'
+  });
+
   const isValid = await isValidDomainSlug(domain, slug);
   
+  logMessage("📋 DOMAIN/SLUG VALIDATION RESULT", { 
+    requestId,
+    domain,
+    slug,
+    isValid,
+    validationMethod: 'domain_slugs table lookup'
+  });
+  
   if (!isValid) {
+    logMessage("❌ INVALID DOMAIN/SLUG COMBINATION", { 
+      requestId,
+      domain,
+      slug,
+      reason: 'Not found in domain_slugs table or slug column is false'
+    });
     return new Response("Invalid domain/slug combination", {
       status: 400
     });
   }
 
   // Log message (admin-only table now)
-  const { error: insertError } = await supabase
+  logMessage("💾 ATTEMPTING DATABASE SAVE", { 
+    requestId,
+    table: 'email_messages',
+    recordData: {
+      from_address: sanitizedFromEmail.substring(0, 50) + '...',
+      to_address: sanitizedToEmail.substring(0, 50) + '...',
+      subject: sanitizedSubject.substring(0, 100) + '...',
+      bodyLength: sanitizedBody.length,
+      direction,
+      headersLength: sanitizedHeaders.length
+    }
+  });
+
+  const { data: insertData, error: insertError } = await supabase
     .from("email_messages")
     .insert([
       {
@@ -110,14 +289,39 @@ serve(async (req) => {
         direction,
         raw_headers: sanitizedHeaders
       }
-    ]);
+    ])
+    .select();
 
   if (insertError) {
-    console.error("Insert failed", insertError);
+    logMessage("❌ DATABASE SAVE FAILED", { 
+      requestId,
+      error: insertError,
+      errorCode: insertError.code,
+      errorMessage: insertError.message,
+      errorDetails: insertError.details,
+      errorHint: insertError.hint
+    });
     return new Response("Database error", {
       status: 500
     });
   }
+
+  logMessage("✅ EMAIL MESSAGE SAVED SUCCESSFULLY", { 
+    requestId,
+    insertData,
+    recordId: insertData?.[0]?.id,
+    from_address: sanitizedFromEmail,
+    to_address: sanitizedToEmail,
+    direction,
+    subject: sanitizedSubject.substring(0, 100)
+  });
+
+  logMessage("🎉 INBOUND MESSENGER REQUEST COMPLETED", { 
+    requestId,
+    status: 'success',
+    totalProcessingTime: 'completed',
+    finalDecision: 'ACCEPTED - Email saved to database'
+  });
 
   return new Response("Message logged", {
     status: 200
