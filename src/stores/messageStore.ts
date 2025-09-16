@@ -128,37 +128,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
     set({ messages: [], error: null });
   },
 
-  // Initialize WebSocket early and keep it hot
-  initializeWebSocket: async () => {
-    if (get().wsInitialized) return;
-    
-    set({ wsInitialized: true });
-    console.log('[MessageStore] Initializing WebSocket early...');
-    
-    try {
-      console.log('[MessageStore] Setting up WebSocket callbacks...');
-      await unifiedWebSocketService.initialize('early-init', {
-        onMessageReceived: (message) => {
-          console.log('[MessageStore] WebSocket message received in callback:', {
-            id: message.id,
-            role: message.role,
-            message_number: message.message_number
-          });
-          get().addMessage(message);
-          set({ wsConnected: true });
-        },
-        onStatusChange: (status) => {
-          console.log('[MessageStore] WebSocket status:', status);
-          set({ wsConnected: status === 'SUBSCRIBED' });
-        }
-      });
-      set({ wsConnected: true });
-      console.log('[MessageStore] WebSocket initialized successfully');
-    } catch (e: any) {
-      console.warn('[MessageStore] WebSocket initialization failed:', e.message);
-      set({ wsConnected: false, error: e.message });
-    }
-  },
+  // WebSocket initialization moved to ChatController when chat_id is available
 
   // Smart fetch: Always use direct query for initial load, WebSocket for real-time
   fetchMessagesWithFallback: async () => {
