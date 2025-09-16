@@ -2,7 +2,6 @@ import { useSyncExternalStore, useMemo } from 'react';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
-import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 
 /**
  * Isolated state management for ChatInput using useSyncExternalStore
@@ -37,22 +36,10 @@ export const useChatInputState = () => {
     })
   );
 
-  // Subscribe to payment flow store state
-  const paymentFlowState = useSyncExternalStore(
-    usePaymentFlowStore.subscribe,
-    () => usePaymentFlowStore.getState(),
-    () => ({
-      isPaymentConfirmed: false,
-      isReportGenerating: false,
-      isReportReady: false,
-      error: null,
-    })
-  );
-
-  // Show stop icon during report generation OR when payment flow stop icon is active
+  // Show stop icon when assistant is typing OR when payment flow stop icon is active
   const isAssistantGenerating = useMemo(() => 
-    paymentFlowState.isReportGenerating || chatState.isPaymentFlowStopIcon,
-    [paymentFlowState.isReportGenerating, chatState.isPaymentFlowStopIcon]
+    chatState.isAssistantTyping || chatState.isPaymentFlowStopIcon,
+    [chatState.isAssistantTyping, chatState.isPaymentFlowStopIcon]
   );
 
   const isRecording = useMemo(() => 
@@ -77,11 +64,11 @@ export const useChatInputState = () => {
     openConversation: conversationState.openConversation,
     closeConversation: conversationState.closeConversation,
     
-    // Payment flow state
-    isPaymentConfirmed: paymentFlowState.isPaymentConfirmed,
-    isReportGenerating: paymentFlowState.isReportGenerating,
-    paymentFlowIsReportReady: paymentFlowState.isReportReady,
-    paymentFlowError: paymentFlowState.error,
+    // Payment flow state (simplified - using chat store only)
+    isPaymentConfirmed: false, // Not needed anymore
+    isReportGenerating: chatState.isAssistantTyping, // Use isAssistantTyping instead
+    paymentFlowIsReportReady: reportState.isReportReady, // Use report store
+    paymentFlowError: null, // Not needed anymore
     
     // Derived state
     isAssistantGenerating,

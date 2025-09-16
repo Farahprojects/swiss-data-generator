@@ -13,7 +13,6 @@ import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 import { networkErrorHandler } from '@/utils/networkErrorHandler';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 
 class ChatController {
   private conversationServiceInitialized = false;
@@ -132,10 +131,10 @@ class ChatController {
     
     // Trigger report ready state
     useReportReadyStore.getState().setReportReady(true);
-    usePaymentFlowStore.getState().setReportReady(true);
     
     // Stop generating state (flip stop button back to wave icon)
-    usePaymentFlowStore.getState().setReportGenerating(false);
+    const { setAssistantTyping } = useChatStore.getState();
+    setAssistantTyping(false);
     
     console.log('[ChatController] ✅ Report ready state triggered and stop button flipped!');
   }

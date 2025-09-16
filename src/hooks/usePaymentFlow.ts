@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 import { createPaymentFlowOrchestrator, PaymentFlowOrchestrator } from '@/utils/paymentFlowOrchestrator';
 import { useChatStore } from '@/core/store';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useCancelModal } from '@/contexts/CancelModalContext';
 
 interface UsePaymentFlowOptions {
@@ -12,13 +12,8 @@ interface UsePaymentFlowOptions {
 export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
   const orchestratorRef = useRef<PaymentFlowOrchestrator | null>(null);
   const { showCancelModal } = useCancelModal();
-  const {
-    setPaymentConfirmed,
-    setReportGenerating,
-    setReportReady,
-    setError,
-    reset,
-  } = usePaymentFlowStore();
+  const { setAssistantTyping } = useChatStore();
+  const { setReportReady } = useReportReadyStore();
 
   useEffect(() => {
     if (!enabled || !chatId) {
@@ -29,22 +24,23 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
     orchestratorRef.current = createPaymentFlowOrchestrator({
       chatId,
       onPaymentConfirmed: () => {
-        setPaymentConfirmed(true);
+        // Payment confirmed - no state needed
       },
       onReportGenerating: () => {
-        setReportGenerating(true);
+        setAssistantTyping(true); // Show stop button
       },
       onReportReady: () => {
         setReportReady(true);
-        // Don't set setReportGenerating(false) here - let typing completion handle it
+        // Stop button will be flipped by system message detection
       },
       onError: (error) => {
-        setError(error);
-        setReportGenerating(false);
+        console.error('Payment flow error:', error);
+        setAssistantTyping(false); // Hide stop button on error
       },
       onStripeCancel: () => {
-        // Reset payment flow state on cancellation
-        reset();
+        // Reset state on cancellation
+        setAssistantTyping(false);
+        setReportReady(false);
       },
       onShowCancelModal: (guestId) => {
         showCancelModal(guestId);
@@ -61,32 +57,27 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
         orchestratorRef.current = null;
       }
     };
-  }, [chatId, enabled, setPaymentConfirmed, setReportGenerating, setReportReady, setError]);
-
-  // Listen for typing completion to stop the stop icon (only for payment flow, not payment flow stop icon)
-  const isAssistantTyping = useChatStore(state => state.isAssistantTyping);
-  const { isReportGenerating } = usePaymentFlowStore();
-  useEffect(() => {
-    if (!isAssistantTyping && isReportGenerating) {
-      setReportGenerating(false);
-    }
-  }, [isAssistantTyping, isReportGenerating, setReportGenerating, chatId]);
+  }, [chatId, enabled, setAssistantTyping, setReportReady]);
 
   // Reset state when chatId changes
   useEffect(() => {
     if (chatId) {
-      reset();
+      setAssistantTyping(false);
+      setReportReady(false);
     }
-  }, [chatId, reset]);
+  }, [chatId, setAssistantTyping, setReportReady]);
 
   return {
-    // State
-    isPaymentConfirmed: usePaymentFlowStore.getState().isPaymentConfirmed,
-    isReportGenerating: usePaymentFlowStore.getState().isReportGenerating,
-    isReportReady: usePaymentFlowStore.getState().isReportReady,
-    error: usePaymentFlowStore.getState().error,
+    // State (simplified - using chat and report stores)
+    isPaymentConfirmed: false, // Not needed anymore
+    isReportGenerating: useChatStore.getState().isAssistantTyping, // Use isAssistantTyping
+    isReportReady: useReportReadyStore.getState().isReportReady, // Use report store
+    error: null, // Not needed anymore
     
-    // Actions
-    reset,
+    // Actions (simplified)
+    reset: () => {
+      setAssistantTyping(false);
+      setReportReady(false);
+    },
   };
 };
