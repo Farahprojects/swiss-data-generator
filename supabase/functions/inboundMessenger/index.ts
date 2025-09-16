@@ -186,14 +186,14 @@ serve(async (req) => {
   logMessage("🧭 DIRECTION VALIDATION", { 
     requestId, 
     direction,
-    validDirections: ['incoming', 'outgoing']
+    validDirections: ['inbound', 'outgoing']
   });
 
-  if (!['incoming', 'outgoing'].includes(direction)) {
+  if (!['inbound', 'outgoing'].includes(direction)) {
     logMessage("❌ INVALID DIRECTION", { 
       requestId, 
       direction,
-      expectedDirections: ['incoming', 'outgoing']
+      expectedDirections: ['inbound', 'outgoing']
     });
     return new Response("Invalid direction", {
       status: 400
