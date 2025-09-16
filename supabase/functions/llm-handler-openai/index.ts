@@ -38,6 +38,8 @@ serve(async (req) => {
     const body = await req.json();
     const { chat_id, text, mode } = body;
 
+    console.log(`[llm-handler-openai] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, mode: ${mode || 'default'}, text: ${text.substring(0, 50)}...`);
+
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
@@ -163,7 +165,8 @@ Content Rules:
 
     // Fire-and-forget TTS call - ONLY for conversation mode
     if (mode === 'conversation') {
-      console.log('[llm-handler-openai] conversation: sending assistant message to chat-send');
+      console.log(`[llm-handler-openai] 💬 CONVERSATION MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
+      
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers: {
@@ -175,9 +178,14 @@ Content Rules:
           voice: 'Puck',
           chat_id: chat_id
         })
-      }).catch(() => {}); // Silent error handling
+      }).catch((err) => {
+        console.error('[llm-handler-openai] ❌ TTS call failed:', err);
+      });
 
       // Fire-and-forget chat-send call to save assistant message
+      const assistantClientId = crypto.randomUUID();
+      console.log(`[llm-handler-openai] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
+      
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
         method: 'POST',
         headers: {
@@ -187,13 +195,39 @@ Content Rules:
         body: JSON.stringify({
           chat_id,
           text: sanitizedText,
-          client_msg_id: crypto.randomUUID(),
+          client_msg_id: assistantClientId,
           role: 'assistant',
           mode: 'conversation'
         })
-      }).then(() => {
-        console.log('[llm-handler-openai] conversation: assistant message sent to chat-send');
-      }).catch(() => {}); // Silent error handling
+      }).then((response) => {
+        console.log(`[llm-handler-openai] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
+      }).catch((err) => {
+        console.error(`[llm-handler-openai] ❌ CHAT-SEND CALL FAILED - client_msg_id: ${assistantClientId}, error:`, err);
+      });
+    } else {
+      // Non-conversation mode - also send to chat-send
+      console.log(`[llm-handler-openai] 🤖 NON-CONVERSATION MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
+      
+      const assistantClientId = crypto.randomUUID();
+      console.log(`[llm-handler-openai] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
+      
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: sanitizedText,
+          client_msg_id: assistantClientId,
+          role: 'assistant'
+        })
+      }).then((response) => {
+        console.log(`[llm-handler-openai] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
+      }).catch((err) => {
+        console.error(`[llm-handler-openai] ❌ CHAT-SEND CALL FAILED - client_msg_id: ${assistantClientId}, error:`, err);
+      });
     }
 
     // Non-conversation: assistant is sent to chat-send by LLM itself (above). Return minimal info.
