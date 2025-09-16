@@ -545,7 +545,6 @@ export type Database = {
       email_messages: {
         Row: {
           body: string | null
-          client_id: string | null
           created_at: string | null
           direction: string
           from_address: string
@@ -557,11 +556,9 @@ export type Database = {
           sent_via: string | null
           subject: string | null
           to_address: string
-          user_id: string | null
         }
         Insert: {
           body?: string | null
-          client_id?: string | null
           created_at?: string | null
           direction: string
           from_address: string
@@ -573,11 +570,9 @@ export type Database = {
           sent_via?: string | null
           subject?: string | null
           to_address: string
-          user_id?: string | null
         }
         Update: {
           body?: string | null
-          client_id?: string | null
           created_at?: string | null
           direction?: string
           from_address?: string
@@ -589,17 +584,8 @@ export type Database = {
           sent_via?: string | null
           subject?: string | null
           to_address?: string
-          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "email_messages_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       email_notification_templates: {
         Row: {
