@@ -12,7 +12,6 @@ interface MessageStore {
   error: string | null;
   hasOlder: boolean;
   wsConnected: boolean;
-  wsInitialized: boolean;
   
   // Actions
   setChatId: (id: string | null) => void;
@@ -23,7 +22,6 @@ interface MessageStore {
   fetchMessagesWithFallback: () => Promise<void>;
   fetchMessagesDirect: () => Promise<void>;
   loadOlder: () => Promise<void>;
-  initializeWebSocket: () => Promise<void>;
   setupRealtimeSubscription: () => Promise<void>;
 }
 
@@ -48,16 +46,12 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
   error: null,
   hasOlder: false,
   wsConnected: false,
-  wsInitialized: false,
 
   // Set chat ID and auto-fetch messages
   setChatId: (id: string | null) => {
     set({ chat_id: id, messages: [], error: null });
     if (id) {
-      // Initialize WebSocket early if not already done
-      if (!get().wsInitialized) {
-        get().initializeWebSocket();
-      }
+      // WebSocket initialization moved to ChatController
       // Fetch messages with proper fallback strategy
       get().fetchMessagesWithFallback();
     }
