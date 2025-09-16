@@ -123,20 +123,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
 
     try {
       console.log('[MessageStore] Fetching messages for chat:', chat_id);
-      await get().fetchMessagesDirect();
-    } catch (e: any) {
-      console.warn('[MessageStore] Failed to fetch messages:', e.message);
-      set({ error: e.message, loading: false });
-    }
-  },
-
-
-  // Fetch messages directly from Supabase (fallback)
-  fetchMessagesDirect: async () => {
-    const { chat_id } = get();
-    if (!chat_id) return;
-
-    try {
+      
       const { data, error } = await supabase
         .from('messages')
         .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
@@ -153,15 +140,14 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
         hasOlder: (data?.length || 0) === 50
       });
       
-      // WebSocket handles real-time subscriptions - no fallback needed
-      
+      console.log(`[MessageStore] Loaded ${messages.length} messages`);
     } catch (e: any) {
-      set({ 
-        error: e?.message || 'Failed to load messages', 
-        loading: false 
-      });
+      console.warn('[MessageStore] Failed to fetch messages:', e.message);
+      set({ error: e.message, loading: false });
     }
   },
+
+
 
   // Load older messages
   loadOlder: async () => {
