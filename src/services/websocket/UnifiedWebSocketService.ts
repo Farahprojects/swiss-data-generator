@@ -13,6 +13,7 @@ class UnifiedWebSocketService {
   // Callbacks for message fetching only
   private onMessage?: (message: Message) => void;
   private onError?: (error: string) => void;
+  private onSystemMessage?: (message: Message) => void;
 
   constructor() {
     // No content area watching - only message fetching
@@ -30,6 +31,7 @@ class UnifiedWebSocketService {
       onStatusChange?: (status: string) => void;
       onOptimisticMessage?: (message: Message) => void;
       onAssistantMessage?: (message: Message) => void;
+      onSystemMessage?: (message: Message) => void;
     }
   ) {
     console.log('[UnifiedWebSocket] Initializing with callbacks:', {
@@ -39,6 +41,7 @@ class UnifiedWebSocketService {
     
     this.onMessage = callbacks?.onMessageReceived;
     this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
+    this.onSystemMessage = callbacks?.onSystemMessage;
 
     // Store the chat_id and subscribe immediately
     this.currentChatId = chat_id;
@@ -137,6 +140,15 @@ class UnifiedWebSocketService {
           (payload) => {
             const newMessage = this.transformDatabaseMessage(payload.new);
             console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
+            
+            // Check for system message with context_injected
+            if (newMessage.role === 'system' && newMessage.context_injected) {
+              console.log('[UnifiedWebSocket] 🎯 System message with context detected - report ready!');
+              if (this.onSystemMessage && typeof this.onSystemMessage === 'function') {
+                this.onSystemMessage(newMessage);
+              }
+            }
+            
             if (onMessageCallback && typeof onMessageCallback === 'function') {
               onMessageCallback(newMessage);
             } else {

@@ -67,7 +67,8 @@ class ChatController {
       onMessageUpdated: this.handleMessageUpdated.bind(this),
       onStatusChange: this.handleStatusChange.bind(this),
       onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-      onAssistantMessage: this.handleAssistantMessageDirect.bind(this)
+      onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
+      onSystemMessage: this.handleSystemMessage.bind(this)
     });
     
     await this.loadExistingMessages();
@@ -119,6 +120,26 @@ class ChatController {
       // Message not in store yet, add it
       addMessage(message);
     }
+  }
+
+  /**
+   * Handle system messages with context injection (report ready)
+   */
+  private handleSystemMessage(message: Message) {
+    console.log('[ChatController] 🎯 System message with context detected - triggering report ready!');
+    
+    // Import stores dynamically to avoid circular dependencies
+    const { useReportReadyStore } = require('@/services/report/reportReadyStore');
+    const { usePaymentFlowStore } = require('@/stores/paymentFlowStore');
+    
+    // Trigger report ready state
+    useReportReadyStore.getState().setReportReady(true);
+    usePaymentFlowStore.getState().setReportReady(true);
+    
+    // Stop generating state (flip stop button back to wave icon)
+    usePaymentFlowStore.getState().setReportGenerating(false);
+    
+    console.log('[ChatController] ✅ Report ready state triggered and stop button flipped!');
   }
 
   /**
@@ -191,7 +212,8 @@ class ChatController {
       onMessageUpdated: this.handleMessageUpdated.bind(this),
       onStatusChange: this.handleStatusChange.bind(this),
       onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-      onAssistantMessage: this.handleAssistantMessageDirect.bind(this)
+      onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
+      onSystemMessage: this.handleSystemMessage.bind(this)
     });
     
     this.loadExistingMessages(); // Load conversation history

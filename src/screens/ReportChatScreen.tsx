@@ -8,7 +8,7 @@ import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
+// Removed - using system message detection through existing WebSocket
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
 
@@ -150,12 +150,8 @@ const ReportChatScreen = () => {
 
             console.log(`[ChatPage] ✅ Report generation triggered successfully for ${guestId}`);
             
-            // Start WebSocket listener immediately after triggering report generation
-            const currentChatId = urlChatId || chat_id;
-            if (currentChatId) {
-              console.log(`[ChatPage] 🔄 Starting WebSocket listener for chat_id: ${currentChatId}`);
-              startReportReadyListener(currentChatId);
-            }
+            // System message detection will handle report ready through existing WebSocket
+            console.log(`[ChatPage] 🔄 Report ready will be detected via system message in existing WebSocket`);
           }
         }
         else if (data?.payment_status === 'pending') {
