@@ -1,5 +1,5 @@
 import { createPaymentPoller, PaymentPoller } from './paymentPoller';
-import { createReportReadyListener, ReportReadyListener } from './reportReadyListener';
+// Removed - using system message detection instead
 import { supabase } from '@/integrations/supabase/client';
 import { chatController } from '@/features/chat/ChatController';
 
@@ -15,7 +15,6 @@ interface PaymentFlowOptions {
 
 export class PaymentFlowOrchestrator {
   private paymentPoller: PaymentPoller | null = null;
-  private reportReadyListener: ReportReadyListener | null = null;
   private isActive = false;
 
   constructor(private options: PaymentFlowOptions) {}
@@ -70,10 +69,7 @@ export class PaymentFlowOrchestrator {
       this.paymentPoller = null;
     }
 
-    if (this.reportReadyListener) {
-      this.reportReadyListener.stop();
-      this.reportReadyListener = null;
-    }
+    // Report ready listener removed - using system message detection
 
     this.isActive = false;
   }
@@ -88,8 +84,7 @@ export class PaymentFlowOrchestrator {
     // Trigger report generation
     await this.triggerReportGeneration(chatId);
 
-    // Start listening for report ready signal
-    await this.startReportReadyListener(chatId);
+    // Report ready will be detected via system message in existing WebSocket
   }
 
   private async triggerReportGeneration(chatId: string): Promise<void> {
@@ -137,30 +132,7 @@ export class PaymentFlowOrchestrator {
     }
   }
 
-  private async startReportReadyListener(chatId: string): Promise<void> {
-    this.reportReadyListener = createReportReadyListener({
-      chatId: chatId,
-      onReportReady: this.handleReportReady.bind(this),
-      onError: this.handleError.bind(this)
-    });
-
-    await this.reportReadyListener.start();
-  }
-
-  private handleReportReady(chatId: string): void {
-    // Remove progress messages and disable stop icon
-    chatController.removePaymentFlowProgress();
-    chatController.setPaymentFlowStopIcon(false);
-    
-    // Show completion message
-    chatController.showPaymentFlowProgress("Your session is ready!");
-    
-    // Notify UI that report is ready
-    this.options.onReportReady();
-    
-    // Stop the orchestrator
-    this.stop();
-  }
+  // Report ready detection moved to system message detection in WebSocket
 
   private handleError(error: string): void {
     // Clean up UI state on error

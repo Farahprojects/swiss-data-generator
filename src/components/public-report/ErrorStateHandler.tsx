@@ -9,7 +9,7 @@ import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { ErrorDiagnosticService, DiagnosticResponse } from '@/services/error/errorDiagnostic';
 import { supabase } from '@/integrations/supabase/client';
-import { stopReportReadyListener } from '@/services/report/reportReadyListener';
+// Removed - using system message detection instead
 
 interface ErrorState {
   type: string;
@@ -70,8 +70,7 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
           // 1. Set report as ready (triggers UI update)
           useReportReadyStore.getState().setReportReady(true);
           
-          // 2. Stop any active listeners
-          stopReportReadyListener(errorState.guest_report_id);
+          // 2. Report ready detection moved to system message detection
           
           // 3. Trigger context injection for chat
           try {

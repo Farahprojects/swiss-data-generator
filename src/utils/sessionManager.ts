@@ -1,4 +1,4 @@
-import { cleanupAllListeners } from '@/services/report/reportReadyListener';
+// Removed - using system message detection instead
 
 // Logger function for session manager
 const log = (level: 'log' | 'warn' | 'error' | 'info', message: string, data?: any, context?: string) => {
@@ -62,8 +62,7 @@ export class SessionManager {
       await this.clearModalStates();
       this.clearUrlParameters();
       
-      // Cleanup real-time listeners
-      cleanupAllListeners();
+      // Report ready listeners removed - using system message detection
 
       // Phase 2: Navigation reset
       if (!preserveNavigation) {
