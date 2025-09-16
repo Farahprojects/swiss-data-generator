@@ -10,6 +10,21 @@ const sanitizeString = (input: string, maxLength = 10000): string => {
   return input.slice(0, maxLength).trim();
 };
 
+// Extract email from formatted address (e.g., "Name <email@domain.com>" -> "email@domain.com")
+const extractEmail = (formattedEmail: string): string => {
+  // Remove any leading/trailing whitespace
+  const trimmed = formattedEmail.trim();
+  
+  // Look for email in angle brackets: "Name <email@domain.com>"
+  const angleBracketMatch = trimmed.match(/<([^>]+)>/);
+  if (angleBracketMatch) {
+    return angleBracketMatch[1].trim();
+  }
+  
+  // If no angle brackets, return as-is (should be plain email)
+  return trimmed;
+};
+
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email) && email.length <= 254;
@@ -134,14 +149,20 @@ serve(async (req) => {
     });
   }
 
+  // Extract clean email addresses from formatted strings
+  const cleanFromEmail = extractEmail(from_email);
+  const cleanToEmail = extractEmail(to_email);
+  
   // Validate email formats
-  const fromEmailValid = isValidEmail(from_email);
-  const toEmailValid = isValidEmail(to_email);
+  const fromEmailValid = isValidEmail(cleanFromEmail);
+  const toEmailValid = isValidEmail(cleanToEmail);
   
   logMessage("📧 EMAIL FORMAT VALIDATION", { 
     requestId, 
-    from_email: from_email.substring(0, 50) + '...',
-    to_email: to_email.substring(0, 50) + '...',
+    original_from: from_email.substring(0, 50) + '...',
+    original_to: to_email.substring(0, 50) + '...',
+    clean_from: cleanFromEmail,
+    clean_to: cleanToEmail,
     fromEmailValid,
     toEmailValid
   });
@@ -151,8 +172,10 @@ serve(async (req) => {
       requestId, 
       fromEmailValid,
       toEmailValid,
-      from_email: from_email.substring(0, 100),
-      to_email: to_email.substring(0, 100)
+      original_from: from_email.substring(0, 100),
+      original_to: to_email.substring(0, 100),
+      clean_from: cleanFromEmail,
+      clean_to: cleanToEmail
     });
     return new Response("Invalid email format", {
       status: 400
@@ -183,14 +206,16 @@ serve(async (req) => {
     originalSizes: {
       from_email: from_email.length,
       to_email: to_email.length,
+      clean_from: cleanFromEmail.length,
+      clean_to: cleanToEmail.length,
       subject: (subject || '').length,
       body: body.length,
       raw_headers: typeof raw_headers === 'string' ? raw_headers.length : JSON.stringify(raw_headers).length
     }
   });
 
-  const sanitizedFromEmail = sanitizeString(from_email, 254);
-  const sanitizedToEmail = sanitizeString(to_email, 254);
+  const sanitizedFromEmail = sanitizeString(cleanFromEmail, 254);
+  const sanitizedToEmail = sanitizeString(cleanToEmail, 254);
   const sanitizedSubject = sanitizeString(subject || '', 998); // RFC 5322 limit
   const sanitizedBody = sanitizeString(body, 1000000); // 1MB limit
   const sanitizedHeaders = sanitizeHeaders(raw_headers);
