@@ -318,6 +318,22 @@ serve(async (req)=>{
           
           if (error) {
             console.error(`[translator-edge-${reqId}] Error inserting into report_ready_signals:`, error);
+          } else {
+            // Call context-injector after successfully saving to translator_logs
+            console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
+            try {
+              const { error: injectorError } = await sb.functions.invoke('context-injector', {
+                body: { chat_id: body.user_id }
+              });
+              
+              if (injectorError) {
+                console.error(`[translator-edge-${reqId}] Context-injector failed:`, injectorError);
+              } else {
+                console.log(`[translator-edge-${reqId}] Context-injector completed successfully`);
+              }
+            } catch (injectorErr) {
+              console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
+            }
           }
         }
       } catch (error) {
