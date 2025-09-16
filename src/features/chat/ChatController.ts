@@ -12,6 +12,8 @@ import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 import { networkErrorHandler } from '@/utils/networkErrorHandler';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 
 class ChatController {
   private conversationServiceInitialized = false;
@@ -127,10 +129,6 @@ class ChatController {
    */
   private handleSystemMessage(message: Message) {
     console.log('[ChatController] 🎯 System message with context detected - triggering report ready!');
-    
-    // Import stores dynamically to avoid circular dependencies
-    const { useReportReadyStore } = require('@/services/report/reportReadyStore');
-    const { usePaymentFlowStore } = require('@/stores/paymentFlowStore');
     
     // Trigger report ready state
     useReportReadyStore.getState().setReportReady(true);
