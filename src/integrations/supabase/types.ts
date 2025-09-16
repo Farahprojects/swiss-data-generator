@@ -476,6 +476,36 @@ export type Database = {
         }
         Relationships: []
       }
+      domain_slugs: {
+        Row: {
+          billing: boolean | null
+          created_at: string | null
+          domain: string
+          id: string
+          info: boolean | null
+          media: boolean | null
+          support: boolean | null
+        }
+        Insert: {
+          billing?: boolean | null
+          created_at?: string | null
+          domain: string
+          id?: string
+          info?: boolean | null
+          media?: boolean | null
+          support?: boolean | null
+        }
+        Update: {
+          billing?: boolean | null
+          created_at?: string | null
+          domain?: string
+          id?: string
+          info?: boolean | null
+          media?: boolean | null
+          support?: boolean | null
+        }
+        Relationships: []
+      }
       edge_function_logs: {
         Row: {
           created_at: string | null
@@ -745,6 +775,7 @@ export type Database = {
           report_generated: boolean | null
           report_type: string | null
           stripe_session_id: string | null
+          updated_at: string
           user_id: string | null
         }
         Insert: {
@@ -764,6 +795,7 @@ export type Database = {
           report_generated?: boolean | null
           report_type?: string | null
           stripe_session_id?: string | null
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
@@ -783,6 +815,7 @@ export type Database = {
           report_generated?: boolean | null
           report_type?: string | null
           stripe_session_id?: string | null
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: []
@@ -1037,6 +1070,7 @@ export type Database = {
           error: Json | null
           id: string
           latency_ms: number | null
+          message_number: number | null
           meta: Json
           model: string | null
           reply_to_id: string | null
@@ -1054,6 +1088,7 @@ export type Database = {
           error?: Json | null
           id?: string
           latency_ms?: number | null
+          message_number?: number | null
           meta?: Json
           model?: string | null
           reply_to_id?: string | null
@@ -1071,6 +1106,7 @@ export type Database = {
           error?: Json | null
           id?: string
           latency_ms?: number | null
+          message_number?: number | null
           meta?: Json
           model?: string | null
           reply_to_id?: string | null
@@ -1438,30 +1474,6 @@ export type Database = {
           id?: string
           name?: string
           system_prompt?: string
-        }
-        Relationships: []
-      }
-      report_ready_signals: {
-        Row: {
-          chat_id: string | null
-          created_at: string | null
-          id: string
-          is_ai_report: boolean | null
-          seen: boolean
-        }
-        Insert: {
-          chat_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_ai_report?: boolean | null
-          seen?: boolean
-        }
-        Update: {
-          chat_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_ai_report?: boolean | null
-          seen?: boolean
         }
         Relationships: []
       }
@@ -2104,6 +2116,10 @@ export type Database = {
       }
       get_next_engine_sequence: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_next_message_number: {
+        Args: { p_chat_id: string }
         Returns: number
       }
       get_stripe_customer_id_for_user: {
