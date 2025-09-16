@@ -297,7 +297,7 @@ serve(async (req)=>{
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
     
-    // Add astro data only reports to report_ready_signals for UI detection
+    // Call context-injector for astro data only reports (not AI reports)
     if (body.is_guest && body.user_id && swiss.ok) {
       try {
         // Properly handle is_ai_report - could be boolean, string "true"/"false", or missing
@@ -308,36 +308,25 @@ serve(async (req)=>{
           isAIReport = body.is_ai_report.toLowerCase().trim() === 'true';
         }
         
-        // If it's astro data only (not AI report), add to report_ready_signals
+        // If it's astro data only (not AI report), call context-injector
         if (!isAIReport) {
-          const { error } = await sb.from('report_ready_signals').insert({
-            chat_id: body.user_id,
-            is_ai_report: false,
-            created_at: new Date().toISOString()
-          });
-          
-          if (error) {
-            console.error(`[translator-edge-${reqId}] Error inserting into report_ready_signals:`, error);
-          } else {
-            // Call context-injector after successfully saving to translator_logs
-            console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
-            try {
-              const { error: injectorError } = await sb.functions.invoke('context-injector', {
-                body: { chat_id: body.user_id }
-              });
-              
-              if (injectorError) {
-                console.error(`[translator-edge-${reqId}] Context-injector failed:`, injectorError);
-              } else {
-                console.log(`[translator-edge-${reqId}] Context-injector completed successfully`);
-              }
-            } catch (injectorErr) {
-              console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
+          console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
+          try {
+            const { error: injectorError } = await sb.functions.invoke('context-injector', {
+              body: { chat_id: body.user_id }
+            });
+            
+            if (injectorError) {
+              console.error(`[translator-edge-${reqId}] Context-injector failed:`, injectorError);
+            } else {
+              console.log(`[translator-edge-${reqId}] Context-injector completed successfully`);
             }
+          } catch (injectorErr) {
+            console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
           }
         }
       } catch (error) {
-        console.warn(`[translator-edge-${reqId}] Failed to add to report_ready_signals:`, error);
+        console.warn(`[translator-edge-${reqId}] Failed to call context-injector:`, error);
       }
     }
     
