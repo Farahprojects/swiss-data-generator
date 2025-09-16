@@ -42,7 +42,11 @@ serve(async (req) => {
   }
 
   try {
-    logMessage("Outbound email request received", { level: 'info', data: { method: req.method } });
+    // Generate unique request ID for correlation with VPS logs
+    const requestId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    
+    logMessage("Outbound email request received", { level: 'info', data: { method: req.method, requestId, timestamp } });
     
     // Initialize Supabase client (no auth required for testing)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -116,17 +120,22 @@ serve(async (req) => {
       domain: "therai.coach",
       to_email: to,
       subject: subject,
-      body: text || html // Use text version if available, otherwise HTML
+      body: text || html, // Use text version if available, otherwise HTML
+      request_id: requestId, // Add request ID for VPS correlation
+      timestamp: timestamp
     };
     
     logMessage("Sending payload to outbound SMTP endpoint", { 
-      level: 'debug', 
+      level: 'info', 
       data: { 
+        requestId,
+        timestamp,
         to_email: smtpPayload.to_email, 
         subject: smtpPayload.subject, 
         payloadSize: JSON.stringify(smtpPayload).length,
         slug: smtpPayload.slug,
-        domain: smtpPayload.domain
+        domain: smtpPayload.domain,
+        endpoint: smtpEndpoint
       }
     });
     
@@ -141,9 +150,12 @@ serve(async (req) => {
       logMessage("Outbound SMTP service error", { 
         level: 'error', 
         data: { 
+          requestId,
+          timestamp,
           status: response.status, 
           error,
-          to_email: smtpPayload.to_email
+          to_email: smtpPayload.to_email,
+          endpoint: smtpEndpoint
         }
       });
       return new Response(JSON.stringify({ error: "Failed to send outbound message", details: error }), {
@@ -156,8 +168,11 @@ serve(async (req) => {
     logMessage("Outbound email sent successfully", { 
       level: 'info',
       data: { 
+        requestId,
+        timestamp,
         to_email: smtpPayload.to_email, 
-        responseStatus: response.status
+        responseStatus: response.status,
+        endpoint: smtpEndpoint
       }
     });
 
