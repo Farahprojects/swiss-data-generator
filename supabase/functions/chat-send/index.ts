@@ -41,6 +41,8 @@ serve(async (req) => {
     const body = await req.json();
     const { chat_id, text, client_msg_id, mode, role, sessionId } = body;
 
+    console.log(`[chat-send] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, role: ${role || 'user'}, mode: ${mode || 'default'}`);
+
     if (!chat_id || !text) {
       return new Response(JSON.stringify({
         error: "Missing required fields: chat_id, text"
@@ -75,12 +77,8 @@ serve(async (req) => {
 
     // If this is an assistant message (e.g., from LLM in conversation mode), save assistant only
     if (role === 'assistant') {
-      if (mode === 'conversation') {
-        console.log('[chat-send] Conversation mode: Assistant message received. Saving to DB...');
-      } else {
-        console.log('[chat-send] Assistant message received. Saving to DB...');
-      }
-
+      console.log(`[chat-send] 🎯 ASSISTANT MESSAGE RECEIVED - chat_id: ${chat_id}, text: ${text.substring(0, 50)}...`);
+      
       const assistantMessageData = {
         chat_id,
         role: "assistant",
@@ -91,7 +89,9 @@ serve(async (req) => {
         meta: {}
       };
 
-      const { error: assistantError } = await supabase
+      console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB - message_number: ${nextMessageNumber}`);
+      
+      const { data: insertData, error: assistantError } = await supabase
         .from("messages")
         .insert(assistantMessageData, {
           onConflict: "client_msg_id",
@@ -100,7 +100,7 @@ serve(async (req) => {
         });
 
       if (assistantError) {
-        console.error('[chat-send] Failed to save assistant message:', assistantError);
+        console.error('[chat-send] ❌ FAILED TO SAVE ASSISTANT MESSAGE:', assistantError);
         return new Response(JSON.stringify({
           error: "Failed to save assistant message"
         }), {
@@ -109,7 +109,7 @@ serve(async (req) => {
         });
       }
 
-      console.log('[chat-send] Assistant message saved');
+      console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, insertData);
       return new Response(JSON.stringify({
         message: "Assistant message saved successfully",
         assistant_message: assistantMessageData
@@ -119,6 +119,8 @@ serve(async (req) => {
     }
 
     // Otherwise, treat as a user message save
+    console.log(`[chat-send] 👤 USER MESSAGE RECEIVED - chat_id: ${chat_id}, text: ${text.substring(0, 50)}...`);
+    
     const userMessageData = {
       chat_id,
       role: "user",
@@ -129,7 +131,9 @@ serve(async (req) => {
       meta: {}
     };
 
-    const { error: userError } = await supabase
+    console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB - message_number: ${nextMessageNumber}`);
+    
+    const { data: userInsertData, error: userError } = await supabase
       .from("messages")
       .insert(userMessageData, {
         onConflict: "client_msg_id",
@@ -138,6 +142,7 @@ serve(async (req) => {
       });
 
     if (userError) {
+      console.error('[chat-send] ❌ FAILED TO SAVE USER MESSAGE:', userError);
       return new Response(JSON.stringify({
         error: "Failed to save message"
       }), {
@@ -149,9 +154,11 @@ serve(async (req) => {
       });
     }
 
+    console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, userInsertData);
+
     // For conversation mode, just save user message (STT handles LLM call separately)
     if (mode === 'conversation') {
-      console.log('[chat-send] Conversation mode: User message saved');
+      console.log('[chat-send] 💬 CONVERSATION MODE: User message saved, no LLM call needed');
       return new Response(JSON.stringify({
         message: "User message saved successfully",
         user_message: userMessageData
@@ -163,6 +170,7 @@ serve(async (req) => {
     // (Assistant path handled above)
 
     // For non-conversation: Fire-and-forget LLM call; LLM will save assistant via chat-send
+    console.log(`[chat-send] 🤖 CALLING LLM HANDLER - chat_id: ${chat_id}`);
     fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
       method: 'POST',
       headers: {
@@ -173,10 +181,13 @@ serve(async (req) => {
         chat_id,
         text: text
       })
+    }).then((response) => {
+      console.log(`[chat-send] ✅ LLM HANDLER CALLED SUCCESSFULLY - status: ${response.status}`);
     }).catch((err) => {
-      console.error('[chat-send] LLM call (fire-and-forget) failed:', err);
+      console.error('[chat-send] ❌ LLM HANDLER CALL FAILED:', err);
     });
 
+    console.log('[chat-send] 🚀 USER MESSAGE SAVED, LLM PROCESSING STARTED');
     return new Response(JSON.stringify({
       message: "User message saved; LLM processing started",
       user_message: userMessageData

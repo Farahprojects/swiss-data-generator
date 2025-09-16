@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
+import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,7 +37,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const chat_id = threadId || storeChatId;
   
   const { 
-    messages, 
     clearChat,
     // Thread management from single source of truth
     threads,
@@ -46,6 +46,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     addThread,
     removeThread
   } = useChatStore();
+  
+  // Get messages from message store
+  const { messages } = useMessageStore();
 
   // 🎯 Simple guest detection: chat_id starts with "guest-"
   const { user } = useAuth();

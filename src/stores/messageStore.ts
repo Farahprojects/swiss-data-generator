@@ -55,12 +55,15 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
   // Add message with deduplication by message_number and optimistic handling
   addMessage: (message: Message) => {
     set((state) => {
-      // Check if message already exists by message_number
-      const exists = state.messages.some(m => m.message_number === message.message_number);
+      // Check if message already exists by message_number or id
+      const exists = state.messages.some(m => 
+        m.message_number === message.message_number || 
+        m.id === message.id
+      );
       if (exists) {
         // Update existing message (remove pending status if it was optimistic)
         const updatedMessages = state.messages.map(m => 
-          m.message_number === message.message_number 
+          (m.message_number === message.message_number || m.id === message.id)
             ? { ...m, ...message, pending: false }
             : m
         );
@@ -73,12 +76,6 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
       
       return { messages: newMessages };
     });
-
-    // Flip stop button back to wave icon when assistant message appears
-    if (message.role === 'assistant') {
-      const { setAssistantTyping } = useChatStore.getState();
-      setAssistantTyping(false);
-    }
   },
 
   // Add optimistic message with temporary number for instant UI
@@ -156,8 +153,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
         hasOlder: (data?.length || 0) === 50
       });
       
-      // Also set up direct real-time subscription as fallback
-      get().setupRealtimeSubscription();
+      // WebSocket handles real-time subscriptions - no fallback needed
       
     } catch (e: any) {
       set({ 

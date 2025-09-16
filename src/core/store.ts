@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Message } from './types';
 import { Conversation } from '@/services/conversations';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
+import { useMessageStore } from '@/stores/messageStore';
 
 export type ChatStatus =
   | 'idle'
@@ -16,8 +17,7 @@ interface ChatState {
   // Current active chat
   chat_id: string | null;
   guest_id: string | null;
-  // Transient only: optimistic user messages (assistant messages do not persist here)
-  messages: Message[];
+  // Messages moved to useMessageStore - single source of truth
   status: ChatStatus;
   error: string | null;
   ttsVoice?: string;
@@ -35,12 +35,7 @@ interface ChatState {
   // Chat actions (unified for both auth and guest)
   startConversation: (chat_id: string, guest_id?: string) => void;
   startNewConversation: (user_id?: string) => Promise<string>;
-  // DEPRECATED: Message management moved to useMessageStore
-  // These are kept for backward compatibility but should not be used
-  loadMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  updateMessage: (id: string, updates: Partial<Message>) => void;
-  removeMessage: (id: string) => void;
+  // Message management moved to useMessageStore - single source of truth
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
@@ -72,7 +67,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // Current active chat
   chat_id: null,
   guest_id: null,
-  messages: [],
+  // Messages moved to useMessageStore - single source of truth
   status: 'idle',
   error: null,
   ttsVoice: 'Puck',
@@ -91,7 +86,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ 
       chat_id: id, 
       guest_id: guest_id,
-      messages: [], 
+      // messages removed - use useMessageStore instead
       status: 'idle', 
       error: null,
       messageLoadError: null,
@@ -112,7 +107,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ 
         chat_id: conversationId,
         guest_id: null,
-        messages: [], 
+        // messages removed - use useMessageStore instead
         status: 'idle', 
         error: null,
         messageLoadError: null,
@@ -131,64 +126,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  loadMessages: (messages) => {
-    const uniqueMessages = messages.filter((msg, index, arr) => 
-      arr.findIndex(m => m.id === msg.id) === index
-    );
-    set({ 
-      messages: uniqueMessages, 
-      isLoadingMessages: false, 
-      messageLoadError: null,
-      lastMessagesFetch: Date.now()
-    });
-  },
+  // loadMessages removed - use useMessageStore instead
 
-  addMessage: (message) => set((state) => {
-    // Enhanced deduplication: check both id and client_msg_id
-    const existingById = state.messages.find(m => m.id === message.id);
-    const existingByClientId = message.client_msg_id ? 
-      state.messages.find(m => m.client_msg_id === message.client_msg_id) : null;
-    
-    // If message already exists by id, skip
-    if (existingById) {
-      return state;
-    }
-    
-    // If there's an optimistic message with same client_msg_id, replace it
-    if (existingByClientId) {
-      const newMessages = state.messages.map(m => 
-        m.client_msg_id === message.client_msg_id ? { ...message } : m
-      );
-      return { messages: newMessages };
-    }
-    
-    const result = { messages: [...state.messages, message] };
-    return result;
-  }),
-
-  updateMessage: (id, updates) => {
-    set((state) => {
-      const newMessages = state.messages.map((msg) =>
-        msg.id === id ? { ...msg, ...updates } : msg
-      );
-      
-      // If the update includes a new id, remove any duplicate with that id
-      if (updates.id && updates.id !== id) {
-        const filteredMessages = newMessages.filter((msg, index, arr) => 
-          !(msg.id === updates.id && arr.findIndex(m => m.id === updates.id) !== index)
-        );
-        return { messages: filteredMessages };
-      }
-      
-      return { messages: newMessages };
-    });
-  },
-
-  removeMessage: (id) => {
-    set((state) => ({
-      messages: state.messages.filter(msg => msg.id !== id)
-    }));
-  },
+  // addMessage, updateMessage, removeMessage removed - use useMessageStore instead
 
   setStatus: (status) => set({ status }),
   
@@ -206,9 +146,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     try {
       set({ isLoadingMessages: true, messageLoadError: null });
-      const { getMessagesForConversation } = await import('@/services/api/messages');
-      const messages = await getMessagesForConversation(state.chat_id);
-      get().loadMessages(messages);
+      // Message loading moved to useMessageStore
+      // Just trigger a refetch by setting chat_id
+      const { setChatId } = useMessageStore.getState();
+      if (state.chat_id) {
+        setChatId(state.chat_id);
+      }
     } catch (error) {
       console.error('[Store] Retry load messages failed:', error);
       set({ 
@@ -224,7 +167,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ 
       chat_id: null, 
       guest_id: null,
-      messages: [], 
+      // messages removed - use useMessageStore instead
       status: 'idle', 
       error: null,
       isLoadingMessages: false,

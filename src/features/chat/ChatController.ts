@@ -32,7 +32,8 @@ class ChatController {
   }
 
   private async loadExistingMessages(retryCount = 0) {
-    const { chat_id, setMessageLoadError, loadMessages } = useChatStore.getState();
+    const { chat_id, setMessageLoadError } = useChatStore.getState();
+    const { setChatId } = useMessageStore.getState();
     if (!chat_id) return;
 
     const maxRetries = 3;
@@ -41,7 +42,8 @@ class ChatController {
     try {
       // 🚀 LAZY LOAD: No loading state, just fetch and load silently
       const messages = await getMessagesForConversation(chat_id);
-      loadMessages(messages);
+      // Set chat_id in message store to trigger fetch
+      setChatId(chat_id);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
@@ -98,6 +100,12 @@ class ChatController {
     // Only add if not already present and no reconciliation occurred
     if (!messages.find(m => m.id === message.id)) {
       addMessage(message);
+      
+      // Handle side-effects after adding to store
+      if (message.role === 'assistant') {
+        const { setAssistantTyping } = useChatStore.getState();
+        setAssistantTyping(false);
+      }
     }
   }
 
@@ -332,7 +340,7 @@ class ChatController {
   }
 
   public removePaymentFlowProgress(): void {
-    const { messages, removeMessage } = useChatStore.getState();
+    const { messages, updateMessage } = useMessageStore.getState();
     
     // Find and remove payment progress messages
     const progressMessages = messages.filter(m => 
@@ -340,7 +348,8 @@ class ChatController {
     );
     
     progressMessages.forEach(msg => {
-      removeMessage(msg.id);
+      // Mark as complete instead of actually removing
+      updateMessage(msg.id, { status: 'complete' });
     });
     
     console.log(`[ChatController] Removed ${progressMessages.length} payment progress messages`);

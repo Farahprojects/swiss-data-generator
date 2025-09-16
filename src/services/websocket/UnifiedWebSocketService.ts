@@ -141,20 +141,18 @@ class UnifiedWebSocketService {
             const newMessage = this.transformDatabaseMessage(payload.new);
             console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
             
-            // Check for system message with context_injected (prevents re-triggering)
-            if (newMessage.role === 'system' && newMessage.context_injected) {
-              console.log('[UnifiedWebSocket] 🎯 System message with context detected - report ready!');
+            // Filter out system messages at WebSocket level (don't touch store)
+            if (newMessage.role === 'system') {
+              console.log('[UnifiedWebSocket] System message filtered out from UI');
+              
+              // Handle system message business logic via callback
               if (this.onSystemMessage && typeof this.onSystemMessage === 'function') {
                 this.onSystemMessage(newMessage);
               }
-            }
-            
-            // Filter out system messages from UI (don't show them in chat)
-            if (newMessage.role === 'system') {
-              console.log('[UnifiedWebSocket] System message filtered out from UI');
               return; // Don't process further for UI display
             }
             
+            // Dispatch pure action to store for user messages only
             if (onMessageCallback && typeof onMessageCallback === 'function') {
               onMessageCallback(newMessage);
             } else {
