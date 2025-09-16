@@ -141,9 +141,9 @@ class UnifiedWebSocketService {
             const newMessage = this.transformDatabaseMessage(payload.new);
             console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
             
-            // Check for system message with context_injected
-            if (newMessage.role === 'system' && newMessage.context_injected) {
-              console.log('[UnifiedWebSocket] 🎯 System message with context detected - report ready!');
+            // Check for system message (any system message triggers report ready)
+            if (newMessage.role === 'system') {
+              console.log('[UnifiedWebSocket] 🎯 System message detected - report ready!');
               if (this.onSystemMessage && typeof this.onSystemMessage === 'function') {
                 this.onSystemMessage(newMessage);
               }
