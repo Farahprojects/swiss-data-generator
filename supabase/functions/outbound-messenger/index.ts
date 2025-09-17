@@ -98,7 +98,7 @@ serve(async (req) => {
         body: html || text || '',
         from_address: from || 'test@example.com',
         to_address: to,
-        direction: 'outgoing',
+        direction: 'outbound',
         sent_via: 'outbound-messenger',
         is_read: true,
         is_starred: false,
@@ -127,7 +127,7 @@ serve(async (req) => {
         requestId,
         to,
         subject,
-        direction: 'outgoing'
+        direction: 'outbound'
       }
     });
     
