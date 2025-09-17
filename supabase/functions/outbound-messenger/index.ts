@@ -58,9 +58,6 @@ serve(async (req) => {
       }
     });
 
-    // For testing - no user authentication required
-    const user = { id: 'test-user-id', email: 'test@example.com' };
-
     // Log raw request data for debugging (sanitizing sensitive data)
     const rawBody = await req.text();
     logMessage("Request body received", { 
@@ -78,8 +75,7 @@ serve(async (req) => {
         subject, 
         htmlLength: html?.length || 0,
         textLength: text?.length || 0,
-        from: from || "default",
-        userId: user.id
+        from: from || "default"
       }
     });
 
@@ -94,94 +90,44 @@ serve(async (req) => {
       });
     }
 
-    const smtpEndpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
-    if (!smtpEndpoint) {
-      logMessage("Outbound SMTP endpoint not configured", { 
-        level: 'error', 
-        data: { envVar: "OUTBOUND_SMTP_ENDPOINT" }
+    // Save outbound email to email_messages table
+    const { error: dbError } = await supabase
+      .from('email_messages')
+      .insert({
+        subject: subject,
+        body: html || text || '',
+        from_address: from || 'test@example.com',
+        to_address: to,
+        direction: 'outgoing',
+        sent_via: 'outbound-messenger',
+        is_read: true,
+        is_starred: false,
+        is_archived: false
       });
-      return new Response(JSON.stringify({ error: "Outbound SMTP endpoint not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
 
-    logMessage("Sending outbound email via SMTP endpoint", { 
-      level: 'info', 
-      data: { 
-        to,
-        endpointDomain: new URL(smtpEndpoint).hostname
-      }
-    });
-    
-    // Build the payload in the format expected by the external SMTP service
-    const smtpPayload = {
-      slug: "madman",
-      domain: "therai.coach",
-      to_email: to,
-      subject: subject,
-      body: text || html, // Use text version if available, otherwise HTML
-      request_id: requestId, // Add request ID for VPS correlation
-      timestamp: timestamp
-    };
-    
-    logMessage("Sending payload to outbound SMTP endpoint", { 
-      level: 'info', 
-      data: { 
-        requestId,
-        timestamp,
-        to_email: smtpPayload.to_email, 
-        subject: smtpPayload.subject, 
-        payloadSize: JSON.stringify(smtpPayload).length,
-        slug: smtpPayload.slug,
-        domain: smtpPayload.domain,
-        endpoint: smtpEndpoint
-      }
-    });
-    
-    const response = await fetch(smtpEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(smtpPayload)
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      logMessage("Outbound SMTP service error", { 
-        level: 'error', 
+    if (dbError) {
+      logMessage("Failed to save outbound email to database", { 
+        level: 'error',
         data: { 
           requestId,
-          timestamp,
-          status: response.status, 
-          error,
-          to_email: smtpPayload.to_email,
-          endpoint: smtpEndpoint
+          error: dbError.message,
+          to,
+          subject
         }
       });
-      return new Response(JSON.stringify({ error: "Failed to send outbound message", details: error }), {
+      return new Response(JSON.stringify({ error: "Failed to save email to database", details: dbError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    const responseData = await response.text();
-    logMessage("Outbound email sent successfully", { 
+    logMessage("Outbound email saved to database successfully", { 
       level: 'info',
       data: { 
         requestId,
-        timestamp,
-        to_email: smtpPayload.to_email, 
-        responseStatus: response.status,
-        endpoint: smtpEndpoint
-      }
-    });
-
-    // Skip database save for testing - just log success
-    logMessage("Email sent successfully (database save skipped for testing)", { 
-      level: 'info',
-      data: { 
-        to_email: to,
-        userId: user.id
+        to,
+        subject,
+        direction: 'outgoing'
       }
     });
     
