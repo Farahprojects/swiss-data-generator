@@ -90,19 +90,133 @@ serve(async (req) => {
       });
     }
 
+    // Check if SMTP endpoint is configured
+    const smtpEndpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
+    if (!smtpEndpoint) {
+      logMessage("Outbound SMTP endpoint not configured", { 
+        level: 'error', 
+        data: { envVar: "OUTBOUND_SMTP_ENDPOINT" }
+      });
+      return new Response(JSON.stringify({ error: "Outbound SMTP endpoint not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Send email to VPS SMTP endpoint
+    logMessage("Sending email to VPS SMTP endpoint", { 
+      level: 'info',
+      data: { 
+        smtpEndpoint,
+        to,
+        subject,
+        from: from || "default"
+      }
+    });
+
+    const smtpPayload = {
+      to,
+      subject,
+      html,
+      text: text || '',
+      from: from || 'noreply@therai.co'
+    };
+
+    let smtpResponse;
+    let smtpResult;
+    
+    try {
+      smtpResponse = await fetch(smtpEndpoint, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'User-Agent': 'therai-outbound-messenger/1.0'
+        },
+        body: JSON.stringify(smtpPayload)
+      });
+
+      const responseText = await smtpResponse.text();
+      
+      logMessage("VPS SMTP endpoint response received", { 
+        level: 'info',
+        data: { 
+          status: smtpResponse.status,
+          statusText: smtpResponse.statusText,
+          responseLength: responseText.length,
+          responsePreview: responseText.substring(0, 200)
+        }
+      });
+
+      // Try to parse JSON response
+      try {
+        smtpResult = JSON.parse(responseText);
+      } catch (parseError) {
+        smtpResult = { success: smtpResponse.ok, message: responseText };
+      }
+
+    } catch (fetchError) {
+      logMessage("Failed to reach VPS SMTP endpoint", { 
+        level: 'error',
+        data: { 
+          error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+          smtpEndpoint,
+          to,
+          subject
+        }
+      });
+      return new Response(JSON.stringify({ error: "Failed to reach SMTP endpoint", details: fetchError instanceof Error ? fetchError.message : String(fetchError) }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Check if VPS approved the email
+    if (!smtpResponse.ok || (smtpResult && smtpResult.success === false)) {
+      logMessage("VPS SMTP endpoint rejected email", { 
+        level: 'warn',
+        data: { 
+          status: smtpResponse.status,
+          response: smtpResult,
+          to,
+          subject
+        }
+      });
+      return new Response(JSON.stringify({ 
+        error: "Email rejected by SMTP endpoint", 
+        details: smtpResult?.message || smtpResult?.error || "Unknown rejection reason"
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    logMessage("VPS SMTP endpoint approved email", { 
+      level: 'info',
+      data: { 
+        response: smtpResult,
+        to,
+        subject
+      }
+    });
+
     // Save outbound email to email_messages table
     const { error: dbError } = await supabase
       .from('email_messages')
       .insert({
         subject: subject,
         body: html || text || '',
-        from_address: from || 'test@example.com',
+        from_address: from || 'noreply@therai.co',
         to_address: to,
         direction: 'outbound',
         sent_via: 'outbound-messenger',
         is_read: true,
         is_starred: false,
-        is_archived: false
+        is_archived: false,
+        raw_headers: JSON.stringify({
+          vps_response: smtpResult,
+          vps_status: smtpResponse.status,
+          request_id: requestId
+        })
       });
 
     if (dbError) {
