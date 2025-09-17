@@ -45,28 +45,41 @@ serve(async (req) => {
     }
 
     console.log('[verification-emailer] Checking environment variables...');
-    const endpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
-    const token    = Deno.env.get("THERIA_SMTP_TOKEN");
+    const endpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
     console.log('[verification-emailer] Environment check:', { 
-      hasEndpoint: !!endpoint, 
-      hasToken: !!token,
+      hasEndpoint: !!endpoint,
       endpointLength: endpoint?.length || 0
     });
     
-    if (!endpoint || !token) {
-      console.log('[verification-emailer] Missing SMTP credentials');
+    if (!endpoint) {
+      console.log('[verification-emailer] Missing SMTP endpoint');
       return new Response(
-        JSON.stringify({ error: "SMTP endpoint or token not set" }),
+        JSON.stringify({ error: "SMTP endpoint not set" }),
         { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
-    const payload = { to, subject, html, text, from: from ?? "Therai <no-reply@theraiastro.com>" };
+    // Build payload in the same format as outbound-messenger
+    const requestId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    
+    const payload = {
+      slug: "noreply",
+      domain: "therai.co",
+      to_email: to,
+      subject: subject,
+      body: text || html, // Use text version if available, otherwise HTML
+      request_id: requestId,
+      timestamp: timestamp
+    };
+    
     console.log('[verification-emailer] Prepared SMTP payload:', { 
-      to: payload.to, 
-      subject: payload.subject, 
-      from: payload.from,
-      htmlLength: payload.html.length
+      slug: payload.slug,
+      domain: payload.domain,
+      to_email: payload.to_email, 
+      subject: payload.subject,
+      bodyLength: payload.body.length,
+      request_id: payload.request_id
     });
 
     console.log('[verification-emailer] Sending request to SMTP endpoint:', endpoint);
@@ -74,8 +87,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // 🔑 send bare token, no Bearer/Token prefix
-        "Authorization": token,
+        "User-Agent": "therai-verification-emailer/1.0"
       },
       body: JSON.stringify(payload),
     });
