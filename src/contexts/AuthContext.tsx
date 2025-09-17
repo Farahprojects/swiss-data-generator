@@ -308,8 +308,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error, data: null };
       }
       
-        // TEMPORARY: Skip email verification check for signin
-        // TODO: Re-enable verification check once SMTP is configured
+        // Check if email is confirmed
+        if (data?.user && !data.user.email_confirmed_at) {
+          // User exists but email not confirmed - show verification modal
+          setPendingEmailAddress(data.user.email);
+          setLoading(false);
+          return { error: null, data };
+        }
+
         if (data?.user) {
           setUser(data.user);
           setSession(data.session);
@@ -325,34 +331,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // TEMPORARY: Skip email verification - create user directly
-      // TODO: Re-enable email verification once SMTP is configured
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
-        }
+      // Use start-signup edge function for proper email verification flow
+      const { data, error } = await supabase.functions.invoke('start-signup', {
+        body: { email, password }
       });
 
-      log('debug', 'Direct signup response', { hasError: !!error, data }, 'auth');
+      log('debug', 'Start-signup response', { hasError: !!error, data }, 'auth');
       
       if (error) {
-        // Handle existing user case
-        if (error.message?.includes('already been registered') || error.message?.includes('already exists')) {
+        return { error, data: null };
+      }
+
+      // Handle edge function response
+      if (data?.success === false) {
+        if (data.errorCode === 'email_exists') {
           return { error: new Error('An account with this email already exists. Please sign in instead.') };
         }
-        return { error: new Error(error.message || 'Signup failed') };
+        return { error: new Error(data.error || 'Signup failed') };
       }
 
-      // User is created and automatically signed in
-      if (data?.user) {
-        setUser(data.user);
-        setSession(data.session);
-        setLoading(false);
+      // Success case - verification email sent
+      if (data?.success === true) {
+        // No user created yet - will be created after email verification
+        return { error: null, data: { message: data.message } };
       }
 
-      return { error: null, user: data?.user || null };
+      return { error: new Error('Unexpected response from signup service') };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
       return { error };
