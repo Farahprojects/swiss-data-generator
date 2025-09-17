@@ -188,7 +188,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                         ? 'border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-300/30' 
                         : experience.isRecommended 
                         ? 'border-gray-300 bg-gray-50/30 shadow-md' 
-                        : 'border-gray-200/50 bg-white/80 backdrop-blur-sm'
+                        : 'border-gray-200/50 bg-white/20 backdrop-blur-sm'
                     }`}
                     ref={isTargeted ? targetRef : null}
                   >

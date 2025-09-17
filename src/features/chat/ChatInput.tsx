@@ -191,7 +191,7 @@ export const ChatInput = () => {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-2 relative">
+    <div className="bg-white/20 backdrop-blur-lg border-t border-gray-100 p-2 relative">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (
