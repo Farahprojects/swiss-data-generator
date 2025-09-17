@@ -114,12 +114,15 @@ serve(async (req) => {
       }
     });
 
+    // Build the payload in the format expected by the external SMTP service
     const smtpPayload = {
-      to,
-      subject,
-      html,
-      text: text || '',
-      from: from || 'noreply@therai.co'
+      slug: "noreply",
+      domain: "therai.co",
+      to_email: to,
+      subject: subject,
+      body: text || html, // Use text version if available, otherwise HTML
+      request_id: requestId, // Add request ID for VPS correlation
+      timestamp: timestamp
     };
 
     let smtpResponse;
