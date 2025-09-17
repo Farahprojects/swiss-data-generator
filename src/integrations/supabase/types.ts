@@ -478,30 +478,57 @@ export type Database = {
       }
       domain_slugs: {
         Row: {
+          admin: boolean | null
           billing: boolean | null
+          contact: boolean | null
           created_at: string | null
+          dev: boolean | null
           domain: string
+          hello: boolean | null
+          help: boolean | null
+          hr: boolean | null
           id: string
           info: boolean | null
+          legal: boolean | null
+          marketing: boolean | null
           media: boolean | null
+          noreply: boolean | null
           support: boolean | null
         }
         Insert: {
+          admin?: boolean | null
           billing?: boolean | null
+          contact?: boolean | null
           created_at?: string | null
+          dev?: boolean | null
           domain: string
+          hello?: boolean | null
+          help?: boolean | null
+          hr?: boolean | null
           id?: string
           info?: boolean | null
+          legal?: boolean | null
+          marketing?: boolean | null
           media?: boolean | null
+          noreply?: boolean | null
           support?: boolean | null
         }
         Update: {
+          admin?: boolean | null
           billing?: boolean | null
+          contact?: boolean | null
           created_at?: string | null
+          dev?: boolean | null
           domain?: string
+          hello?: boolean | null
+          help?: boolean | null
+          hr?: boolean | null
           id?: string
           info?: boolean | null
+          legal?: boolean | null
+          marketing?: boolean | null
           media?: boolean | null
+          noreply?: boolean | null
           support?: boolean | null
         }
         Relationships: []
