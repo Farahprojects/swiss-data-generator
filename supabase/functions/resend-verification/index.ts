@@ -74,7 +74,7 @@ serve(async (req) => {
       type: 'signup',
       email,
       options: {
-        redirectTo: 'https://therai.co/auth/email'
+        redirectTo: 'https://auth.therai.co/auth/email'
       }
     });
 

@@ -37,21 +37,18 @@ serve(async (req) => {
       }
     });
 
-    // Generate signup confirmation link using admin API
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'signup',
+    // Create user first using admin API
+    const { data: userData, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        redirectTo: 'https://therai.co/auth/email'
-      }
+      email_confirm: false // Don't auto-confirm email
     });
 
-    if (error) {
-      console.error('Error generating signup link:', error);
+    if (createError) {
+      console.error('Error creating user:', createError);
       
       // Handle email already exists case specifically
-      if (error.message?.includes('already been registered') || error.status === 422) {
+      if (createError.message?.includes('already been registered') || createError.status === 422) {
         return new Response(
           JSON.stringify({ 
             success: false,
@@ -65,59 +62,35 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: error.message || 'Failed to create account',
+          error: createError.message || 'Failed to create account',
           errorCode: 'signup_failed'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!data.properties?.action_link) {
+    if (!userData.user) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'Failed to generate verification link',
-          errorCode: 'link_generation_failed'
+          error: 'Failed to create user account',
+          errorCode: 'user_creation_failed'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get email template from database
-    const { data: templateData, error: templateError } = await supabase
-      .from('email_notification_templates')
-      .select('subject, body_html, body_text')
-      .eq('template_type', 'email_verification')
-      .single();
+    console.log('User created successfully:', userData.user.id);
 
-    if (templateError || !templateData) {
-      console.error('Error fetching email template:', templateError);
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: 'Failed to fetch email template',
-          errorCode: 'template_error'
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Replace template variables
-    const htmlContent = templateData.body_html.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
-    const textContent = templateData.body_text.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
-
-    // Send verification email using existing verification-emailer function
-    const { error: emailError } = await supabase.functions.invoke('verification-emailer', {
+    // Call signup_token function to send verification email
+    const { error: tokenError } = await supabase.functions.invoke('signup_token', {
       body: {
-        to: email,
-        subject: templateData.subject,
-        html: htmlContent,
-        text: textContent
+        user_id: userData.user.id
       }
     });
 
-    if (emailError) {
-      console.error('Error sending verification email:', emailError);
+    if (tokenError) {
+      console.error('Error calling signup_token:', tokenError);
       return new Response(
         JSON.stringify({ 
           success: false,
