@@ -6,7 +6,6 @@ BEGIN
     id,
     email,
     email_verified,
-    verification_status,
     verification_token,
     created_at,
     updated_at,
@@ -16,7 +15,6 @@ BEGIN
     NEW.id,
     NEW.email,
     CASE WHEN NEW.email_confirmed_at IS NOT NULL THEN true ELSE false END,
-    CASE WHEN NEW.email_confirmed_at IS NOT NULL THEN 'verified' ELSE 'pending' END,
     gen_random_uuid()::text, -- Generate verification token
     COALESCE(NEW.created_at, now()),
     now(),
@@ -25,7 +23,6 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     email_verified = EXCLUDED.email_verified,
-    verification_status = EXCLUDED.verification_status,
     verification_token = COALESCE(EXCLUDED.verification_token, public.profiles.verification_token), -- Keep existing token if not null
     updated_at = now();
   

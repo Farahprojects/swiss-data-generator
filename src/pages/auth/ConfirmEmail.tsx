@@ -37,7 +37,6 @@ const ConfirmEmail: React.FC = () => {
         .from('profiles')
         .update({ 
           email_verified: true,
-          verification_status: 'verified',
           verification_token: null, // Clear the token after use
           updated_at: new Date().toISOString()
         })
