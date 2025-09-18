@@ -274,27 +274,35 @@ serve(async (req) => {
     });
   }
 
-  // Email sending
+  // Email sending via VPS SMTP endpoint
   try {
-    log("→ Sending email via SMTP");
+    log("→ Sending email via VPS SMTP endpoint");
     log("Email details:", {
       to: newEmail,
       subject: templateData.subject,
       htmlLength: html.length,
+      userId: userId,
       smtpEndpoint: new URL(smtpEndpoint).hostname,
     });
 
-    const emailPayload = {
-      to: newEmail,
-      subject: templateData.subject,
-      html,
-      from: "Therai <no-reply@therai.co>",
+    // Build VPS-compatible payload for verification emails
+    const smtpPayload = {
+      slug: "noreply",                    // Hardcoded for verification pipeline
+      domain: "therai.co",               // Hardcoded for verification pipeline
+      to_email: newEmail,                // Dynamic: user's email
+      subject: templateData.subject,     // Dynamic: from template
+      body: html,                        // Dynamic: processed HTML template
+      request_id: userId,                // Use auth user ID for correlation
+      timestamp: new Date().toISOString() // Dynamic: current timestamp
     };
 
     const send = await fetch(smtpEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(emailPayload),
+      headers: { 
+        "Content-Type": "application/json",
+        "User-Agent": "therai-email-verification/1.0"
+      },
+      body: JSON.stringify(smtpPayload),
     });
 
     if (!send.ok) {
@@ -308,10 +316,11 @@ serve(async (req) => {
     }
 
     const smtpResponse = await send.text();
-    log("✓ Email sent successfully:", {
+    log("✓ Email sent successfully via VPS:", {
       smtpStatus: send.status,
       responseLength: smtpResponse.length,
       to: newEmail,
+      userId: userId,
     });
   } catch (err: any) {
     log("✗ Exception during email sending:", err.message);
