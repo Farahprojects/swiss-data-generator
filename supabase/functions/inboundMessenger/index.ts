@@ -121,7 +121,7 @@ serve(async (req) => {
     });
   }
 
-  const { from_email, to_email, subject, body, raw_headers, direction } = payload;
+  const { from_email, to_email, subject, body, raw_headers, direction, attachments, attachment_count, has_attachments } = payload;
 
   // Input validation and sanitization
   logMessage("🔍 STARTING INPUT VALIDATION", { 
@@ -131,7 +131,10 @@ serve(async (req) => {
     subject: subject ? 'present' : 'missing',
     body: body ? 'present' : 'missing',
     direction: direction ? 'present' : 'missing',
-    raw_headers: raw_headers ? 'present' : 'missing'
+    raw_headers: raw_headers ? 'present' : 'missing',
+    attachments: attachments ? 'present' : 'missing',
+    attachment_count: attachment_count || 0,
+    has_attachments: has_attachments || false
   });
 
   if (!from_email || !to_email || !body || !direction) {
@@ -219,6 +222,27 @@ serve(async (req) => {
   const sanitizedSubject = sanitizeString(subject || '', 998); // RFC 5322 limit
   const sanitizedBody = sanitizeString(body, 1000000); // 1MB limit
   const sanitizedHeaders = sanitizeHeaders(raw_headers);
+  
+  // Sanitize and validate attachments
+  let sanitizedAttachments = [];
+  let sanitizedAttachmentCount = 0;
+  let sanitizedHasAttachments = false;
+  
+  if (attachments && Array.isArray(attachments)) {
+    sanitizedAttachments = attachments
+      .filter(att => att && typeof att === 'object' && att.filename && att.content)
+      .map(att => ({
+        filename: sanitizeString(att.filename, 255),
+        content: sanitizeString(att.content, 15000000), // 15MB base64 limit
+        mime_type: sanitizeString(att.mime_type || 'application/octet-stream', 100),
+        size: typeof att.size === 'number' ? Math.min(att.size, 10000000) : 0, // 10MB limit
+        encoding: sanitizeString(att.encoding || 'base64', 20)
+      }))
+      .slice(0, 10); // Max 10 attachments
+    
+    sanitizedAttachmentCount = sanitizedAttachments.length;
+    sanitizedHasAttachments = sanitizedAttachmentCount > 0;
+  }
 
   logMessage("✅ INPUT SANITIZATION COMPLETE", { 
     requestId,
@@ -227,7 +251,10 @@ serve(async (req) => {
       to_email: sanitizedToEmail.length,
       subject: sanitizedSubject.length,
       body: sanitizedBody.length,
-      raw_headers: sanitizedHeaders.length
+      raw_headers: sanitizedHeaders.length,
+      attachments: sanitizedAttachments.length,
+      attachment_count: sanitizedAttachmentCount,
+      has_attachments: sanitizedHasAttachments
     }
   });
 
@@ -299,7 +326,9 @@ serve(async (req) => {
       subject: sanitizedSubject.substring(0, 100) + '...',
       bodyLength: sanitizedBody.length,
       direction,
-      headersLength: sanitizedHeaders.length
+      headersLength: sanitizedHeaders.length,
+      attachmentCount: sanitizedAttachmentCount,
+      hasAttachments: sanitizedHasAttachments
     }
   });
 
@@ -312,7 +341,10 @@ serve(async (req) => {
         subject: sanitizedSubject,
         body: sanitizedBody,
         direction,
-        raw_headers: sanitizedHeaders
+        raw_headers: sanitizedHeaders,
+        attachments: sanitizedAttachments,
+        attachment_count: sanitizedAttachmentCount,
+        has_attachments: sanitizedHasAttachments
       }
     ])
     .select();
@@ -338,7 +370,9 @@ serve(async (req) => {
     from_address: sanitizedFromEmail,
     to_address: sanitizedToEmail,
     direction,
-    subject: sanitizedSubject.substring(0, 100)
+    subject: sanitizedSubject.substring(0, 100),
+    attachmentCount: sanitizedAttachmentCount,
+    hasAttachments: sanitizedHasAttachments
   });
 
   logMessage("🎉 INBOUND MESSENGER REQUEST COMPLETED", { 
