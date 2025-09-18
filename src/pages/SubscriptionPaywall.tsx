@@ -202,7 +202,7 @@ const SubscriptionPaywall: React.FC = () => {
       </main>
 
       <footer className="py-8 text-center text-sm text-gray-500 font-light">
-        © {new Date().getFullYear()} Theraiapi. All rights reserved.
+        © {new Date().getFullYear()} therai. All rights reserved.
       </footer>
     </div>
   );

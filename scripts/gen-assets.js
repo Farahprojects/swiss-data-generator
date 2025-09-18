@@ -11,7 +11,7 @@ const path = require('path');
 const https = require('https');
 const sharp = require('sharp');
 
-const REMOTE_SVG_URL = process.env.SVG_URL || 'https://auth.therai.co/storage/v1/object/public/therai-assets/theraiicon.svg';
+const REMOTE_SVG_URL = process.env.SVG_URL || 'https://api.therai.co/storage/v1/object/public/therai-assets/theraiicon.svg';
 
 async function ensureDir(dir) {
   await fs.promises.mkdir(dir, { recursive: true });

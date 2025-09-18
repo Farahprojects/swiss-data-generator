@@ -3,12 +3,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Default favicon -->
-    <link rel="icon" type="image/png" href="https://auth.therai.co/storage/v1/object/public/therai-assets/Therailogoblack.png" />
-    <!-- Light mode favicon -->
-    <link rel="icon" type="image/png" href="https://auth.therai.co/storage/v1/object/public/therai-assets/Therailogoblack.png" media="(prefers-color-scheme: light)" />
-    <!-- Dark mode favicon -->
-    <link rel="icon" type="image/jpeg" href="https://auth.therai.co/storage/v1/object/public/therai-assets/logowhite.jpeg" media="(prefers-color-scheme: dark)" />
+    <!-- Color scheme support -->
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- Default favicon - prioritize white logo for dark tabs -->
+    <link rel="icon" type="image/jpeg" href="https://api.therai.co/storage/v1/object/public/therai-assets/logowhite.jpeg?v=5" />
+    
+    <!-- Alternative formats -->
+    <link rel="icon" type="image/png" sizes="32x32" href="https://api.therai.co/storage/v1/object/public/therai-assets/logowhite.jpeg?v=5" />
+    <link rel="icon" type="image/png" sizes="16x16" href="https://api.therai.co/storage/v1/object/public/therai-assets/logowhite.jpeg?v=5" />
+    
+    <!-- Apple touch icon -->
+    <link rel="apple-touch-icon" href="https://api.therai.co/storage/v1/object/public/therai-assets/logowhite.jpeg?v=5" />
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-visual" />
     <meta name="format-detection" content="telephone=no" />

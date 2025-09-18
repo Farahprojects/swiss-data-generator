@@ -28,8 +28,8 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
   const logoElement = (
     <div className={cn('flex items-center gap-2', className)}>
       <img 
-        src="https://auth.therai.co/storage/v1/object/public/therai-assets/Therailogoblack.png" 
-        alt="TheRAI Logo" 
+        src="https://api.therai.co/storage/v1/object/public/therai-assets/Therailogoblack.png" 
+        alt="therai Logo" 
         className={cn('object-contain', logoSizeClasses[size])}
       />
       <span className={cn(
