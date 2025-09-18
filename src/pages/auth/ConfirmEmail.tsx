@@ -24,48 +24,31 @@ const ConfirmEmail: React.FC = () => {
   const { toast } = useToast();
   const processedRef = useRef(false);
 
-  const finishSuccess = async (kind: 'signup' | 'email_change') => {
+  const finishSuccess = async (kind: 'signup' | 'email_change', token: string) => {
     console.log(`[EMAIL-VERIFY] ✓ SUCCESS: ${kind} verification completed`);
     
     setMessage('Finalizing your account...');
     
     try {
-      // Ensure profile exists first
-      const { error: profileCreationError } = await supabase.rpc('ensure_profile_for_current_user');
-      if (profileCreationError) {
-        console.error('[EMAIL-VERIFY] Profile creation error:', profileCreationError);
-        throw profileCreationError;
-      }
-      console.log('[EMAIL-VERIFY] ✓ Profile ensured');
+      // Mark profile as verified and clear token
+      console.log('[EMAIL-VERIFY] Marking profile as verified and clearing token...');
 
-      // Mark profile as verified with retry logic
-      let verificationAttempts = 0;
-      let verificationSuccess = false;
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          email_verified: true,
+          verification_status: 'verified',
+          verification_token: null, // Clear the token after use
+          updated_at: new Date().toISOString()
+        })
+        .eq('verification_token', token); // Use the token we already extracted
       
-      while (verificationAttempts < 3 && !verificationSuccess) {
-        verificationAttempts++;
-        console.log(`[EMAIL-VERIFY] Attempting profile verification (attempt ${verificationAttempts})`);
-        
-        const { data: isVerified, error: verificationError } = await supabase.rpc('mark_profile_verified');
-        
-        if (verificationError) {
-          console.error(`[EMAIL-VERIFY] Profile verification error (attempt ${verificationAttempts}):`, verificationError);
-          if (verificationAttempts >= 3) throw verificationError;
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
-          continue;
-        }
-        
-        if (isVerified) {
-          console.log('[EMAIL-VERIFY] ✓ Profile verification status updated successfully');
-          verificationSuccess = true;
-        } else {
-          console.warn(`[EMAIL-VERIFY] Profile verification returned false (attempt ${verificationAttempts})`);
-          if (verificationAttempts >= 3) {
-            throw new Error('Profile verification failed after multiple attempts');
-          }
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
-        }
+      if (updateError) {
+        console.error(`[EMAIL-VERIFY] Profile verification error:`, updateError);
+        throw updateError;
       }
+      
+      console.log('[EMAIL-VERIFY] ✓ Profile verification status updated successfully');
       
     } catch (error) {
       console.error('[EMAIL-VERIFY] Critical profile update error:', error);
@@ -81,13 +64,12 @@ const ConfirmEmail: React.FC = () => {
     
     setStatus('success');
     const msg = kind === 'signup'
-      ? 'Email verified! You may now enter the app.'
-      : 'Email updated! You may now enter the app.';
+      ? 'Email verified! Please sign in to continue.'
+      : 'Email updated! Please sign in to continue.';
     setMessage(msg);
     toast({ variant: 'success', title: 'Success', description: msg });
 
-    window.history.replaceState({}, '', '/auth/email');
-    // Remove auto-redirect - user must click button to enter
+    // No session creation - user will sign in fresh
   };
 
   useEffect(() => {
@@ -126,53 +108,8 @@ const ConfirmEmail: React.FC = () => {
         const newEmail = hash.get('email') || search.get('email');
         const hashType = hash.get('type');
 
-        // Flow path determination
-        if (accessToken && refreshToken) {
-          console.log(`[EMAIL-VERIFY:${requestId}] → Flow: ACCESS_TOKEN method`);
-
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (error) {
-            console.error(`[EMAIL-VERIFY:${requestId}] setSession error:`, error);
-            throw error;
-          }
-
-          if (newEmail) {
-            console.log(`[EMAIL-VERIFY:${requestId}] Updating user email to:`, newEmail);
-            const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
-            if (updateErr) {
-              console.error(`[EMAIL-VERIFY:${requestId}] updateUser error:`, updateErr);
-              throw updateErr;
-            }
-          }
-
-          finishSuccess('email_change');
-          return;
-        }
-
-        if (pkceCode) {
-          console.log(`[EMAIL-VERIFY:${requestId}] → Flow: PKCE method`);
-
-          const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
-          if (error || !data.session) {
-            console.error(`[EMAIL-VERIFY:${requestId}] exchangeCodeForSession error:`, error);
-            throw error ?? new Error('No session returned');
-          }
-
-          if (newEmail) {
-            console.log(`[EMAIL-VERIFY:${requestId}] Updating user email to:`, newEmail);
-            const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
-            if (updateErr) {
-              console.error(`[EMAIL-VERIFY:${requestId}] updateUser error:`, updateErr);
-              throw updateErr;
-            }
-          }
-
-          finishSuccess('email_change');
-          return;
-        }
+        // Only support OTP flow (custom email verification)
+        // ACCESS_TOKEN and PKCE flows removed for simplicity
 
         // OTP Flow
         const token = hash.get('token') || search.get('token');
@@ -193,29 +130,36 @@ const ConfirmEmail: React.FC = () => {
         }
 
         // Pre-verification logging
-        console.log(`[EMAIL-VERIFY:${requestId}] Calling verifyOtp with:`, {
+        console.log(`[EMAIL-VERIFY:${requestId}] Checking profile table for token:`, {
           tokenLength: token.length,
           type: tokenType,
           email: email,
         });
 
-        const { error } = await supabase.auth.verifyOtp({ 
-          token, 
-          type: tokenType as any, 
-          email 
-        });
-        
-        if (error) {
-          console.error(`[EMAIL-VERIFY:${requestId}] verifyOtp error:`, {
-            message: error.message,
-            status: (error as any).status,
-            details: error,
+        // Check profile table for matching token
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, email_verified, verification_token')
+          .eq('verification_token', token)
+          .eq('email', email)
+          .single();
+
+        if (profileError || !profileData) {
+          console.error(`[EMAIL-VERIFY:${requestId}] Profile verification error:`, {
+            message: profileError?.message || 'Token not found',
+            details: profileError,
           });
-          throw error;
+          throw new Error('Invalid verification link or link has expired');
         }
 
-        console.log(`[EMAIL-VERIFY:${requestId}] ✓ verifyOtp successful`);
-        finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change');
+        console.log(`[EMAIL-VERIFY:${requestId}] ✓ Token found in profile table`);
+        console.log(`[EMAIL-VERIFY:${requestId}] Profile data:`, {
+          userId: profileData.id,
+          email: profileData.email,
+          alreadyVerified: profileData.email_verified,
+        });
+
+        finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token);
 
       } catch (err: any) {
         console.error(`[EMAIL-VERIFY:${requestId}] ✗ VERIFICATION FAILED:`, {
@@ -302,10 +246,10 @@ const ConfirmEmail: React.FC = () => {
             <CardFooter className="flex flex-col gap-4 justify-center px-0 pt-8">
               {status === 'success' ? (
                 <Button
-                  onClick={() => navigate('/subscription')}
+                  onClick={() => navigate('/login')}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
                 >
-                  Continue to Chat
+                  Sign In to Continue
                 </Button>
               ) : (
                 <div className="flex flex-col gap-3 w-full">

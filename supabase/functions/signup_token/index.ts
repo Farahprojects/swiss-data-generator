@@ -23,15 +23,17 @@ serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
-  let userId = "";
-  try {
-    const body = await req.json();
-    userId = body.user_id ?? "";
-    log("✓ Request received:", { userId, hasUserId: !!userId });
-  } catch (e) {
-    log("✗ JSON parsing failed:", e);
-    return respond(400, { error: "Invalid JSON" });
-  }
+         let userId = "";
+         let verificationToken = "";
+         try {
+           const body = await req.json();
+           userId = body.user_id ?? "";
+           verificationToken = body.verification_token ?? "";
+           log("✓ Request received:", { userId, hasUserId: !!userId, hasToken: !!verificationToken });
+         } catch (e) {
+           log("✗ JSON parsing failed:", e);
+           return respond(400, { error: "Invalid JSON" });
+         }
 
   if (!userId) {
     log("✗ Missing user_id parameter");
@@ -52,6 +54,11 @@ serve(async (req) => {
   let tokenLink = "";
   let emailOtp = "";
   let userEmail = "";
+
+  if (!verificationToken) {
+    log("✗ Missing verification_token parameter");
+    return respond(400, { error: "verification_token is required" });
+  }
 
   // User data fetching with detailed logging
   try {
@@ -95,71 +102,28 @@ serve(async (req) => {
     return respond(500, { error: "Error fetching user data", details: e.message });
   }
 
-  // Token generation with detailed logging
+  // Build custom verification URL using our token
   try {
-    log("→ Generating signup confirmation token");
-    log("Token generation params:", {
-      type: "signup",
+    log("→ Building custom verification URL");
+    log("Using verification token:", {
+      hasToken: !!verificationToken,
+      tokenLength: verificationToken.length,
       email: userEmail,
-      redirectTo,
     });
-
-    const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
-      type: "signup",
-      email: userEmail,
-      options: { redirectTo },
-    });
-
-    if (tokenErr) {
-      log("✗ Token generation failed:", {
-        message: tokenErr.message,
-        code: tokenErr.code,
-        status: tokenErr.status,
-      });
-      return respond(500, { error: "Token generation failed", details: tokenErr.message });
-    }
-
-    log("✓ Token generation successful");
-    log("Link data structure:", {
-      hasActionLink: !!(linkData?.action_link),
-      hasProperties: !!(linkData?.properties),
-      actionLinkLength: linkData?.action_link?.length || 0,
-      keys: Object.keys(linkData || {}),
-    });
-
-    // Extract raw token from Supabase response
-    const props = (linkData as any)?.properties ?? {};
-    const rawToken = props.token || props.email_otp || "";
-    emailOtp = props.email_otp ?? "";
-
-    log("Token extraction results:", {
-      hasRawToken: !!rawToken,
-      hasEmailOtp: !!emailOtp,
-      tokenLength: rawToken.length,
-      otpLength: emailOtp.length,
-    });
-
-    if (!rawToken) {
-      log("✗ Missing token in response:", linkData);
-      return respond(500, {
-        error: "Missing token in generation response",
-        details: linkData,
-      });
-    }
 
     // Build custom verification URL to auth.therai.co
     const customRedirectUrl = "https://auth.therai.co/auth/email";
-    tokenLink = `${customRedirectUrl}?token=${encodeURIComponent(rawToken)}&type=signup&email=${encodeURIComponent(userEmail)}`;
-    
+    tokenLink = `${customRedirectUrl}?token=${encodeURIComponent(verificationToken)}&type=signup&email=${encodeURIComponent(userEmail)}`;
+
     log("✓ Custom URL construction complete:", {
       redirectUrl: customRedirectUrl,
-      tokenLength: rawToken.length,
+      tokenLength: verificationToken.length,
       finalLength: tokenLink.length,
       finalUrl: tokenLink,
     });
   } catch (err: any) {
-    log("✗ Exception during token generation:", err.message);
-    return respond(500, { error: "Link generation failed", details: err.message });
+    log("✗ Exception during URL construction:", err.message);
+    return respond(500, { error: "URL construction failed", details: err.message });
   }
 
   // Pass token to email-verification function

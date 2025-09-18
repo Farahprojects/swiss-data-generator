@@ -15,9 +15,9 @@ export const initializeApp = async () => {
 };
 
 /**
- * Initialize when the app loads
+ * Initialize when the app loads (only on main domain)
  */
-if (typeof window !== 'undefined') {
-  // Initialize on page load
+if (typeof window !== 'undefined' && window.location.hostname === 'therai.co') {
+  // Initialize on page load only for main domain
   initializeApp();
 }

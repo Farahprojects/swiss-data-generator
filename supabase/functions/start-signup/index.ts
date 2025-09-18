@@ -82,10 +82,32 @@ serve(async (req) => {
 
     console.log('User created successfully:', userData.user.id);
 
+    // Generate custom verification token
+    const verificationToken = crypto.randomUUID();
+    
+    // Store token in profiles table (profile should be created by trigger)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ verification_token: verificationToken })
+      .eq('id', userData.user.id);
+
+    if (profileError) {
+      console.error('Error storing verification token:', profileError);
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Failed to create verification token',
+          errorCode: 'token_creation_failed'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Call signup_token function to send verification email
     const { error: tokenError } = await supabase.functions.invoke('signup_token', {
       body: {
-        user_id: userData.user.id
+        user_id: userData.user.id,
+        verification_token: verificationToken
       }
     });
 
