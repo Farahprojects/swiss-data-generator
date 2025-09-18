@@ -34,8 +34,7 @@ export type AuthContextType = {
   session: Session | null;
   loading: boolean;
   isValidating: boolean;
-  pendingEmailAddress: string | null;
-  isPendingEmailCheck: boolean;
+  // Email verification now handled by custom system
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signInWithGoogle: () => Promise<{ error: Error | null }>;
@@ -43,7 +42,7 @@ export type AuthContextType = {
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
-  clearPendingEmail: () => void;
+  // clearPendingEmail removed - handled by custom system
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,8 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingEmailAddress, setPendingEmailAddress] = useState<string | null>(null);
-  const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
+  // Email verification state removed - handled by custom system
   const [isValidating, setIsValidating] = useState(false);
   const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
@@ -274,9 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id]);
 
-  const clearPendingEmail = () => {
-    setPendingEmailAddress(null);
-  };
+  // clearPendingEmail function removed - handled by custom system
 
   // Validate that a user still exists in the database
   const validateUserExists = async (userId: string): Promise<boolean> => {
@@ -308,13 +304,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error, data: null };
       }
       
-        // Check if email is confirmed
-        if (data?.user && !data.user.email_confirmed_at) {
-          // User exists but email not confirmed - show verification modal
-          setPendingEmailAddress(data.user.email);
-          setLoading(false);
-          return { error: null, data };
-        }
+        // Email verification check removed - handled by custom verification system
+        // Users will be redirected to verification page if needed
 
         if (data?.user) {
           setUser(data.user);
@@ -527,8 +518,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         loading,
         isValidating,
-        pendingEmailAddress,
-        isPendingEmailCheck,
+        // Email verification state removed - handled by custom system
         signIn,
         signUp,
         signInWithGoogle,
@@ -536,7 +526,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         resendVerificationEmail,
         resetPasswordForEmail,
-        clearPendingEmail,
+        // clearPendingEmail removed
       }}
     >
       {children}
