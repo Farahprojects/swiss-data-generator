@@ -40,7 +40,7 @@ serve(async (req) => {
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const smtpEndpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
+  const smtpEndpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
 
   if (!url || !key || !smtpEndpoint) {
     log("✗ Missing environment variables:", { hasUrl: !!url, hasKey: !!key, hasSmtp: !!smtpEndpoint });

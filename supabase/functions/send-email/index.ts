@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     // secrets
-    const endpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
+    const endpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
     const smtpToken = Deno.env.get("THERIA_SMTP_TOKEN");
     if (!endpoint || !smtpToken) {
       log("error", "Missing SMTP env", { endpointSet: !!endpoint, tokenSet: !!smtpToken });
