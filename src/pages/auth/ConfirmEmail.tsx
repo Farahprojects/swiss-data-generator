@@ -86,7 +86,8 @@ const ConfirmEmail: React.FC = () => {
     setMessage(msg);
     toast({ variant: 'success', title: 'Success', description: msg });
 
-    // Keep URL as is to avoid navigation issues - user must click button to enter
+    window.history.replaceState({}, '', '/auth/email');
+    // Remove auto-redirect - user must click button to enter
   };
 
   useEffect(() => {
