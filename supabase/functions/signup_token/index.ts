@@ -164,11 +164,11 @@ serve(async (req) => {
   // Template fetching and processing
   let templateData;
   try {
-    log("→ Fetching email template for: signup_confirmation");
+    log("→ Fetching email template for: email_verification");
     const { data, error: templateErr } = await supabase
-      .from("token_emails")
+      .from("email_notification_templates")
       .select("subject, body_html")
-      .eq("template_type", "signup_confirmation")
+      .eq("template_type", "email_verification")
       .single();
 
     if (templateErr || !templateData) {
@@ -193,10 +193,10 @@ serve(async (req) => {
   log("→ Processing template variables");
   const originalHtml = templateData.body_html;
   const html = templateData.body_html
-    .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
+    .replace(/\{\{verification_link\}\}/g, tokenLink)
     .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
 
-  const linkReplacements = (originalHtml.match(/\{\{\s*\.Link\s*\}\}/g) || []).length;
+  const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;
   const otpReplacements = (originalHtml.match(/\{\{\s*\.OTP\s*\}\}/g) || []).length;
 
   log("✓ Template processing complete:", {
@@ -251,5 +251,5 @@ serve(async (req) => {
   }
 
   log(`✅ SIGNUP CONFIRMATION COMPLETE: ${userEmail}`);
-  return respond(200, { status: "sent", template_type: "signup_confirmation" });
+  return respond(200, { status: "sent", template_type: "email_verification" });
 });
