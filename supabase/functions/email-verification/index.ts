@@ -213,7 +213,7 @@ serve(async (req) => {
     log(`→ Fetching email template for: ${templateType}`);
     const { data, error: templateErr } = await supabase
       .from("email_notification_templates")
-      .select("subject, body_html")
+      .select("subject, body_html, body_text")
       .eq("template_type", templateType)
       .single();
 
@@ -229,6 +229,7 @@ serve(async (req) => {
     log("✓ Template fetched successfully:", {
       subject: templateData.subject,
       htmlLength: templateData.body_html?.length || 0,
+      textLength: templateData.body_text?.length || 0,
     });
   } catch (err: any) {
     log("✗ Exception during template fetch:", err.message);
