@@ -161,95 +161,29 @@ serve(async (req) => {
     return respond(500, { error: "Link generation failed", details: err.message });
   }
 
-  // Template fetching and processing
-  let templateData;
+  // Pass token to email-verification function
   try {
-    log("→ Fetching email template for: email_verification");
-    const { data, error: templateErr } = await supabase
-      .from("email_notification_templates")
-      .select("subject, body_html")
-      .eq("template_type", "email_verification")
-      .single();
+    log("→ Calling email-verification function with token");
+    const { error: emailErr } = await supabase.functions.invoke('email-verification', {
+      body: {
+        user_id: userId,
+        token_link: tokenLink,
+        email_otp: emailOtp,
+        template_type: "email_verification"
+      }
+    });
 
-    if (templateErr || !templateData) {
-      log("✗ Template fetch failed:", {
-        error: templateErr?.message,
-        hasData: !!data,
-      });
-      return respond(500, { error: "Template fetch failed", details: templateErr?.message });
+    if (emailErr) {
+      log("✗ Email-verification function failed:", emailErr);
+      return respond(500, { error: "Email sending failed", details: emailErr.message });
     }
 
-    templateData = data;
-    log("✓ Template fetched successfully:", {
-      subject: templateData.subject,
-      htmlLength: templateData.body_html?.length || 0,
-    });
+    log("✓ Email-verification function completed successfully");
   } catch (err: any) {
-    log("✗ Exception during template fetch:", err.message);
-    return respond(500, { error: "Template processing failed", details: err.message });
-  }
-
-  // Template variable substitution
-  log("→ Processing template variables");
-  const originalHtml = templateData.body_html;
-  const html = templateData.body_html
-    .replace(/\{\{verification_link\}\}/g, tokenLink)
-    .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
-
-  const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;
-  const otpReplacements = (originalHtml.match(/\{\{\s*\.OTP\s*\}\}/g) || []).length;
-
-  log("✓ Template processing complete:", {
-    linkReplacements,
-    otpReplacements,
-    originalLength: originalHtml.length,
-    processedLength: html.length,
-  });
-
-  // Email sending
-  try {
-    log("→ Sending email via SMTP");
-    log("Email details:", {
-      to: userEmail,
-      subject: templateData.subject,
-      htmlLength: html.length,
-      smtpEndpoint: new URL(smtpEndpoint).hostname,
-    });
-
-    const emailPayload = {
-      to: userEmail,
-      subject: templateData.subject,
-      html,
-      from: "Therai <no-reply@therai.co>",
-    };
-
-    const send = await fetch(smtpEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(emailPayload),
-    });
-
-    if (!send.ok) {
-      const errTxt = await send.text();
-      log("✗ SMTP delivery failed:", {
-        status: send.status,
-        statusText: send.statusText,
-        error: errTxt,
-      });
-      return respond(500, { error: "Email sending failed", details: errTxt });
-    }
-
-    const smtpResponse = await send.text();
-    log("✓ Email sent successfully:", {
-      smtpStatus: send.status,
-      responseLength: smtpResponse.length,
-      to: userEmail,
-    });
-  } catch (err: any) {
-    log("✗ Exception during email sending:", err.message);
+    log("✗ Exception calling email-verification:", err.message);
     return respond(500, { error: "Email delivery failed", details: err.message });
   }
 
-  log(`✅ SIGNUP CONFIRMATION COMPLETE: ${userEmail}`);
+  log(`✅ SIGNUP TOKEN GENERATED: ${userEmail}`);
   return respond(200, { status: "sent", template_type: "email_verification" });
 });
