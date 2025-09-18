@@ -10,10 +10,16 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
+
+// Create service role client for verification (no auth required)
+const supabaseService = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+);
 
 const ConfirmEmail: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -33,7 +39,7 @@ const ConfirmEmail: React.FC = () => {
       // Mark profile as verified and clear token
       console.log('[EMAIL-VERIFY] Marking profile as verified and clearing token...');
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseService
         .from('profiles')
         .update({ 
           email_verified: true,
@@ -136,7 +142,7 @@ const ConfirmEmail: React.FC = () => {
         });
 
         // Check profile table for matching token
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabaseService
           .from('profiles')
           .select('id, email, email_verified, verification_token')
           .eq('verification_token', token)
