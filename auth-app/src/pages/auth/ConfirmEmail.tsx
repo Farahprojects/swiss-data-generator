@@ -7,18 +7,17 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+} from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { useLocation } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
-import Logo from '../components/Logo';
+import Logo from '../../components/Logo';
 
 const ConfirmEmail: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your email…');
 
-  const navigate = useNavigate();
   const location = useLocation();
   const processedRef = useRef(false);
 

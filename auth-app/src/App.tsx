@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
 import './index.css';
