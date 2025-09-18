@@ -10,16 +10,10 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
-
-// Create service role client for verification (no auth required)
-const supabaseService = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-);
 
 const ConfirmEmail: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -30,43 +24,47 @@ const ConfirmEmail: React.FC = () => {
   const { toast } = useToast();
   const processedRef = useRef(false);
 
-  const finishSuccess = async (kind: 'signup' | 'email_change', token: string) => {
+  const finishSuccess = async (kind: 'signup' | 'email_change', token: string, email: string) => {
     console.log(`[EMAIL-VERIFY] ✓ SUCCESS: ${kind} verification completed`);
-    
-    setMessage('Finalizing your account...');
-    
-    try {
-      // Mark profile as verified and clear token
-      console.log('[EMAIL-VERIFY] Marking profile as verified and clearing token...');
 
-      const { error: updateError } = await supabaseService
-        .from('profiles')
-        .update({ 
-          email_verified: true,
-          verification_token: null, // Clear the token after use
-          updated_at: new Date().toISOString()
-        })
-        .eq('verification_token', token); // Use the token we already extracted
-      
-      if (updateError) {
-        console.error(`[EMAIL-VERIFY] Profile verification error:`, updateError);
-        throw updateError;
+    setMessage('Finalizing your account...');
+
+    try {
+      // Call secure edge function to verify token and update profile
+      console.log('[EMAIL-VERIFY] Calling verify-email-token edge function...');
+
+      const { data, error } = await supabase.functions.invoke('verify-email-token', {
+        body: {
+          token,
+          email,
+          type: kind
+        }
+      });
+
+      if (error) {
+        console.error('[EMAIL-VERIFY] Edge function error:', error);
+        throw new Error(error.message || 'Verification failed');
       }
-      
-      console.log('[EMAIL-VERIFY] ✓ Profile verification status updated successfully');
-      
+
+      if (!data?.success) {
+        console.error('[EMAIL-VERIFY] Verification failed:', data?.error);
+        throw new Error(data?.error || 'Verification failed');
+      }
+
+      console.log('[EMAIL-VERIFY] ✓ Email verification successful:', data.message);
+
     } catch (error) {
-      console.error('[EMAIL-VERIFY] Critical profile update error:', error);
+      console.error('[EMAIL-VERIFY] Critical verification error:', error);
       setStatus('error');
-      setMessage('Failed to finalize your account. Please try again or contact support.');
-      toast({ 
-        variant: 'destructive', 
-        title: 'Account Setup Error', 
-        description: 'Unable to complete account verification. Please try again.' 
+      setMessage('Failed to verify your email. Please try again or contact support.');
+      toast({
+        variant: 'destructive',
+        title: 'Verification Error',
+        description: error instanceof Error ? error.message : 'Unable to complete email verification. Please try again.'
       });
       return;
     }
-    
+
     setStatus('success');
     const msg = kind === 'signup'
       ? 'Email verified! Please sign in to continue.'
@@ -135,36 +133,14 @@ const ConfirmEmail: React.FC = () => {
         }
 
         // Pre-verification logging
-        console.log(`[EMAIL-VERIFY:${requestId}] Checking profile table for token:`, {
+        console.log(`[EMAIL-VERIFY:${requestId}] Starting verification with edge function:`, {
           tokenLength: token.length,
           type: tokenType,
           email: email,
         });
 
-        // Check profile table for matching token
-        const { data: profileData, error: profileError } = await supabaseService
-          .from('profiles')
-          .select('id, email, email_verified, verification_token')
-          .eq('verification_token', token)
-          .eq('email', email)
-          .single();
-
-        if (profileError || !profileData) {
-          console.error(`[EMAIL-VERIFY:${requestId}] Profile verification error:`, {
-            message: profileError?.message || 'Token not found',
-            details: profileError,
-          });
-          throw new Error('Invalid verification link or link has expired');
-        }
-
-        console.log(`[EMAIL-VERIFY:${requestId}] ✓ Token found in profile table`);
-        console.log(`[EMAIL-VERIFY:${requestId}] Profile data:`, {
-          userId: profileData.id,
-          email: profileData.email,
-          alreadyVerified: profileData.email_verified,
-        });
-
-        finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token);
+        // Call edge function to verify token and update profile
+        finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token, email);
 
       } catch (err: any) {
         console.error(`[EMAIL-VERIFY:${requestId}] ✗ VERIFICATION FAILED:`, {
