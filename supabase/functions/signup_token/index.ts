@@ -127,35 +127,36 @@ serve(async (req) => {
       keys: Object.keys(linkData || {}),
     });
 
-    tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
+    // Extract raw token from Supabase response
     const props = (linkData as any)?.properties ?? {};
-    emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
+    const rawToken = props.token || props.email_otp || "";
+    emailOtp = props.email_otp ?? "";
 
     log("Token extraction results:", {
-      hasTokenLink: !!tokenLink,
+      hasRawToken: !!rawToken,
       hasEmailOtp: !!emailOtp,
-      tokenLinkLength: tokenLink.length,
+      tokenLength: rawToken.length,
       otpLength: emailOtp.length,
     });
 
-    if (!tokenLink) {
-      log("✗ Missing action_link in response:", linkData);
+    if (!rawToken) {
+      log("✗ Missing token in response:", linkData);
       return respond(500, {
-        error: "Missing action_link in token generation",
+        error: "Missing token in generation response",
         details: linkData,
       });
     }
 
-    // Link construction
-    const originalLink = tokenLink;
-    tokenLink += `&email=${encodeURIComponent(userEmail)}`;
+    // Build custom verification URL to auth.therai.co
+    const customRedirectUrl = "https://auth.therai.co/auth/email";
+    tokenLink = `${customRedirectUrl}?token=${encodeURIComponent(rawToken)}&type=signup&email=${encodeURIComponent(userEmail)}`;
     
-    log("✓ Link construction complete:", {
-      originalLength: originalLink.length,
+    log("✓ Custom URL construction complete:", {
+      redirectUrl: customRedirectUrl,
+      tokenLength: rawToken.length,
       finalLength: tokenLink.length,
-      addedParam: `email=${encodeURIComponent(userEmail)}`,
+      finalUrl: tokenLink,
     });
-    log("Final verification link:", tokenLink);
   } catch (err: any) {
     log("✗ Exception during token generation:", err.message);
     return respond(500, { error: "Link generation failed", details: err.message });
