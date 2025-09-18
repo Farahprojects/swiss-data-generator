@@ -68,7 +68,7 @@ serve(async (req) => {
       domain: "therai.co",
       to_email: to,
       subject: subject,
-      body: text || html, // Use text version if available, otherwise HTML
+      body: html || text, // Use HTML version first, fallback to text
       request_id: requestId,
       timestamp: timestamp
     };
