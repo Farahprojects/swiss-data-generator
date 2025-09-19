@@ -70,13 +70,17 @@ export const useChatInitialization = () => {
       startConversation(targetChatId, guestId);
     }
 
-    // 4. Initialize controller (messages WS) immediately
+    // 4. Initialize WebSocket callbacks once (without specific chat_id)
     if (targetChatId && targetChatId !== "1") {
-      console.log('[useChatInitialization] Initializing controller with chat_id:', targetChatId);
+      console.log('[useChatInitialization] Initializing WebSocket for chat_id:', targetChatId);
       chatController.initializeForConversation(targetChatId);
     } else if (targetChatId === "1") {
       console.error('[useChatInitialization] BLOCKED: Invalid chat_id "1" detected, clearing store');
       useChatStore.getState().clearChat();
+    } else {
+      // Initialize WebSocket callbacks without specific chat_id for future use
+      console.log('[useChatInitialization] Initializing WebSocket callbacks only');
+      chatController.initializeWebSocketCallbacks();
     }
   }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId]);
 };

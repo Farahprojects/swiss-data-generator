@@ -95,7 +95,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   };
 
   // Handle switching to a different conversation
-  const handleSwitchToChat = (conversationId: string) => {
+  const handleSwitchToChat = async (conversationId: string) => {
     console.log('[ChatThreadsSidebar] Switching to chat:', conversationId);
     
     // DIRECT FLOW: Immediately set chat_id and fetch messages
@@ -105,6 +105,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     // Also update the main chat store
     const { startConversation } = useChatStore.getState();
     startConversation(conversationId);
+    
+    // Switch WebSocket subscription to new chat_id
+    const { chatController } = await import('@/features/chat/ChatController');
+    await chatController.switchToChat(conversationId);
     
     // Navigate to the appropriate route based on user type
     if (userType.isGuest) {

@@ -20,8 +20,31 @@ class UnifiedWebSocketService {
   }
 
   /**
-   * Initialize the WebSocket service early (without specific chat_id)
+   * Initialize the WebSocket service with callbacks (without subscribing to specific chat)
    * This creates a hot connection that can be used for any chat
+   */
+  async initializeCallbacks(callbacks?: {
+    onMessageReceived?: (message: Message) => void;
+    onMessageUpdated?: (message: Message) => void;
+    onStatusChange?: (status: string) => void;
+    onOptimisticMessage?: (message: Message) => void;
+    onAssistantMessage?: (message: Message) => void;
+    onSystemMessage?: (message: Message) => void;
+  }) {
+    console.log('[UnifiedWebSocket] Initializing callbacks only:', {
+      hasOnMessageReceived: !!callbacks?.onMessageReceived,
+      hasOnMessageUpdated: !!callbacks?.onMessageUpdated
+    });
+    
+    this.onMessage = callbacks?.onMessageReceived;
+    this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
+    this.onSystemMessage = callbacks?.onSystemMessage;
+    
+    console.log('[UnifiedWebSocket] Callbacks initialized, ready for subscription');
+  }
+
+  /**
+   * Initialize the WebSocket service and subscribe to specific chat
    */
   async initialize(
     chat_id: string,
@@ -34,26 +57,11 @@ class UnifiedWebSocketService {
       onSystemMessage?: (message: Message) => void;
     }
   ) {
-    console.log('[UnifiedWebSocket] Initializing with callbacks:', {
-      hasOnMessageReceived: !!callbacks?.onMessageReceived,
-      hasOnMessageUpdated: !!callbacks?.onMessageUpdated
-    });
+    // Initialize callbacks first
+    await this.initializeCallbacks(callbacks);
     
-    this.onMessage = callbacks?.onMessageReceived;
-    this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
-    this.onSystemMessage = callbacks?.onSystemMessage;
-
-    // Store the chat_id and subscribe immediately
-    this.currentChatId = chat_id;
-    
-    // Clean up existing subscription
-    if (this.realtimeChannel) {
-      supabase.removeChannel(this.realtimeChannel);
-      this.realtimeChannel = null;
-    }
-
-    // Setup realtime subscription for this specific chat
-    this.setupRealtimeSubscription(chat_id);
+    // Then subscribe to the specific chat
+    await this.subscribeToChat(chat_id);
     
     console.log('[UnifiedWebSocket] Initialized and subscribed to chat:', chat_id);
   }
