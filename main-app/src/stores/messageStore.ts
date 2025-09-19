@@ -45,7 +45,24 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
 
   // Set chat ID and auto-fetch messages
   setChatId: (id: string | null) => {
-    set({ chat_id: id, messages: [], error: null });
+    const currentState = get();
+    const currentChatId = currentState.chat_id;
+    
+    // If switching to a different chat_id, clear messages
+    // But preserve optimistic messages if they're for the new chat_id
+    if (currentChatId !== id) {
+      const optimisticMessages = currentState.messages.filter(m => m.status === 'thinking');
+      const shouldPreserveOptimistic = optimisticMessages.some(m => m.chat_id === id);
+      
+      if (shouldPreserveOptimistic) {
+        // Keep optimistic messages for the new chat_id
+        set({ chat_id: id, messages: optimisticMessages, error: null });
+      } else {
+        // Clear all messages when switching chats
+        set({ chat_id: id, messages: [], error: null });
+      }
+    }
+    
     if (id) {
       // Just fetch messages - WebSocket handles real-time updates
       get().fetchMessages();
