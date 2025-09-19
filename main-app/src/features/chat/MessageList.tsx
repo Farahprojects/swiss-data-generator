@@ -4,7 +4,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { useAutoScroll } from '@/hooks/useAutoScroll';
+import { useAutoScroll } from '@/hooks/useAutoScroll'; // Auto-scroll hook for message list
 import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
