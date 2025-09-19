@@ -398,13 +398,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 {visibleThreadsList.map((conversation) => {
                   const isActive = conversation.id === chat_id;
                   
-                  // Debug logging to check for duplicate IDs
-                  console.log('[ChatThreadsSidebar] Rendering conversation:', {
-                    id: conversation.id,
-                    title: conversation.title,
-                    isActive,
-                    currentChatId: chat_id
-                  });
                   return (
                     <div
                       key={conversation.id}
