@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "buildCommand": "cd auth-app && npm install && npm run build",
+  "outputDirectory": "auth-app/dist",
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
