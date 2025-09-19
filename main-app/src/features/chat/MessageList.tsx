@@ -186,7 +186,7 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!astroChoiceMade && !chat_id ? (
+                {!astroChoiceMade && !chat_id && !isAuthenticated ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
                       onClose={() => {

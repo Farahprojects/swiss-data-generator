@@ -47,7 +47,7 @@ export const ChatInput = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('user_id');
-  const isAuthenticated = !!user && !!userId;
+  const isAuthenticated = !!user;
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
