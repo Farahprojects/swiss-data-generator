@@ -59,7 +59,7 @@ serve(async (req) => {
   let currentEmail = "";
   let newEmail = "";
 
-  // Check if token was provided directly (from signup_token) or needs to be generated
+  // Check if token was provided directly (from signup_token or generateLink) or needs to be generated
   if (tokenLink && templateType === "email_verification") {
     // Token provided directly - get user email for sending
     try {
@@ -136,7 +136,7 @@ serve(async (req) => {
   }
 
   // Token generation with detailed logging (only if not provided directly)
-  if (!tokenLink || templateType !== "email_verification") {
+  if (!tokenLink) {
     try {
       log("→ Generating email change token");
       log("Token generation params:", {

@@ -322,32 +322,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Use start-signup edge function for proper email verification flow
-      const { data, error } = await supabase.functions.invoke('start-signup', {
-        body: { email, password }
+      // Create user first using admin API
+      const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: false // Don't auto-confirm email
       });
 
-      log('debug', 'Start-signup response', { hasError: !!error, data }, 'auth');
-      
-      if (error) {
-        return { error, data: null };
-      }
-
-      // Handle edge function response
-      if (data?.success === false) {
-        if (data.errorCode === 'email_exists') {
+      if (createError) {
+        log('debug', 'User creation error', { error: createError }, 'auth');
+        
+        // Handle email already exists case specifically
+        if (createError.message?.includes('already been registered') || createError.status === 422) {
           return { error: new Error('An account with this email already exists. Please sign in instead.') };
         }
-        return { error: new Error(data.error || 'Signup failed') };
+        
+        return { error: new Error(createError.message || 'Failed to create account') };
+      }
+
+      if (!userData.user) {
+        return { error: new Error('Failed to create user account') };
+      }
+
+      log('debug', 'User created successfully', { userId: userData.user.id }, 'auth');
+
+      // Generate signup verification link using admin API
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: "signup",
+        email: email,
+        options: { 
+          redirectTo: "https://auth.therai.co/auth/email" // Same redirect as email-verification function
+        }
+      });
+
+      if (linkError) {
+        log('debug', 'Link generation error', { error: linkError }, 'auth');
+        return { error: new Error('Failed to generate verification link') };
+      }
+
+      const tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
+      if (!tokenLink) {
+        return { error: new Error('Failed to generate verification link') };
+      }
+
+      log('debug', 'Signup link generated', { hasLink: !!tokenLink }, 'auth');
+
+      // Call email-verification edge function to send the email
+      const { error: emailError } = await supabase.functions.invoke('email-verification', {
+        body: {
+          user_id: userData.user.id,
+          token_link: tokenLink,
+          template_type: "email_verification"
+        }
+      });
+
+      if (emailError) {
+        log('debug', 'Email sending error', { error: emailError }, 'auth');
+        return { error: new Error('Failed to send verification email') };
       }
 
       // Success case - verification email sent
-      if (data?.success === true) {
-        // No user created yet - will be created after email verification
-        return { error: null, data: { message: data.message } };
-      }
+      return { 
+        error: null, 
+        data: { 
+          message: 'Verification email sent. Please check your inbox and click the verification link to complete registration.' 
+        } 
+      };
 
-      return { error: new Error('Unexpected response from signup service') };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
       return { error };

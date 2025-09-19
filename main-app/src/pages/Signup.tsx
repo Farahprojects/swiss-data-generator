@@ -145,6 +145,7 @@ const Signup = () => {
     setLoading(true);
     
     try {
+      // TODO: Update to use new signup flow with generateLink
       // Use dedicated resend verification function
       const { data, error } = await supabase.functions.invoke('resend-verification', {
         body: { email }

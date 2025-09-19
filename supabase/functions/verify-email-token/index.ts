@@ -56,17 +56,24 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if token exists in profiles table
-    log("Checking profile for token...");
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, email, email_verified, verification_token')
-      .eq('verification_token', token)
-      .eq('email', email)
-      .single();
+    // Use Supabase's built-in verification API
+    log("Verifying token with Supabase auth API...");
+    
+    // Extract token from the full URL if needed
+    let verificationToken = token;
+    if (token.includes('#')) {
+      const hashParams = new URLSearchParams(token.split('#')[1]);
+      verificationToken = hashParams.get('access_token') || token;
+    }
 
-    if (profileError || !profileData) {
-      log("Token not found or invalid:", profileError?.message);
+    // Verify the token using Supabase's admin API
+    const { data: verifyData, error: verifyError } = await supabase.auth.admin.verifyOtp({
+      token_hash: verificationToken,
+      type: type === 'signup' ? 'signup' : 'email'
+    });
+
+    if (verifyError) {
+      log("Token verification failed:", verifyError.message);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -76,53 +83,29 @@ serve(async (req) => {
       );
     }
 
-    log("Token found, profile data:", {
-      userId: profileData.id,
-      email: profileData.email,
-      alreadyVerified: profileData.email_verified
-    });
-
-    // Check if already verified
-    if (profileData.email_verified) {
-      log("Email already verified");
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Email already verified",
-          alreadyVerified: true
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Mark email as verified and clear token
-    log("Marking email as verified and clearing token...");
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ 
-        email_verified: true,
-        verification_token: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('verification_token', token);
-
-    if (updateError) {
-      log("Failed to update profile:", updateError.message);
+    if (!verifyData.user) {
+      log("No user returned from verification");
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Failed to verify email" 
+          error: "Verification failed - no user found" 
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    log("✅ Email verification successful");
+    log("✅ Email verification successful via Supabase:", {
+      userId: verifyData.user.id,
+      email: verifyData.user.email,
+      emailConfirmed: verifyData.user.email_confirmed_at
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Email verified successfully",
-        userId: profileData.id
+        userId: verifyData.user.id,
+        email: verifyData.user.email
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
