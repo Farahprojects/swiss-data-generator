@@ -139,7 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
               setUser(null);
               setSession(null);
-              setPendingEmailAddress(null);
               setIsPendingEmailCheck(false);
             }
           } catch (validationError) {
@@ -167,25 +166,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
 
               if (emailCheckData?.status === 'pending') {
-                setPendingEmailAddress(emailCheckData.pending_to);
               } else {
-                setPendingEmailAddress(null);
               }
             } catch (error) {
-              setPendingEmailAddress(null);
             } finally {
               setIsPendingEmailCheck(false);
             }
           }, 0);
         } else {
           // No email change history, skip the check entirely
-          setPendingEmailAddress(null);
           setIsPendingEmailCheck(false);
         }
       }
 
       if (event === 'SIGNED_OUT') {
-        setPendingEmailAddress(null);
         setIsPendingEmailCheck(false);
         setUser(null);
         setSession(null);
@@ -200,7 +194,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.warn('[AuthContext] User no longer exists in database, clearing auth state');
             setUser(null);
             setSession(null);
-            setPendingEmailAddress(null);
             setIsPendingEmailCheck(false);
           });
         }
@@ -236,7 +229,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
               setUser(null);
               setSession(null);
-              setPendingEmailAddress(null);
               setIsPendingEmailCheck(false);
             }
           } catch (validationError) {
@@ -259,7 +251,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('[AuthContext] Periodic validation: User no longer exists, clearing auth state');
           setUser(null);
           setSession(null);
-          setPendingEmailAddress(null);
           setIsPendingEmailCheck(false);
         }
       }
@@ -479,7 +470,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local state first
       setUser(null);
       setSession(null);
-      setPendingEmailAddress(null);
       setIsPendingEmailCheck(false);
       clearNavigationState();
 
