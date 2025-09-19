@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
@@ -28,6 +28,12 @@ import ChatContainer from './pages/ChatContainer';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import EmbeddedCheckout from './pages/EmbeddedCheckout';
+
+// Legacy redirect component for /c/g/:threadId -> /g/:threadId
+const LegacyGuestRedirect: React.FC = () => {
+  const { threadId } = useParams<{ threadId: string }>();
+  return <Navigate to={`/g/${threadId}`} replace />;
+};
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
 const AuthedAppShell: React.FC = () => {
@@ -69,10 +75,17 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/stripe-return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
               <Route path="/stripe" element={<PublicOnlyGuard><EmbeddedCheckout /></PublicOnlyGuard>} />
               
-              {/* New chat routes with clean /c namespace */}
-              <Route path="/c" element={<ChatContainer />} />
+              {/* Guest routes - /g/:chat_id */}
+              <Route path="/g/:chatId" element={<ChatContainer />} />
+              
+              {/* Auth routes - /c/:thread_id */}
               <Route path="/c/:threadId" element={<ChatContainer />} />
-              <Route path="/c/g/:threadId" element={<ChatContainer />} />
+              
+              {/* Hidden /c base route - internal only for auth thread creation */}
+              <Route path="/c" element={<ChatContainer />} />
+              
+              {/* Legacy redirects */}
+              <Route path="/c/g/:threadId" element={<LegacyGuestRedirect />} />
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />

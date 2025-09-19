@@ -26,11 +26,14 @@ export const useUserType = (): UserTypeInfo => {
   // Get identifiers
   const urlUserId = searchParams.get('user_id');
   
-  // 🎯 Simple guest detection: URL path starts with "/c/g/"
-  const isGuestPath = pathname.startsWith('/c/g/');
+  // 🎯 Guest detection: URL path starts with "/g/"
+  const isGuestPath = pathname.startsWith('/g/');
+  
+  // 🎯 Auth detection: URL path starts with "/c/" (but not "/c/g/")
+  const isAuthPath = pathname.startsWith('/c/') && !pathname.startsWith('/c/g/');
   
   // Determine user type with clear priority
-  const isAuthenticated = !!user && !!urlUserId;
+  const isAuthenticated = !!user && (isAuthPath || pathname === '/c');
   const isGuest = isGuestPath && !isAuthenticated; // Guest only if not authenticated
   const isUnauthenticated = !isAuthenticated && !isGuest;
   
