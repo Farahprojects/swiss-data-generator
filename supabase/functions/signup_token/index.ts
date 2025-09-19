@@ -23,22 +23,9 @@ serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
-         let userId = "";
-         let verificationToken = "";
-         try {
-           const body = await req.json();
-           userId = body.user_id ?? "";
-           verificationToken = body.verification_token ?? "";
-           log("✓ Request received:", { userId, hasUserId: !!userId, hasToken: !!verificationToken });
-         } catch (e) {
-           log("✗ JSON parsing failed:", e);
-           return respond(400, { error: "Invalid JSON" });
-         }
-
-  if (!userId) {
-    log("✗ Missing user_id parameter");
-    return respond(400, { error: "user_id is required" });
-  }
+         // Note: This function is deprecated - use new signup flow instead
+         log("⚠️ signup_token function is deprecated - use new signup flow instead");
+         return respond(400, { error: "This function is deprecated. Use the new signup flow instead." });
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
