@@ -11,6 +11,7 @@ import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
+import { useMode } from '@/contexts/ModeContext';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
 const renderMessages = (messages: Message[]) => {
@@ -97,6 +98,9 @@ export const MessageList = () => {
   const guestReportId = searchParams.get('guest_id');
   const isAuthenticated = !!user;
   const isGuest = !!guestReportId;
+  
+  // Mode detection
+  const { mode } = useMode();
   
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
@@ -186,7 +190,7 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!astroChoiceMade && !chat_id && !isAuthenticated ? (
+                {!astroChoiceMade && mode === 'astro' ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
                       onClose={() => {

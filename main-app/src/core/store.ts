@@ -3,6 +3,7 @@ import { Message } from './types';
 import { Conversation } from '@/services/conversations';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
 import { useMessageStore } from '@/stores/messageStore';
+import { supabase } from '@/integrations/supabase/client';
 
 export type ChatStatus =
   | 'idle'
@@ -31,6 +32,10 @@ interface ChatState {
   threads: Conversation[];
   isLoadingThreads: boolean;
   threadsError: string | null;
+  
+  // Real-time sync state
+  conversationChannel: any;
+  isConversationSyncActive: boolean;
 
   // Chat actions (unified for both auth and guest)
   startConversation: (chat_id: string, guest_id?: string) => void;
@@ -40,6 +45,7 @@ interface ChatState {
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
   clearChat: () => void;
+  clearAllData: () => void;
   setLoadingMessages: (loading: boolean) => void;
   setMessageLoadError: (error: string | null) => void;
   retryLoadMessages: () => Promise<void>;
@@ -56,6 +62,13 @@ interface ChatState {
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
   clearThreadsError: () => void;
+  
+  // Real-time sync methods
+  addConversation: (conversation: Conversation) => void;
+  updateConversation: (conversation: Conversation) => void;
+  removeConversation: (conversationId: string) => void;
+  initializeConversationSync: (userId: string) => void;
+  cleanupConversationSync: () => void;
   
   // Guest management helpers
   getGuestId: () => string | null;
@@ -81,6 +94,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   threads: [],
   isLoadingThreads: false,
   threadsError: null,
+  
+  // Real-time sync state
+  conversationChannel: null,
+  isConversationSyncActive: false,
 
   startConversation: (id, guest_id) => {
     set({ 
@@ -221,6 +238,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  clearAllData: () => {
+    // Clean up real-time sync
+    get().cleanupConversationSync();
+    
+    // Clear all chat data
+    get().clearChat();
+    
+    // Clear threads
+    set({ 
+      threads: [], 
+      isLoadingThreads: false, 
+      threadsError: null 
+    });
+  },
+
   setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
 
   setPaymentFlowStopIcon: (show) => set({ isPaymentFlowStopIcon: show }),
@@ -231,7 +263,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const { listConversations } = await import('@/services/conversations');
       const conversations = await listConversations();
-      set({ threads: conversations, isLoadingThreads: false });
+      
+      // Sort by updated_at desc for proper ordering
+      const sortedConversations = conversations.sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+      
+      set({ threads: sortedConversations, isLoadingThreads: false });
+      
+      // Initialize real-time sync after initial load
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        get().initializeConversationSync(user.id);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load threads';
       set({ threadsError: errorMessage, isLoadingThreads: false });
@@ -243,8 +287,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const { createConversation } = await import('@/services/conversations');
       const conversationId = await createConversation(userId, title);
-      // Reload threads to get the new one with proper timestamps
-      await get().loadThreads();
+      
+      // Don't manually reload - let real-time subscription handle it
+      // This ensures we get the authoritative data from the database
+      set({ isLoadingThreads: false });
+      
       return conversationId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create thread';
@@ -258,11 +305,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const { deleteConversation } = await import('@/services/conversations');
       await deleteConversation(threadId);
-      // Remove from local state
-      set(state => ({
-        threads: state.threads.filter(thread => thread.id !== threadId),
-        isLoadingThreads: false
-      }));
+      
+      // Don't manually update local state - let real-time subscription handle it
+      // This ensures consistency across all tabs/devices
+      set({ isLoadingThreads: false });
       
       // If this was the current chat, clear the session
       if (get().chat_id === threadId) {
@@ -295,6 +341,98 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearThreadsError: () => set({ threadsError: null }),
+
+  // Real-time sync methods
+  addConversation: (conversation: Conversation) => {
+    set(state => {
+      // Check if conversation already exists to avoid duplicates
+      const exists = state.threads.some(thread => thread.id === conversation.id);
+      if (exists) return state;
+      
+      // Add new conversation and sort by updated_at desc
+      const updatedThreads = [conversation, ...state.threads].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+      
+      return { threads: updatedThreads };
+    });
+  },
+
+  updateConversation: (conversation: Conversation) => {
+    set(state => ({
+      threads: state.threads.map(thread => 
+        thread.id === conversation.id ? conversation : thread
+      ).sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )
+    }));
+  },
+
+  removeConversation: (conversationId: string) => {
+    set(state => ({
+      threads: state.threads.filter(thread => thread.id !== conversationId)
+    }));
+  },
+
+  initializeConversationSync: (userId: string) => {
+    const state = get();
+    
+    // Don't initialize if already active
+    if (state.isConversationSyncActive) {
+      console.log('[ChatStore] Conversation sync already active');
+      return;
+    }
+
+    console.log('[ChatStore] Initializing conversation sync for user:', userId);
+
+    const channel = supabase
+      .channel(`conversations:user:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[ChatStore] Conversation change received:', payload.eventType, payload);
+          
+          switch (payload.eventType) {
+            case 'INSERT':
+              get().addConversation(payload.new as Conversation);
+              break;
+            case 'UPDATE':
+              get().updateConversation(payload.new as Conversation);
+              break;
+            case 'DELETE':
+              get().removeConversation(payload.old.id);
+              break;
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[ChatStore] Conversation sync status:', status);
+        if (status === 'SUBSCRIBED') {
+          set({ isConversationSyncActive: true });
+        }
+      });
+
+    set({ conversationChannel: channel });
+  },
+
+  cleanupConversationSync: () => {
+    const state = get();
+    
+    if (state.conversationChannel) {
+      console.log('[ChatStore] Cleaning up conversation sync');
+      supabase.removeChannel(state.conversationChannel);
+      set({ 
+        conversationChannel: null, 
+        isConversationSyncActive: false 
+      });
+    }
+  },
 
   // Guest management helpers
   getGuestId: () => {

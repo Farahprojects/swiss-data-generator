@@ -19,6 +19,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { ModeDropdown } from '@/components/chat/ModeDropdown';
 
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
@@ -217,8 +218,11 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
           {/* Main Chat Area */}
           <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
-            {/* Top Header with User Avatar */}
+            {/* Top Header with Mode Dropdown and User Avatar */}
             <div className="flex items-center justify-between p-3 bg-white border-b border-gray-100">
+              <div className="flex items-center">
+                <ModeDropdown />
+              </div>
               <div className="flex-1" />
               
               {/* User Avatar Dropdown - Top Right */}

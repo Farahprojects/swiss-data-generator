@@ -39,6 +39,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   
   const { 
     clearChat,
+    clearAllData,
     // Thread management from single source of truth
     threads,
     isLoadingThreads,
@@ -70,10 +71,27 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
   }, [userType.isAuthenticated, loadThreads]);
 
-  // Handle new chat creation - redirect to /therai for unified handling
+  // Handle new chat creation - create new chat_id immediately
   const handleNewChat = async () => {
-    // Navigate to /therai which will handle new chat creation
-    navigate('/therai', { replace: true });
+    if (!user) {
+      console.error('[ChatThreadsSidebar] Cannot create new chat: user not authenticated');
+      return;
+    }
+
+    try {
+      console.log('[ChatThreadsSidebar] Creating new conversation for authenticated user');
+      
+      // Create new conversation immediately
+      const { addThread } = useChatStore.getState();
+      const newChatId = await addThread(user.id, 'New Chat');
+      
+      // Navigate to the new conversation
+      navigate(`/c/${newChatId}`, { replace: true });
+      
+      console.log('[ChatThreadsSidebar] New conversation created and navigated to:', newChatId);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to create new conversation:', error);
+    }
   };
 
   // Handle switching to a different conversation

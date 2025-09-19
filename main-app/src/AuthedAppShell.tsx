@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
+import { ModeProvider } from '@/contexts/ModeContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
@@ -51,6 +52,7 @@ const AuthedAppShell: React.FC = () => {
       <AuthProvider>
         <ModalStateProvider>
           <SettingsModalProvider>
+            <ModeProvider>
             <Routes>
               {/* Public routes - redirect authenticated users to chat */}
               <Route path="/" element={<PublicOnlyGuard>{isMobile ? (isNativeApp ? <MobileLanding /> : <ChatContainer />) : <PublicReport />}</PublicOnlyGuard>} />
@@ -93,6 +95,7 @@ const AuthedAppShell: React.FC = () => {
               {/* 404 - redirect authenticated users to chat */}
               <Route path="*" element={<PublicOnlyGuard><NotFound /></PublicOnlyGuard>} />
             </Routes>
+            </ModeProvider>
           </SettingsModalProvider>
         </ModalStateProvider>
       </AuthProvider>
