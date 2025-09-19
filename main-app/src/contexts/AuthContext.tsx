@@ -107,14 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Update URL parameters to match auth state
       if (supaSession?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-        // User signed in or has existing session - add user_id to URL if not present
-        const currentUrl = new URL(window.location.href);
-        if (!currentUrl.searchParams.has('user_id')) {
-          currentUrl.searchParams.set('user_id', supaSession.user.id);
-          window.history.replaceState({}, '', currentUrl.toString());
-        }
+        // User signed in or has existing session - no need to add user_id to URL
+        // The user information is available through the auth context
       } else if (!supaSession?.user && event === 'SIGNED_OUT') {
-        // User signed out - remove user_id from URL if present
+        // User signed out - clean up any existing user_id from URL if present
         const currentUrl = new URL(window.location.href);
         if (currentUrl.searchParams.has('user_id')) {
           currentUrl.searchParams.delete('user_id');
