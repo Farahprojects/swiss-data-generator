@@ -33,8 +33,7 @@ const ConfirmEmail: React.FC = () => {
            console.log('[EMAIL-VERIFY] Calling edge function with:', {
              token: token.substring(0, 8) + '...',
              email,
-             type: kind,
-             supabaseUrl: supabase.supabaseUrl
+             type: kind
            });
 
            const { data, error } = await supabase.functions.invoke('verify-email-token', {
