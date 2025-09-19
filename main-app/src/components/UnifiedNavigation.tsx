@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye, Globe, Calendar } from 'lucide-react';
+import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye, Globe, Calendar, Home } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
@@ -77,6 +77,10 @@ const UnifiedNavigation = ({
   const isDashboardPage = isCalendarPage;
   const isMessagesPage = false; // Messages removed
   const isWebsiteBuilderPage = false; // Website builder removed
+  
+  // Determine if we should show home button
+  const isMainPage = location.pathname === '/';
+  const shouldShowHomeButton = !isMainPage && (isLoggedIn || !isLoggedIn);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -230,6 +234,20 @@ const UnifiedNavigation = ({
 
             {/* Call to Action Buttons or User Menu */}
             <div className="flex items-center space-x-4">
+              {/* Home button - show when not on main page */}
+              {shouldShowHomeButton && (
+                <Link to="/">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="hover:bg-gray-100 transition-colors duration-200"
+                    aria-label="Go to home"
+                  >
+                    <Home className="h-5 w-5 text-gray-700" />
+                  </Button>
+                </Link>
+              )}
+              
               {isLoggedIn ? (
                 <>
                   {/* Website Builder Action Buttons */}
