@@ -33,17 +33,27 @@ class ChatController {
 
   private async loadExistingMessages(retryCount = 0) {
     const { chat_id, setMessageLoadError } = useChatStore.getState();
-    const { setChatId } = useMessageStore.getState();
+    const { setChatId, addMessage } = useMessageStore.getState();
     if (!chat_id) return;
 
     const maxRetries = 3;
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
 
     try {
-      // 🚀 LAZY LOAD: No loading state, just fetch and load silently
+      console.log('[ChatController] Loading existing messages for chat:', chat_id);
+      
+      // 🚀 LAZY LOAD: Fetch messages and load them directly
       const messages = await getMessagesForConversation(chat_id);
-      // Set chat_id in message store to trigger fetch
+      
+      // Set chat_id in message store first
       setChatId(chat_id);
+      
+      // Then add the fetched messages to the store
+      messages.forEach(message => {
+        addMessage(message);
+      });
+      
+      console.log('[ChatController] Loaded', messages.length, 'existing messages for chat:', chat_id);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
