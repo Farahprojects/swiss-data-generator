@@ -299,7 +299,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   <MoreHorizontal className="w-4 h-4 text-gray-600" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit">
+              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
                 <DropdownMenuItem
                   onClick={() => {
                     // Always use chat_id if available, otherwise 'new'
@@ -311,7 +311,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       openReportModal('new');
                     }
                   }}
-                  className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                 >
                   Astro
                 </DropdownMenuItem>
@@ -320,7 +320,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 {userType.isAuthenticated && chat_id && (
                   <DropdownMenuItem
                     onClick={() => handleEditTitle(chat_id, threadTitle)}
-                    className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                    className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                   >
                     Edit
                   </DropdownMenuItem>
@@ -335,7 +335,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       }
                       setShowDeleteConfirm(true);
                     }}
-                    className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                    className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                   >
                     {uiConfig.chatMenuActions.delete.label}
                   </DropdownMenuItem>
@@ -433,20 +433,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             <MoreHorizontal className="w-4 h-4 text-gray-600" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit">
+                        <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
                           <DropdownMenuItem
                             onClick={() => {
                               // Open astro data form for this specific conversation
                               openReportModal(conversation.id);
                             }}
-                            className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                           >
                             Astro
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem
                             onClick={() => handleEditTitle(conversation.id, conversation.title || '')}
-                            className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                           >
                             Edit
                           </DropdownMenuItem>
@@ -456,7 +456,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                               setConversationToDelete(conversation.id);
                               setShowDeleteConfirm(true);
                             }}
-                            className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                           >
                             Delete
                           </DropdownMenuItem>
