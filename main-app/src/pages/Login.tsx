@@ -172,7 +172,15 @@ const Login = () => {
       }
 
       // Step 3: success — redirect to /therai (clean auth page)
-      navigate('/therai', { replace: true });
+      const from = (location.state as any)?.from?.pathname;
+      
+      if (from && from.startsWith('/c/')) {
+        // If they were trying to access a specific thread, go there
+        navigate(from, { replace: true });
+      } else {
+        // Otherwise, go to clean /therai page
+        navigate('/therai', { replace: true });
+      }
       
     } catch (err: any) {
       toast({

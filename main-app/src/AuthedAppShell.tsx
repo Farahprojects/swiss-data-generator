@@ -1,6 +1,5 @@
 import React from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { useAuthRouteGuard } from '@/hooks/useAuthRouteGuard';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
@@ -46,9 +45,6 @@ const AuthedAppShell: React.FC = () => {
 
   const isMobile = useIsMobile();
   const isNativeApp = useIsNativeApp();
-  
-  // 🎯 Smart route guard - ensures auth users always have correct URLs
-  useAuthRouteGuard();
 
   return (
     <NavigationStateProvider>
@@ -82,8 +78,8 @@ const AuthedAppShell: React.FC = () => {
               {/* Guest routes - /g/:chat_id */}
               <Route path="/g/:chatId" element={<ChatContainer />} />
               
-              {/* Auth routes - /c/:thread_id */}
-              <Route path="/c/:threadId" element={<ChatContainer />} />
+              {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
+              <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />
               
               {/* Auth clean page - no auto thread creation */}
               <Route path="/therai" element={<AuthGuard><ChatContainer /></AuthGuard>} />
