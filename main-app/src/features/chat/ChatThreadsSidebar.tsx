@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useSearchParams, useParams } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +32,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Get chat_id directly from URL (most reliable source)
   const { threadId } = useParams<{ threadId?: string }>();
   const storeChatId = useChatStore((state) => state.chat_id);
+  const navigate = useNavigate();
   
   // Use URL threadId as primary source, fallback to store
   const chat_id = threadId || storeChatId;
@@ -69,19 +70,19 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
   }, [userType.isAuthenticated, loadThreads]);
 
-  // Handle new chat creation - redirect to /c for unified handling
+  // Handle new chat creation - redirect to /therai for unified handling
   const handleNewChat = async () => {
-    // Navigate to /c which will handle new chat creation
-    window.location.href = '/c';
+    // Navigate to /therai which will handle new chat creation
+    navigate('/therai', { replace: true });
   };
 
   // Handle switching to a different conversation
   const handleSwitchToChat = (conversationId: string) => {
     // Navigate to the appropriate route based on user type
     if (userType.isGuest) {
-      window.location.href = `/c/g/${conversationId}`;
+      navigate(`/g/${conversationId}`, { replace: true });
     } else {
-      window.location.href = `/c/${conversationId}`;
+      navigate(`/c/${conversationId}`, { replace: true });
     }
   };
 
@@ -93,8 +94,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         await removeThread(conversationToDelete);
         console.log('[ChatThreadsSidebar] Conversation deleted:', conversationToDelete);
         
-        // Navigate back to /c after deletion
-        window.location.href = '/c';
+        // Navigate back to /therai after deletion (clean React navigation)
+        navigate('/therai', { replace: true });
       } catch (error) {
         console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
       }
