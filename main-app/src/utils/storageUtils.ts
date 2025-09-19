@@ -7,7 +7,7 @@ export const normalizeStorageUrl = (url: string): string => {
   if (!url) return url;
   
   // If it's already using the correct domain, just fix double slashes
-  if (url.includes('wrvqqvqvwqmfdqvqmaar.supabase.co')) {
+  if (url.includes('api.therai.co')) {
     return url.replace(/\/\/+/g, '/').replace(':/', '://');
   }
   
