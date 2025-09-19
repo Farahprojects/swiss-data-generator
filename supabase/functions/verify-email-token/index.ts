@@ -15,6 +15,13 @@ serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
   const log = (...args: any[]) => console.log(`[VERIFY-EMAIL:${requestId}]`, ...args);
 
+  // Log request details
+  log("Request received:", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   try {
     const { token, email, type } = await req.json();
     

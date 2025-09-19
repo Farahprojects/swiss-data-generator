@@ -30,18 +30,31 @@ const ConfirmEmail: React.FC = () => {
       // Call secure edge function to verify token and update profile
       console.log('[EMAIL-VERIFY] Calling verify-email-token edge function...');
 
-      const { data, error } = await supabase.functions.invoke('verify-email-token', {
-        body: {
-          token,
-          email,
-          type: kind
-        }
-      });
+           console.log('[EMAIL-VERIFY] Calling edge function with:', {
+             token: token.substring(0, 8) + '...',
+             email,
+             type: kind,
+             supabaseUrl: supabase.supabaseUrl
+           });
 
-      if (error) {
-        console.error('[EMAIL-VERIFY] Edge function error:', error);
-        throw new Error(error.message || 'Verification failed');
-      }
+           const { data, error } = await supabase.functions.invoke('verify-email-token', {
+             body: {
+               token,
+               email,
+               type: kind
+             }
+           });
+
+           if (error) {
+             console.error('[EMAIL-VERIFY] Edge function error:', {
+               error,
+               message: error.message,
+               details: error.details,
+               hint: error.hint,
+               code: error.code
+             });
+             throw new Error(error.message || 'Verification failed');
+           }
 
       if (!data?.success) {
         console.error('[EMAIL-VERIFY] Verification failed:', data?.error);
