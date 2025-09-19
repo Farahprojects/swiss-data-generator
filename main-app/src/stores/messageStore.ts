@@ -72,12 +72,22 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
   // Add message with deduplication by message_number and optimistic handling
   addMessage: (message: Message) => {
     set((state) => {
+      console.log('[MessageStore] Adding message:', {
+        id: message.id,
+        chat_id: message.chat_id,
+        role: message.role,
+        text: message.text?.substring(0, 50) + '...',
+        currentChatId: state.chat_id,
+        currentMessagesCount: state.messages.length
+      });
+      
       // Check if message already exists by message_number or id
       const exists = state.messages.some(m => 
         m.message_number === message.message_number || 
         m.id === message.id
       );
       if (exists) {
+        console.log('[MessageStore] Message already exists, updating:', message.id);
         // Update existing message (remove pending status if it was optimistic)
         const updatedMessages = state.messages.map(m => 
           (m.message_number === message.message_number || m.id === message.id)
@@ -91,6 +101,7 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
       const newMessages = [...state.messages, message];
       newMessages.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
       
+      console.log('[MessageStore] Added new message, total count:', newMessages.length);
       return { messages: newMessages };
     });
   },

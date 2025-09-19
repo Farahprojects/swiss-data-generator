@@ -25,40 +25,51 @@ class ChatController {
 
 
   constructor() {
-    this.loadExistingMessages();
+    // Don't load messages in constructor - wait for initializeForConversation
+    // this.loadExistingMessages();
     
     // Listen for network retry events
     window.addEventListener('network-retry', this.handleNetworkRetry.bind(this));
   }
 
-  private async loadExistingMessages(retryCount = 0) {
-    const { chat_id, setMessageLoadError } = useChatStore.getState();
+  private async loadExistingMessages(chat_id?: string, retryCount = 0) {
+    const { setMessageLoadError } = useChatStore.getState();
     const { setChatId, addMessage } = useMessageStore.getState();
-    if (!chat_id) return;
+    
+    // Use provided chat_id or fallback to store
+    const targetChatId = chat_id || useChatStore.getState().chat_id;
+    if (!targetChatId) return;
+    
+    // CRITICAL: Block invalid chat_id values
+    if (targetChatId === "1" || targetChatId.length < 10) {
+      console.error('[ChatController] BLOCKED: Invalid chat_id detected:', targetChatId);
+      setMessageLoadError('Invalid chat ID');
+      return;
+    }
 
     const maxRetries = 3;
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
 
     try {
-      console.log('[ChatController] Loading existing messages for chat:', chat_id);
+      console.log('[ChatController] Loading existing messages for chat:', targetChatId);
       
       // 🚀 LAZY LOAD: Fetch messages and load them directly
-      const messages = await getMessagesForConversation(chat_id);
+      const messages = await getMessagesForConversation(targetChatId);
       
       // Set chat_id in message store first
-      setChatId(chat_id);
+      setChatId(targetChatId);
       
       // Then add the fetched messages to the store
       messages.forEach(message => {
         addMessage(message);
       });
       
-      console.log('[ChatController] Loaded', messages.length, 'existing messages for chat:', chat_id);
+      console.log('[ChatController] Loaded', messages.length, 'existing messages for chat:', targetChatId);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
       if (retryCount < maxRetries) {
-        setTimeout(() => this.loadExistingMessages(retryCount + 1), retryDelay);
+        setTimeout(() => this.loadExistingMessages(targetChatId, retryCount + 1), retryDelay);
       } else {
         setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
       }
@@ -84,7 +95,7 @@ class ChatController {
       onSystemMessage: this.handleSystemMessage.bind(this)
     });
     
-    await this.loadExistingMessages();
+    await this.loadExistingMessages(chat_id);
   }
 
   // Heartbeat system
@@ -231,7 +242,7 @@ class ChatController {
       onSystemMessage: this.handleSystemMessage.bind(this)
     });
     
-    this.loadExistingMessages(); // Load conversation history
+    this.loadExistingMessages(); // Load conversation history - will use store chat_id
   }
 
   // sendTextMessage removed - using unifiedWebSocketService.sendMessageDirect() directly

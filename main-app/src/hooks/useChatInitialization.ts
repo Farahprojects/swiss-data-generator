@@ -31,12 +31,28 @@ export const useChatInitialization = () => {
       return;
     }
     
+    // CRITICAL: Clear any invalid cached chat_id values (like "1")
+    if (threadId && threadId !== "1") {
+      // Clear any cached "1" values that might be causing issues
+      sessionStorage.removeItem('therai_active_chat_shared');
+      sessionStorage.removeItem('therai_active_chat_auth_');
+      sessionStorage.removeItem('therai_active_chat_guest_');
+    }
+    
     // Hydration order: URL → sessionStorage → fresh start
     let targetChatId = chat_id;
+    
+    console.log('[useChatInitialization] Starting hydration:', {
+      currentChatId: chat_id,
+      threadId,
+      userId: user?.id,
+      guestId
+    });
     
     // 1. URL threadId is primary source of truth
     if (!targetChatId && threadId) {
       targetChatId = threadId;
+      console.log('[useChatInitialization] Using URL threadId:', targetChatId);
     }
     
     // 2. Fallback to sessionStorage cache
@@ -44,17 +60,23 @@ export const useChatInitialization = () => {
       const hydratedChatId = hydrateFromStorage(user?.id, guestId);
       if (hydratedChatId) {
         targetChatId = hydratedChatId;
+        console.log('[useChatInitialization] Using hydrated chatId:', targetChatId);
       }
     }
     
     // 3. Start conversation in store if needed
-    if (targetChatId && targetChatId !== chat_id) {
+    if (targetChatId && targetChatId !== chat_id && targetChatId !== "1") {
+      console.log('[useChatInitialization] Starting conversation with chat_id:', targetChatId);
       startConversation(targetChatId, guestId);
     }
 
     // 4. Initialize controller (messages WS) immediately
-    if (targetChatId) {
+    if (targetChatId && targetChatId !== "1") {
+      console.log('[useChatInitialization] Initializing controller with chat_id:', targetChatId);
       chatController.initializeForConversation(targetChatId);
+    } else if (targetChatId === "1") {
+      console.error('[useChatInitialization] BLOCKED: Invalid chat_id "1" detected, clearing store');
+      useChatStore.getState().clearChat();
     }
   }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId]);
 };

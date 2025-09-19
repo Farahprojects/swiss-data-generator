@@ -481,6 +481,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Try shared cache first (guest/auth agnostic)
       const cachedChatId = sessionStorage.getItem(STORAGE_KEYS.CHAT.SHARED.UUID);
       if (cachedChatId) {
+        console.log('[Store] Hydrated from shared cache:', cachedChatId);
         return cachedChatId;
       }
       
@@ -489,6 +490,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
         const storedChatId = sessionStorage.getItem(authKey);
         if (storedChatId) {
+          console.log('[Store] Hydrated from auth cache:', storedChatId);
           return storedChatId;
         }
       }
@@ -497,10 +499,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(guestId);
         const storedChatId = sessionStorage.getItem(guestKey);
         if (storedChatId) {
+          console.log('[Store] Hydrated from guest cache:', storedChatId);
           return storedChatId;
         }
       }
       
+      console.log('[Store] No cached chat_id found');
       return null;
     } catch (error) {
       console.error('[Store] Error hydrating from storage:', error);
