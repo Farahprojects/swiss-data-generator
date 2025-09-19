@@ -85,6 +85,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       const { addThread } = useChatStore.getState();
       const newChatId = await addThread(user.id, 'New Chat');
       
+      // DIRECT FLOW: Immediately set chat_id and fetch messages (same as handleSwitchToChat)
+      const { setChatId } = useMessageStore.getState();
+      setChatId(newChatId);
+      
+      // Also update the main chat store
+      const { startConversation } = useChatStore.getState();
+      startConversation(newChatId);
+      
+      // Switch WebSocket subscription to new chat_id
+      const { chatController } = await import('@/features/chat/ChatController');
+      await chatController.switchToChat(newChatId);
+      
       // Navigate to the new conversation
       navigate(`/c/${newChatId}`, { replace: true });
       

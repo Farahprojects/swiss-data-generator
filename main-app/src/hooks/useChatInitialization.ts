@@ -6,81 +6,69 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserType } from '@/hooks/useUserType';
 
 /**
- * Centralized chat initialization hook with hydration
- * Single responsibility: Initialize chat with proper hydration order
+ * Direct chat initialization - always fetch from source of truth (DB)
+ * No more fragile sessionStorage hydration
  * 
  * Architecture:
- * - Store hydrates from: sessionStorage → URL → backend
- * - Store is single authority, UI always reads from store
+ * - URL threadId → Direct DB fetch → Store → UI
+ * - WebSocket initialized once on app startup
+ * - Everything is explicit and direct
  */
 export const useChatInitialization = () => {
   const { threadId } = useParams<{ threadId?: string }>();
-  const { chat_id, hydrateFromStorage, startConversation } = useChatStore();
+  const { chat_id, startConversation, loadThreads } = useChatStore();
   const { user } = useAuth();
   const { guestId } = useUserType();
 
   useEffect(() => {
-    // Extra safety: Check URL params for chat_id
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlChatId = urlParams.get('chat_id');
+    // Initialize WebSocket callbacks once on app startup
+    const initializeWebSocket = async () => {
+      console.log('[useChatInitialization] Initializing WebSocket callbacks once');
+      await chatController.initializeWebSocketCallbacks();
+    };
     
-    // Double-safety: ensure we never hydrate a deleted session
-    if (!threadId && !urlChatId) {
-      // Reset store to guarantee clean state
-      useChatStore.getState().clearChat();
-      return;
-    }
-    
-    // CRITICAL: Clear any invalid cached chat_id values (like "1")
-    if (threadId && threadId !== "1") {
-      // Clear any cached "1" values that might be causing issues
-      sessionStorage.removeItem('therai_active_chat_shared');
-      sessionStorage.removeItem('therai_active_chat_auth_');
-      sessionStorage.removeItem('therai_active_chat_guest_');
-    }
-    
-    // Hydration order: URL → sessionStorage → fresh start
-    let targetChatId = chat_id;
-    
-    console.log('[useChatInitialization] Starting hydration:', {
-      currentChatId: chat_id,
-      threadId,
-      userId: user?.id,
-      guestId
-    });
-    
-    // 1. URL threadId is primary source of truth
-    if (!targetChatId && threadId) {
-      targetChatId = threadId;
-      console.log('[useChatInitialization] Using URL threadId:', targetChatId);
-    }
-    
-    // 2. Fallback to sessionStorage cache
-    if (!targetChatId) {
-      const hydratedChatId = hydrateFromStorage(user?.id, guestId);
-      if (hydratedChatId) {
-        targetChatId = hydratedChatId;
-        console.log('[useChatInitialization] Using hydrated chatId:', targetChatId);
-      }
-    }
-    
-    // 3. Start conversation in store if needed
-    if (targetChatId && targetChatId !== chat_id && targetChatId !== "1") {
-      console.log('[useChatInitialization] Starting conversation with chat_id:', targetChatId);
-      startConversation(targetChatId, guestId);
-    }
+    initializeWebSocket();
 
-    // 4. Initialize WebSocket callbacks once (without specific chat_id)
-    if (targetChatId && targetChatId !== "1") {
-      console.log('[useChatInitialization] Initializing WebSocket for chat_id:', targetChatId);
-      chatController.initializeForConversation(targetChatId);
-    } else if (targetChatId === "1") {
-      console.error('[useChatInitialization] BLOCKED: Invalid chat_id "1" detected, clearing store');
-      useChatStore.getState().clearChat();
-    } else {
-      // Initialize WebSocket callbacks without specific chat_id for future use
-      console.log('[useChatInitialization] Initializing WebSocket callbacks only');
-      chatController.initializeWebSocketCallbacks();
+    // Load threads from DB (source of truth)
+    if (user) {
+      console.log('[useChatInitialization] Loading threads from DB');
+      loadThreads();
     }
-  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId]);
+  }, [user, loadThreads]);
+
+  useEffect(() => {
+    // Handle direct URL navigation (typing /c/123 in browser)
+    if (threadId && threadId !== "1") {
+      console.log('[useChatInitialization] Direct URL navigation detected:', threadId);
+      
+      // Validate threadId exists in DB before using it
+      const validateAndLoadThread = async () => {
+        try {
+          // Check if this thread exists in our loaded threads
+          const { threads } = useChatStore.getState();
+          const threadExists = threads.some(thread => thread.id === threadId);
+          
+          if (threadExists) {
+            console.log('[useChatInitialization] Thread exists, loading directly');
+            // Use the same direct flow as handleSwitchToChat
+            const { useMessageStore } = await import('@/stores/messageStore');
+            useMessageStore.getState().setChatId(threadId);
+            startConversation(threadId, guestId);
+            await chatController.switchToChat(threadId);
+          } else {
+            console.log('[useChatInitialization] Thread not found in DB, clearing');
+            useChatStore.getState().clearChat();
+          }
+        } catch (error) {
+          console.error('[useChatInitialization] Error validating thread:', error);
+          useChatStore.getState().clearChat();
+        }
+      };
+      
+      validateAndLoadThread();
+    } else if (threadId === "1") {
+      console.error('[useChatInitialization] BLOCKED: Invalid threadId "1" detected');
+      useChatStore.getState().clearChat();
+    }
+  }, [threadId, startConversation, guestId]);
 };
