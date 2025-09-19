@@ -272,11 +272,6 @@ export const useChatStore = create<ChatState>()(
         (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
       
-      console.log('[ChatStore] Loaded conversations:', sortedConversations.map(c => ({
-        id: c.id,
-        title: c.title,
-        updated_at: c.updated_at
-      })));
       
       set({ threads: sortedConversations, isLoadingThreads: false });
       
@@ -357,15 +352,8 @@ export const useChatStore = create<ChatState>()(
       // Check if conversation already exists to avoid duplicates
       const exists = state.threads.some(thread => thread.id === conversation.id);
       if (exists) {
-        console.log('[ChatStore] Conversation already exists, skipping add:', conversation.id);
         return state;
       }
-      
-      console.log('[ChatStore] Adding new conversation:', {
-        id: conversation.id,
-        title: conversation.title,
-        currentThreadsCount: state.threads.length
-      });
       
       // Add new conversation and sort by updated_at desc
       const updatedThreads = [conversation, ...state.threads].sort(
@@ -397,11 +385,8 @@ export const useChatStore = create<ChatState>()(
     
     // Don't initialize if already active
     if (state.isConversationSyncActive) {
-      console.log('[ChatStore] Conversation sync already active');
       return;
     }
-
-    console.log('[ChatStore] Initializing conversation sync for user:', userId);
 
     const channel = supabase
       .channel(`conversations:user:${userId}`)
@@ -414,8 +399,6 @@ export const useChatStore = create<ChatState>()(
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('[ChatStore] Conversation change received:', payload.eventType, payload);
-          
           switch (payload.eventType) {
             case 'INSERT':
               get().addConversation(payload.new as Conversation);
@@ -430,7 +413,6 @@ export const useChatStore = create<ChatState>()(
         }
       )
       .subscribe((status) => {
-        console.log('[ChatStore] Conversation sync status:', status);
         if (status === 'SUBSCRIBED') {
           set({ isConversationSyncActive: true });
         }
@@ -443,7 +425,6 @@ export const useChatStore = create<ChatState>()(
     const state = get();
     
     if (state.conversationChannel) {
-      console.log('[ChatStore] Cleaning up conversation sync');
       supabase.removeChannel(state.conversationChannel);
       set({ 
         conversationChannel: null, 
