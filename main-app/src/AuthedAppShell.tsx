@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useAuthRouteGuard } from '@/hooks/useAuthRouteGuard';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
@@ -45,6 +46,9 @@ const AuthedAppShell: React.FC = () => {
 
   const isMobile = useIsMobile();
   const isNativeApp = useIsNativeApp();
+  
+  // 🎯 Smart route guard - ensures auth users always have correct URLs
+  useAuthRouteGuard();
 
   return (
     <NavigationStateProvider>
