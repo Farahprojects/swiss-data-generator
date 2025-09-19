@@ -1,7 +1,13 @@
 {
-  "buildCommand": "npm run build --workspace=therai-auth-app",
-  "installCommand": "npm ci",
-  "outputDirectory": "auth-app/dist",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
