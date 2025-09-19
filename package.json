@@ -1,0 +1,29 @@
+{
+  "name": "therai-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TheRAI monorepo with main app and auth app",
+  "workspaces": [
+    "main-app",
+    "auth-app"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=main-app",
+    "dev:main": "npm run dev --workspace=main-app",
+    "dev:auth": "npm run dev --workspace=auth-app",
+    "dev:both": "concurrently \"npm run dev:main\" \"npm run dev:auth\"",
+    "build": "npm run build --workspace=main-app",
+    "build:main": "npm run build --workspace=main-app",
+    "build:auth": "npm run build --workspace=auth-app",
+    "build:all": "npm run build --workspace=main-app && npm run build --workspace=auth-app",
+    "install:all": "npm install && npm install --workspace=main-app && npm install --workspace=auth-app",
+    "clean": "rm -rf node_modules main-app/node_modules auth-app/node_modules main-app/dist auth-app/dist"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
