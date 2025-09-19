@@ -238,7 +238,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     
     try {
       await updateConversationTitle(editingConversationId, editTitle.trim());
-      // The real-time sync will automatically update the UI
+      
+      // Manually update the local state immediately for instant UI update
+      const { updateConversation, threads } = useChatStore.getState();
+      const existingConversation = threads.find(t => t.id === editingConversationId);
+      
+      if (existingConversation) {
+        const updatedConversation = {
+          ...existingConversation,
+          title: editTitle.trim(),
+          updated_at: new Date().toISOString()
+        };
+        updateConversation(updatedConversation);
+      }
+      
       setShowEditTitle(false);
       setEditingConversationId(null);
       setEditTitle('');
