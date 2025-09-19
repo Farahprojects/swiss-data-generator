@@ -70,7 +70,7 @@ export const SettingsModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeSettings()}>
-      <DialogContent className="sm:max-w-[800px] h-[80vh] p-0 flex flex-col">
+      <DialogContent className="sm:max-w-[800px] h-[80vh] p-0 flex flex-col bg-white">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-2xl font-semibold">Settings</h2>
