@@ -213,9 +213,10 @@ const ConfirmEmail: React.FC = () => {
         </motion.div>
       </main>
 
-      <footer className="py-8 text-center text-sm text-gray-500 font-light">
-        © {new Date().getFullYear()} therai. All rights reserved.
-      </footer>
+            <footer className="py-8 text-center text-sm text-gray-500 font-light">
+              © {new Date().getFullYear()} therai. All rights reserved.
+              {/* Force rebuild for pill-shaped buttons */}
+            </footer>
     </div>
   );
 };
