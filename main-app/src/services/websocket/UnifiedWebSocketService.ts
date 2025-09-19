@@ -31,16 +31,10 @@ class UnifiedWebSocketService {
     onAssistantMessage?: (message: Message) => void;
     onSystemMessage?: (message: Message) => void;
   }) {
-    console.log('[UnifiedWebSocket] Initializing callbacks only:', {
-      hasOnMessageReceived: !!callbacks?.onMessageReceived,
-      hasOnMessageUpdated: !!callbacks?.onMessageUpdated
-    });
     
     this.onMessage = callbacks?.onMessageReceived;
     this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
     this.onSystemMessage = callbacks?.onSystemMessage;
-    
-    console.log('[UnifiedWebSocket] Callbacks initialized, ready for subscription');
   }
 
   /**
@@ -62,8 +56,6 @@ class UnifiedWebSocketService {
     
     // Then subscribe to the specific chat
     await this.subscribeToChat(chat_id);
-    
-    console.log('[UnifiedWebSocket] Initialized and subscribed to chat:', chat_id);
   }
 
   /**
@@ -99,7 +91,6 @@ class UnifiedWebSocketService {
    * Set TTS mode (stub for compatibility)
    */
   setTtsMode(enabled: boolean) {
-    console.log('[UnifiedWebSocket] setTtsMode:', enabled ? 'enabled' : 'disabled');
     // This is a stub - TTS mode handling should be done elsewhere
   }
 
@@ -107,10 +98,6 @@ class UnifiedWebSocketService {
    * Subscribe to a specific chat (called when chat_id is known)
    */
   async subscribeToChat(chat_id: string) {
-    console.log('[UnifiedWebSocket] Subscribing to chat:', chat_id, 'with callbacks:', {
-      hasOnMessage: !!this.onMessage,
-      hasOnError: !!this.onError
-    });
     
     this.currentChatId = chat_id;
     
@@ -147,7 +134,6 @@ class UnifiedWebSocketService {
           },
           (payload) => {
             const newMessage = this.transformDatabaseMessage(payload.new);
-            console.log('[UnifiedWebSocket] New message received:', newMessage.message_number);
             
             // Filter out system messages at WebSocket level (don't touch store)
             if (newMessage.role === 'system') {
@@ -191,7 +177,6 @@ class UnifiedWebSocketService {
           
           if (status === 'SUBSCRIBED') {
             this.subscriptionRetryCount = 0;
-            console.log('[UnifiedWebSocket] Successfully subscribed to messages');
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
             const retry = Math.min(++this.subscriptionRetryCount, 5);
             const delay = Math.min(1000 * Math.pow(2, retry), 8000);

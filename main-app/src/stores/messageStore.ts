@@ -75,14 +75,6 @@ export const useMessageStore = create<MessageStore>()(
   // Add message with deduplication by message_number and optimistic handling
   addMessage: (message: Message) => {
     set((state) => {
-      console.log('[MessageStore] Adding message:', {
-        id: message.id,
-        chat_id: message.chat_id,
-        role: message.role,
-        text: message.text?.substring(0, 50) + '...',
-        currentChatId: state.chat_id,
-        currentMessagesCount: state.messages.length
-      });
       
       // Check if message already exists by message_number or id
       const exists = state.messages.some(m => 
@@ -90,7 +82,6 @@ export const useMessageStore = create<MessageStore>()(
         m.id === message.id
       );
       if (exists) {
-        console.log('[MessageStore] Message already exists, updating:', message.id);
         // Update existing message (remove pending status if it was optimistic)
         const updatedMessages = state.messages.map(m => 
           (m.message_number === message.message_number || m.id === message.id)
@@ -104,7 +95,6 @@ export const useMessageStore = create<MessageStore>()(
       const newMessages = [...state.messages, message];
       newMessages.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
       
-      console.log('[MessageStore] Added new message, total count:', newMessages.length);
       return { messages: newMessages };
     });
   },
@@ -122,8 +112,6 @@ export const useMessageStore = create<MessageStore>()(
         pending: true,
         tempId: message.id // Keep original ID for reconciliation
       };
-      
-      console.log('[MessageStore] Adding optimistic message:', nextOptimisticNumber);
       
       // Add optimistic message and sort
       const newMessages = [...state.messages, optimisticMessage];
@@ -153,7 +141,6 @@ export const useMessageStore = create<MessageStore>()(
     set({ loading: true, error: null });
 
     try {
-      console.log('[MessageStore] Fetching messages for chat:', chat_id);
       
       const { data, error } = await supabase
         .from('messages')
@@ -170,8 +157,6 @@ export const useMessageStore = create<MessageStore>()(
         loading: false,
         hasOlder: (data?.length || 0) === 50
       });
-      
-      console.log(`[MessageStore] Loaded ${messages.length} messages`);
     } catch (e: any) {
       console.warn('[MessageStore] Failed to fetch messages:', e.message);
       set({ error: e.message, loading: false });

@@ -23,7 +23,6 @@ export const useChatInitialization = () => {
   useEffect(() => {
     // Initialize WebSocket callbacks once on app startup
     const initializeWebSocket = async () => {
-      console.log('[useChatInitialization] Initializing WebSocket callbacks once');
       await chatController.initializeWebSocketCallbacks();
     };
     
@@ -31,7 +30,6 @@ export const useChatInitialization = () => {
 
     // Load threads from DB (source of truth)
     if (user) {
-      console.log('[useChatInitialization] Loading threads from DB');
       loadThreads();
     }
   }, [user, loadThreads]);
@@ -39,7 +37,6 @@ export const useChatInitialization = () => {
   useEffect(() => {
     // Handle direct URL navigation (typing /c/123 in browser)
     if (threadId && threadId !== "1") {
-      console.log('[useChatInitialization] Direct URL navigation detected:', threadId);
       
       // Validate threadId exists in DB before using it
       const validateAndLoadThread = async () => {
@@ -49,14 +46,12 @@ export const useChatInitialization = () => {
           const threadExists = threads.some(thread => thread.id === threadId);
           
           if (threadExists) {
-            console.log('[useChatInitialization] Thread exists, loading directly');
             // Use the same direct flow as handleSwitchToChat
             const { useMessageStore } = await import('@/stores/messageStore');
             useMessageStore.getState().setChatId(threadId);
             startConversation(threadId, guestId);
             await chatController.switchToChat(threadId);
           } else {
-            console.log('[useChatInitialization] Thread not found in DB, clearing');
             useChatStore.getState().clearChat();
           }
         } catch (error) {

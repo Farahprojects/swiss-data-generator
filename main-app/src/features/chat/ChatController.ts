@@ -51,7 +51,6 @@ class ChatController {
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
 
     try {
-      console.log('[ChatController] Loading existing messages for chat:', targetChatId);
       
       // 🚀 LAZY LOAD: Fetch messages and load them directly
       const messages = await getMessagesForConversation(targetChatId);
@@ -63,8 +62,6 @@ class ChatController {
       messages.forEach(message => {
         addMessage(message);
       });
-      
-      console.log('[ChatController] Loaded', messages.length, 'existing messages for chat:', targetChatId);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
@@ -116,7 +113,6 @@ class ChatController {
    * Switch WebSocket subscription to different chat_id
    */
   async switchToChat(chat_id: string) {
-    console.log('[ChatController] Switching WebSocket to chat:', chat_id);
     await unifiedWebSocketService.subscribeToChat(chat_id);
   }
 
