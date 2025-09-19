@@ -594,25 +594,28 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
                 </div>
 
-                <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                    Email Address *
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...register('email', { 
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address'
-                      }
-                    })}
-                    placeholder="your@email.com"
-                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                  />
-                  {errors.email && <ErrorMsg msg={errors.email.message || ''} />}
-                </div>
+                {/* Hide email field for authenticated users */}
+                {!isAuthenticated && (
+                  <div>
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      Email Address *
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      {...register('email', { 
+                        required: 'Email is required',
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: 'Invalid email address'
+                        }
+                      })}
+                      placeholder="your@email.com"
+                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                    />
+                    {errors.email && <ErrorMsg msg={errors.email.message || ''} />}
+                  </div>
+                )}
 
                 <div>
                   {isMobile ? (
