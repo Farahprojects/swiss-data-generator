@@ -139,7 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
               setUser(null);
               setSession(null);
-              setIsPendingEmailCheck(false);
             }
           } catch (validationError) {
             console.error('Session validation error:', validationError);
@@ -154,7 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Don't block the auth flow for every sign-in
         const hasEmailChangeHistory = localStorage.getItem('hasEmailChangeHistory');
         if (hasEmailChangeHistory === 'true') {
-          setIsPendingEmailCheck(true);
           
           // Defer the email check to avoid blocking the auth flow
           setTimeout(async () => {
@@ -170,17 +168,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             } catch (error) {
             } finally {
-              setIsPendingEmailCheck(false);
             }
           }, 0);
         } else {
           // No email change history, skip the check entirely
-          setIsPendingEmailCheck(false);
         }
       }
 
       if (event === 'SIGNED_OUT') {
-        setIsPendingEmailCheck(false);
         setUser(null);
         setSession(null);
       }
@@ -194,7 +189,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.warn('[AuthContext] User no longer exists in database, clearing auth state');
             setUser(null);
             setSession(null);
-            setIsPendingEmailCheck(false);
           });
         }
       }
@@ -229,7 +223,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
               setUser(null);
               setSession(null);
-              setIsPendingEmailCheck(false);
             }
           } catch (validationError) {
             console.error('Initial session validation error:', validationError);
@@ -251,7 +244,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('[AuthContext] Periodic validation: User no longer exists, clearing auth state');
           setUser(null);
           setSession(null);
-          setIsPendingEmailCheck(false);
         }
       }
     }, 30000); // Check every 30 seconds
@@ -470,7 +462,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local state first
       setUser(null);
       setSession(null);
-      setIsPendingEmailCheck(false);
       clearNavigationState();
 
       // Import and use cleanup utility
