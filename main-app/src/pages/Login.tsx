@@ -9,7 +9,6 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -53,7 +52,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginAttempted, setLoginAttempted] = useState(false);
 
@@ -64,30 +62,12 @@ const Login = () => {
   // Redirect to calendar once fully authenticated
   // ————————————————————————————————————————————————
   useEffect(() => {
-    if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
+    if (!authLoading && user && !isPendingEmailCheck) {
       const from = (location.state as any)?.from?.pathname || '/chat';
       navigate(from, { replace: true });
     }
-  }, [authLoading, user, showVerificationModal, isPendingEmailCheck, navigate, location.state]);
+  }, [authLoading, user, isPendingEmailCheck, navigate, location.state]);
 
-  // ————————————————————————————————————————————————
-  // Show verification modal automatically when flagged by AuthContext
-  // ————————————————————————————————————————————————
-  useEffect(() => {
-    if (pendingEmailAddress && !isPendingEmailCheck) {
-      setShowVerificationModal(true);
-    }
-  }, [pendingEmailAddress, isPendingEmailCheck]);
-
-  // ————————————————————————————————————————————————
-  // Show verification modal when redirected from a protected route
-  // ————————————————————————————————————————————————
-  useEffect(() => {
-    const state = location.state as any;
-    if (state?.showVerification && state?.pendingEmail) {
-      setShowVerificationModal(true);
-    }
-  }, [location.state]);
 
   // ————————————————————————————————————————————————
   // If the user manually navigates to /login while already signed‑in, bounce them.
@@ -95,7 +75,6 @@ const Login = () => {
   if (
     user &&
     !loginAttempted &&
-    !showVerificationModal &&
     !pendingEmailAddress &&
     !isPendingEmailCheck &&
     (typeof window === 'undefined' || !window.location.pathname.includes('/auth/password'))
@@ -107,39 +86,7 @@ const Login = () => {
   // ————————————————————————————————————————————————
   // Helpers
   // ————————————————————————————————————————————————
-  const openVerificationModal = () => {
-    setShowVerificationModal(true);
-    setLoading(false);
-  };
 
-  /** Resend verification email (edge function) */
-  const handleResendVerification = async (email: string): Promise<{ error: Error | null }> => {
-    try {
-      // Use Supabase edge function via the client
-      const { data, error } = await supabase.functions.invoke('email-verification', {
-        body: { user_id: user?.id ?? '' }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to send verification email');
-      }
-
-      toast({
-        title: 'Verification email sent',
-        description: 'Please check your inbox (and spam folder).',
-      });
-      
-      return { error: null };
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message ?? 'Unable to resend email',
-        variant: 'destructive',
-      });
-      
-      return { error: error instanceof Error ? error : new Error(error.message ?? 'Unable to resend email') };
-    }
-  };
 
   // ————————————————————————————————————————————————
   // Form submit
@@ -159,7 +106,7 @@ const Login = () => {
       if (error) {
         const msg = error.message.toLowerCase();
         if (msg.includes('confirm') || msg.includes('verification') || msg.includes('verify')) {
-          openVerificationModal();
+          setErrorMsg('Please check your email for verification instructions');
         } else {
           setErrorMsg('Invalid email or password');
         }
@@ -196,21 +143,6 @@ const Login = () => {
   const handleGoogleSignIn = async () => signInWithGoogle();
   const handleAppleSignIn = async () => signInWithApple();
 
-  // ————————————————————————————————————————————————
-  // Verification modal callbacks
-  // ————————————————————————————————————————————————
-  const handleVerificationFinished = () => {
-    setShowVerificationModal(false);
-    clearPendingEmail();
-    toast({ title: 'Email verified', description: 'Redirecting…' });
-    const from = (location.state as any)?.from?.pathname || '/chat';
-    navigate(from, { replace: true });
-  };
-
-  const handleVerificationCancelled = () => {
-    setShowVerificationModal(false);
-    clearPendingEmail();
-  };
 
   // ————————————————————————————————————————————————
   // Render
@@ -289,17 +221,6 @@ const Login = () => {
 
       <Footer hideMobileAstroToggle />
 
-      {showVerificationModal && (
-        <LoginVerificationModal
-          isOpen={showVerificationModal}
-          email={pendingEmailAddress || email}
-          currentEmail={user?.email || ''}
-          pendingEmail={pendingEmailAddress}
-          resendVerificationEmail={handleResendVerification}
-          onVerified={handleVerificationFinished}
-          onCancel={handleVerificationCancelled}
-        />
-      )}
     </div>
   );
 };

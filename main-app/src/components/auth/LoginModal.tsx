@@ -6,7 +6,6 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 interface LoginModalProps {
@@ -37,7 +36,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const emailValid = validateEmail(email);
@@ -47,19 +45,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   // Handle successful authentication
   // ————————————————————————————————————————————————
   useEffect(() => {
-    if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
+    if (!authLoading && user && !isPendingEmailCheck) {
       onSuccess?.();
     }
-  }, [authLoading, user, showVerificationModal, isPendingEmailCheck, onSuccess]);
+  }, [authLoading, user, isPendingEmailCheck, onSuccess]);
 
-  // ————————————————————————————————————————————————
-  // Show verification modal automatically when flagged by AuthContext
-  // ————————————————————————————————————————————————
-  useEffect(() => {
-    if (pendingEmailAddress && !isPendingEmailCheck) {
-      setShowVerificationModal(true);
-    }
-  }, [pendingEmailAddress, isPendingEmailCheck]);
 
   // ————————————————————————————————————————————————
   // Form submission
@@ -110,34 +100,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
     }
   };
 
-  // ————————————————————————————————————————————————
-  // Verification handlers
-  // ————————————————————————————————————————————————
-  const handleResendVerification = async () => {
-    try {
-      await clearPendingEmail();
-      toast({
-        title: 'Verification email sent',
-        description: 'Please check your inbox and click the verification link.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to resend verification email. Please try again.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleVerificationFinished = () => {
-    setShowVerificationModal(false);
-    onSuccess?.();
-  };
-
-  const handleVerificationCancelled = () => {
-    setShowVerificationModal(false);
-    clearPendingEmail();
-  };
 
   // ————————————————————————————————————————————————
   // Render
@@ -200,21 +162,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
         <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
       </div>
 
-      {/* Verification Modal */}
-      {showVerificationModal && (
-        <LoginVerificationModal
-          isOpen={showVerificationModal}
-          email={pendingEmailAddress || email}
-          currentEmail={user?.email || ''}
-          pendingEmail={pendingEmailAddress}
-          resendVerificationEmail={async (email: string) => {
-            await handleResendVerification();
-            return { error: new Error('') };
-          }}
-          onVerified={handleVerificationFinished}
-          onCancel={handleVerificationCancelled}
-        />
-      )}
     </div>
   );
 };
