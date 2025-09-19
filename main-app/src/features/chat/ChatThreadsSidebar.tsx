@@ -96,6 +96,16 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Handle switching to a different conversation
   const handleSwitchToChat = (conversationId: string) => {
+    console.log('[ChatThreadsSidebar] Switching to chat:', conversationId);
+    
+    // DIRECT FLOW: Immediately set chat_id and fetch messages
+    const { setChatId } = useMessageStore.getState();
+    setChatId(conversationId);
+    
+    // Also update the main chat store
+    const { startConversation } = useChatStore.getState();
+    startConversation(conversationId);
+    
     // Navigate to the appropriate route based on user type
     if (userType.isGuest) {
       navigate(`/g/${conversationId}`, { replace: true });
