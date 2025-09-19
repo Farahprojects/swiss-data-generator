@@ -185,7 +185,7 @@ const ConfirmEmail: React.FC = () => {
               {status === 'success' ? (
                 <Button
                   onClick={() => window.location.href = 'https://therai.co/login'}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-full"
                 >
                   Sign In to Continue
                 </Button>
@@ -193,7 +193,7 @@ const ConfirmEmail: React.FC = () => {
                 <div className="flex flex-col gap-3 w-full">
                   <Button 
                     onClick={() => window.location.href = 'https://therai.co/login'} 
-                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-full"
                   >
                     Return to Login
                   </Button>
@@ -201,7 +201,7 @@ const ConfirmEmail: React.FC = () => {
                     <Button 
                       onClick={() => window.location.href = 'https://therai.co/signup'}
                       variant="outline" 
-                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-light py-4 rounded-xl"
+                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-light py-4 rounded-full"
                     >
                       Create New Account
                     </Button>
