@@ -40,7 +40,7 @@ serve(async (req) => {
     }
 
     const customerId = customers.data[0].id;
-    const origin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+    const origin = req.headers.get("origin") || "https://api.therai.co";
 
     // Create billing portal session
     const portalSession = await stripe.billingPortal.sessions.create({

@@ -77,7 +77,7 @@ serve(async (req) => {
     });
 
     const { successUrl, cancelUrl } = await req.json();
-    const origin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+    const origin = req.headers.get("origin") || "https://api.therai.co";
 
     // Create subscription checkout session with dynamic pricing
     const session = await stripe.checkout.sessions.create({

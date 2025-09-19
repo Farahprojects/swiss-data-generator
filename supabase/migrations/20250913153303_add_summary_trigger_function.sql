@@ -36,7 +36,7 @@ BEGIN
   IF message_count >= 12 THEN
     -- Call the edge function asynchronously (fire and forget)
     PERFORM net.http_post(
-      url := 'https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/generate-summary',
+      url := 'https://api.therai.co/functions/v1/generate-summary',
       body := jsonb_build_object(
         'chat_id', NEW.chat_id,
         'trigger_check', true

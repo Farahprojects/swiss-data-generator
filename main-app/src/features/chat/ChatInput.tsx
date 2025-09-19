@@ -68,6 +68,8 @@ export const ChatInput = () => {
 
   const handleSend = async () => {
     if (text.trim()) {
+      let currentChatId = chat_id;
+      
       // For authenticated users: create conversation if no chat_id exists
       if (isAuthenticated && !chat_id && user) {
         try {
@@ -76,6 +78,9 @@ export const ChatInput = () => {
           
           // Initialize the conversation in chatController (store will handle state)
           await chatController.initializeConversation(newChatId);
+          
+          // Use the newly created chat_id for this message
+          currentChatId = newChatId;
           
           console.log('[ChatInput] New conversation created and initialized:', newChatId);
         } catch (error) {
@@ -99,7 +104,7 @@ export const ChatInput = () => {
       // Show optimistic message immediately in UI - instant display
       const optimisticMessage: Message = {
         id: client_msg_id,
-        chat_id: chat_id!,
+        chat_id: currentChatId!,
         role: 'user',
         text: text.trim(),
         createdAt: new Date().toISOString(),
@@ -114,7 +119,7 @@ export const ChatInput = () => {
       // Fire-and-forget direct invoke - no queueMicrotask delay
       supabase.functions.invoke('chat-send', {
         body: {
-          chat_id: chat_id!,
+          chat_id: currentChatId!,
           text: text.trim(),
           client_msg_id
         }
