@@ -21,7 +21,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
     }
   };
 } else {
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        'apikey': supabaseAnonKey,
+      },
+    }
+  });
 }
 
 export { supabase };
