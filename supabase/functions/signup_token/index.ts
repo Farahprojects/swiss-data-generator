@@ -42,10 +42,9 @@ serve(async (req) => {
   let emailOtp = "";
   let userEmail = "";
 
-  if (!verificationToken) {
-    log("✗ Missing verification_token parameter");
-    return respond(400, { error: "verification_token is required" });
-  }
+  // Note: This function is deprecated - verification_token no longer exists
+  log("⚠️ signup_token function is deprecated - verification_token system removed");
+  return respond(400, { error: "This function is deprecated. Use the new signup flow instead." });
 
   // User data fetching with detailed logging
   try {
