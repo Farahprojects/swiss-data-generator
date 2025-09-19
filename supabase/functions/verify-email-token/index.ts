@@ -22,6 +22,17 @@ serve(async (req) => {
     headers: Object.fromEntries(req.headers.entries())
   });
 
+  // Accept any valid apikey (anon key is fine for this function)
+  const apikeyHeader = req.headers.get('apikey');
+  
+  if (!apikeyHeader) {
+    log("Missing apikey header");
+    return new Response(
+      JSON.stringify({ code: 401, message: "Missing apikey header" }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const { token, email, type } = await req.json();
     
