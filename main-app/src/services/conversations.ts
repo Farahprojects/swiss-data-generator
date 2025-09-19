@@ -30,7 +30,7 @@ export const createConversation = async (userId: string, title?: string): Promis
 /**
  * List all conversations for an authenticated user using edge function
  */
-export const listConversations = async (): Promise<Conversation[]> => {
+export const listConversations = async (limit?: number, offset?: number): Promise<Conversation[]> => {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -39,7 +39,9 @@ export const listConversations = async (): Promise<Conversation[]> => {
 
   const { data, error } = await supabase.functions.invoke('conversation-manager?action=list_conversations', {
     body: {
-      user_id: user.id
+      user_id: user.id,
+      limit: limit || 50, // Default to 50 conversations
+      offset: offset || 0
     }
   });
 

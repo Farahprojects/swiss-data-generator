@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Message } from './types';
 import { Conversation } from '@/services/conversations';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
@@ -76,7 +77,9 @@ interface ChatState {
   clearGuestData: () => void;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => ({
   // Current active chat
   chat_id: null,
   guest_id: null,
@@ -533,4 +536,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.error('[Store] Error persisting chat_id to storage:', error);
     }
   },
-}));
+}),
+    {
+      name: 'therai-chat-store',
+      storage: {
+        getItem: (name) => {
+          const str = sessionStorage.getItem(name);
+          return str ? JSON.parse(str) : null;
+        },
+        setItem: (name, value) => {
+          sessionStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: (name) => {
+          sessionStorage.removeItem(name);
+        },
+      },
+      // Only persist essential state, not real-time sync data
+      partialize: (state) => ({
+        chat_id: state.chat_id,
+        guest_id: state.guest_id,
+        status: state.status,
+        error: state.error,
+        ttsVoice: state.ttsVoice,
+        isAssistantTyping: state.isAssistantTyping,
+        isPaymentFlowStopIcon: state.isPaymentFlowStopIcon,
+        threads: state.threads,
+      }),
+    }
+  )
+);

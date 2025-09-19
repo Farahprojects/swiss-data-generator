@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
@@ -63,6 +63,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  
+  // Lazy loading state
+  const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Load threads only for authenticated users (skip for guests on /c/g)
   useEffect(() => {
@@ -196,6 +200,27 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     return firstWords.substring(0, 27) + '...';
   }, [messages]);
 
+  // Lazy loading: Only show visible threads
+  const visibleThreadsList = useMemo(() => {
+    return threads.slice(0, visibleThreads);
+  }, [threads, visibleThreads]);
+
+  // Check if there are more threads to load
+  const hasMoreThreads = threads.length > visibleThreads;
+
+  // Load more threads function
+  const loadMoreThreads = useCallback(async () => {
+    if (isLoadingMore || !hasMoreThreads) return;
+    
+    setIsLoadingMore(true);
+    
+    // Simulate loading delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    setVisibleThreads(prev => Math.min(prev + 10, threads.length));
+    setIsLoadingMore(false);
+  }, [isLoadingMore, hasMoreThreads, threads.length]);
+
 
 
 
@@ -214,7 +239,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           onMouseEnter={() => setHoveredThread(chat_id)}
           onMouseLeave={() => setHoveredThread(null)}
         >
-          <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+          <div className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
                 {threadTitle}
@@ -310,13 +335,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Chat history section */}
           <div className="space-y-1">
             <div className="text-xs text-gray-600 font-medium px-3 py-1">{uiConfig.threadSectionLabel}</div>
-            {isLoadingThreads ? (
-              <div className="text-xs text-gray-500 px-3 py-1">Loading...</div>
-            ) : threads.length === 0 ? (
+            {threads.length === 0 ? (
               <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
             ) : (
               <div className="space-y-1">
-                {threads.map((conversation) => {
+                {visibleThreadsList.map((conversation) => {
                   const isActive = conversation.id === chat_id;
                   
                   // Debug logging to check for duplicate IDs
@@ -335,8 +358,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                     >
                       <div className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
                         isActive 
-                          ? 'bg-gray-100 border-l-2 border-gray-900' 
-                          : 'hover:bg-gray-50'
+                          ? 'bg-gray-100' 
+                          : 'hover:bg-gray-100'
                       }`}>
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
@@ -380,6 +403,19 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   </div>
                   );
                 })}
+                
+                {/* Load More Button */}
+                {hasMoreThreads && (
+                  <div className="pt-2">
+                    <button
+                      onClick={loadMoreThreads}
+                      disabled={isLoadingMore}
+                      className="w-full px-3 py-2 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoadingMore ? 'Loading...' : `Load more (${threads.length - visibleThreads} remaining)`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
