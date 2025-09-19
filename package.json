@@ -16,14 +16,11 @@
     "build:main": "npm run build --workspace=main-app",
     "build:auth": "npm run build --workspace=auth-app",
     "build:all": "npm run build --workspace=main-app && npm run build --workspace=auth-app",
-    "build:dev": "npm run build --workspace=main-app",
     "install:all": "npm install && npm install --workspace=main-app && npm install --workspace=auth-app",
     "clean": "rm -rf node_modules main-app/node_modules auth-app/node_modules main-app/dist auth-app/dist"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "@vitejs/plugin-react": "^4.3.3",
-    "vite": "^5.4.20"
+    "concurrently": "^8.2.2"
   },
   "engines": {
     "node": ">=18.0.0",
