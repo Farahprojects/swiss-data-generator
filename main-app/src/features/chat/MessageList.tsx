@@ -95,7 +95,7 @@ export const MessageList = () => {
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('user_id');
   const guestReportId = searchParams.get('guest_id');
-  const isAuthenticated = !!user && !!userId;
+  const isAuthenticated = !!user;
   const isGuest = !!guestReportId;
   
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
