@@ -28,7 +28,6 @@ import ChatContainer from './pages/ChatContainer';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import EmbeddedCheckout from './pages/EmbeddedCheckout';
-import ThreadSelectionPage from './pages/ThreadSelectionPage';
 
 // Legacy redirect component for /c/g/:threadId -> /g/:threadId
 const LegacyGuestRedirect: React.FC = () => {
@@ -82,8 +81,8 @@ const AuthedAppShell: React.FC = () => {
               {/* Auth routes - /c/:thread_id */}
               <Route path="/c/:threadId" element={<ChatContainer />} />
               
-              {/* Auth thread selection page */}
-              <Route path="/therai" element={<AuthGuard><ThreadSelectionPage /></AuthGuard>} />
+              {/* Auth clean page - no auto thread creation */}
+              <Route path="/therai" element={<AuthGuard><ChatContainer /></AuthGuard>} />
               
               {/* Legacy redirects */}
               <Route path="/c/g/:threadId" element={<LegacyGuestRedirect />} />
