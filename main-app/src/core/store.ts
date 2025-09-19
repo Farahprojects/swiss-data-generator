@@ -269,6 +269,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
       
+      console.log('[ChatStore] Loaded conversations:', sortedConversations.map(c => ({
+        id: c.id,
+        title: c.title,
+        updated_at: c.updated_at
+      })));
+      
       set({ threads: sortedConversations, isLoadingThreads: false });
       
       // Initialize real-time sync after initial load
@@ -347,7 +353,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set(state => {
       // Check if conversation already exists to avoid duplicates
       const exists = state.threads.some(thread => thread.id === conversation.id);
-      if (exists) return state;
+      if (exists) {
+        console.log('[ChatStore] Conversation already exists, skipping add:', conversation.id);
+        return state;
+      }
+      
+      console.log('[ChatStore] Adding new conversation:', {
+        id: conversation.id,
+        title: conversation.title,
+        currentThreadsCount: state.threads.length
+      });
       
       // Add new conversation and sort by updated_at desc
       const updatedThreads = [conversation, ...state.threads].sort(
