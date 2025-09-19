@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { updateConversationTitle } from '@/services/conversations';
 
 
 interface ChatThreadsSidebarProps {
@@ -63,6 +64,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  const [showEditTitle, setShowEditTitle] = useState(false);
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -221,6 +225,35 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     setIsLoadingMore(false);
   }, [isLoadingMore, hasMoreThreads, threads.length]);
 
+  // Handle edit title
+  const handleEditTitle = (conversationId: string, currentTitle: string) => {
+    setEditingConversationId(conversationId);
+    setEditTitle(currentTitle || '');
+    setShowEditTitle(true);
+  };
+
+  // Save title changes
+  const handleSaveTitle = async () => {
+    if (!editingConversationId || !editTitle.trim()) return;
+    
+    try {
+      await updateConversationTitle(editingConversationId, editTitle.trim());
+      // The real-time sync will automatically update the UI
+      setShowEditTitle(false);
+      setEditingConversationId(null);
+      setEditTitle('');
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to update title:', error);
+    }
+  };
+
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setShowEditTitle(false);
+    setEditingConversationId(null);
+    setEditTitle('');
+  };
+
 
 
 
@@ -269,6 +302,16 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 >
                   Astro
                 </DropdownMenuItem>
+                
+                {/* Edit title option - only for authenticated users with chat_id */}
+                {userType.isAuthenticated && chat_id && (
+                  <DropdownMenuItem
+                    onClick={() => handleEditTitle(chat_id, threadTitle)}
+                    className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                  >
+                    Edit
+                  </DropdownMenuItem>
+                )}
                 
                 {/* Delete/Clear option - shown for both auth and guest users */}
                 {userPermissions.canDeleteCurrentChat && uiConfig.chatMenuActions.delete && (
@@ -389,6 +432,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem
+                            onClick={() => handleEditTitle(conversation.id, conversation.title || '')}
+                            className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
                             onClick={() => {
                               setConversationToDelete(conversation.id);
                               setShowDeleteConfirm(true);
@@ -468,6 +518,48 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               >
                 {uiConfig.chatMenuActions.delete.confirmButton}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Title Popup */}
+      {showEditTitle && (
+        <div className="fixed inset-0 bg-white/20 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm mx-4 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Edit Chat Title</h3>
+              <button
+                onClick={handleCancelEdit}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Enter chat title..."
+                  className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent placeholder-gray-400"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveTitle}
+                  disabled={!editTitle.trim()}
+                  className="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>
