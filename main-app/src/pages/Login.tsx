@@ -171,12 +171,8 @@ const Login = () => {
         return openVerificationModal();
       }
 
-      // Step 3: success — redirect immediately with user_id
-      
-      // Force immediate redirect after successful login with user_id parameter
-      const from = (location.state as any)?.from?.pathname || '/chat';
-      const basePath = from.includes('?') ? from.split('?')[0] : from;
-      navigate(`${basePath}?user_id=${data.user.id}`, { replace: true });
+      // Step 3: success — redirect to /therai (clean auth page)
+      navigate('/therai', { replace: true });
       
     } catch (err: any) {
       toast({
