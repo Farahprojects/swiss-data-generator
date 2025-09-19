@@ -1,8 +1,4 @@
 {
-  "buildCommand": "cd auth-app && npm install && npm run build",
-  "outputDirectory": "auth-app/dist",
-  "installCommand": "npm install",
-  "framework": "vite",
   "rewrites": [
     {
       "source": "/(.*)",
