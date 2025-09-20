@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Heart, Target, ArrowLeft, Loader2, Users } from 'lucide-react';
+import { X, User, Heart, Target, ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, Tag } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertCircle } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
@@ -15,11 +14,10 @@ import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
-import { usePricing } from '@/contexts/PricingContext';
 import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
 
@@ -32,22 +30,14 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson' | 'payment'>('type');
+  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>('type');
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
-  const [showPromoCode, setShowPromoCode] = useState(false);
-  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
-  const [promoError, setPromoError] = useState<string>('');
-  const [trustedPricing, setTrustedPricing] = useState<any>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const isMobile = useIsMobile();
   
   // Auth detection - use route-based logic
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const location = useLocation();
-  const userId = searchParams.get('user_id');
   
   // Route-based authentication: /c routes are authenticated
   const isAuthenticated = location.pathname.startsWith('/c/');
@@ -55,9 +45,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Conversation management for authenticated users
   const { addThread } = useChatStore();
   const chat_id = useChatStore((state) => state.chat_id);
-  
-  
-  const { getPriceById, isLoading: pricesLoading } = usePricing();
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -78,73 +65,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       secondPersonPlaceId: '',
       request: '',
       reportType: '',
-      promoCode: '',
     },
   });
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
   const formValues = watch();
-
-  // Get price identifier from form data (mirroring PaymentStep logic)
-  const getPriceIdentifier = () => {
-    // Prioritize direct reportType for unified behavior
-    if (formValues.reportType) {
-      return formValues.reportType;
-    }
-    
-    // Fallback to request field for astro data
-    if (formValues.request) {
-      return formValues.request;
-    }
-    
-    return '';
-  };
-
-  // Get base price from cached data (mirroring PaymentStep logic)
-  const getBasePrice = () => {
-    const priceIdentifier = getPriceIdentifier();
-    if (!priceIdentifier) return 0;
-    
-    const priceData = getPriceById(priceIdentifier);
-    return priceData ? Number(priceData.unit_price_usd) : 0;
-  };
-
-  // Validate promo code and get trusted pricing (mirroring PaymentStep logic)
-  const validatePromoCode = async (promoCode: string): Promise<any> => {
-    setIsValidatingPromo(true);
-    setPromoError('');
-
-    try {
-      const id = getPriceIdentifier();
-      
-      if (!id) {
-        return { valid: false, discount_usd: 0, trusted_base_price_usd: 0, final_price_usd: 0, report_type: '', reason: 'Invalid report type' };
-      }
-
-      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { promoCode, basePrice: getBasePrice(), reportType: id }
-      });
-
-      if (error) {
-        return { valid: false, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id, reason: 'Failed to validate promo code' };
-      }
-
-      // Use the base price from cache, but apply promo discount from validation
-      const promoResult = data;
-      
-      return {
-        ...promoResult,
-        trusted_base_price_usd: getBasePrice(), // Use cached price
-        final_price_usd: promoResult.valid ? promoResult.final_price_usd : getBasePrice(),
-      };
-
-    } catch (error) {
-      console.error('❌ Promo validation exception:', error);
-      throw new Error('Failed to validate pricing');
-    } finally {
-      setIsValidatingPromo(false);
-    }
-  };
 
   const handleAstroTypeSelect = (type: string) => {
     setSelectedAstroType(type);
@@ -272,22 +197,14 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (selectedAstroType === 'sync') {
       setCurrentStep('secondPerson');
     } else {
-      // For authenticated users, skip payment step and submit directly
-      if (isAuthenticated) {
-        handleAuthenticatedSubmit(data);
-      } else {
-        setCurrentStep('payment');
-      }
+      // Submit directly for authenticated users
+      handleAuthenticatedSubmit(data);
     }
   };
 
   const handleSecondPersonSubmit = (data: ReportFormData) => {
-    // For authenticated users, skip payment step and submit directly
-    if (isAuthenticated) {
-      handleAuthenticatedSubmit(data);
-    } else {
-      setCurrentStep('payment');
-    }
+    // Submit directly for authenticated users
+    handleAuthenticatedSubmit(data);
   };
 
   const handleSecondPlaceSelect = (place: PlaceData) => {
@@ -312,125 +229,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     onClose();
   };
 
-  const handlePaymentSubmit = async () => {
-    setIsProcessingPayment(true);
-    try {
-      const formData = form.getValues();
-      const currentPromoCode = formData.promoCode?.trim() || '';
-      let pricingResult: any;
-
-      // Validate promo code if provided, otherwise use base pricing
-      if (currentPromoCode) {
-        pricingResult = await validatePromoCode(currentPromoCode);
-        
-        if (!pricingResult.valid) {
-          setPromoError(pricingResult.reason || 'Invalid Promo Code');
-          return;
-        }
-      } else {
-        // No promo code provided - use base pricing
-        const priceIdentifier = getPriceIdentifier();
-        if (!priceIdentifier) {
-          setPromoError('Invalid report type');
-          return;
-        }
-        
-        pricingResult = {
-          valid: true,
-          discount_usd: 0,
-          trusted_base_price_usd: getBasePrice(),
-          final_price_usd: getBasePrice(),
-          report_type: priceIdentifier,
-          reason: undefined
-        };
-      }
-
-      setTrustedPricing(pricingResult);
-
-      // Transform form data to match translator edge function field names (mirroring ReportForm)
-      const transformedReportData = {
-        // Keep original form fields for compatibility
-        ...formData,
-        
-        // Add translator field names for birth data (convert dates to ISO format)
-        birth_date: convertDateFormat(formData.birthDate),
-        birth_time: formData.birthTime,
-        location: formData.birthLocation,
-        latitude: formData.birthLatitude,
-        longitude: formData.birthLongitude,
-        
-        // Second person fields with translator names (convert dates to ISO format)
-        second_person_birth_date: convertDateFormat(formData.secondPersonBirthDate),
-        second_person_birth_time: formData.secondPersonBirthTime,
-        second_person_location: formData.secondPersonBirthLocation,
-        second_person_latitude: formData.secondPersonLatitude,
-        second_person_longitude: formData.secondPersonLongitude,
-        
-        // Ensure request field is set
-        request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
-        
-        // Guest flags
-        is_guest: true
-      };
-
-      // Call initiate-report-flow to create guest report and get chat_id
-      const { data: response, error } = await supabase.functions.invoke('initiate-report-flow', {
-        body: {
-          reportData: transformedReportData,
-          trustedPricing: pricingResult
-        }
-      });
-
-      if (error) {
-        console.error('Failed to initiate report flow:', error);
-        toast.error('Failed to initiate report flow. Please try again.');
-        return;
-      }
-
-      if (response) {
-        
-        // Check if we need to redirect to Stripe checkout
-        if (response.checkoutUrl) {
-          console.log(`[AstroForm] 💳 Redirecting to Stripe checkout: ${response.checkoutUrl}`);
-          toast.success('Redirecting to payment...');
-          
-          // Redirect to Stripe checkout
-          try {
-            window.open(response.checkoutUrl, '_self');
-          } catch (redirectError) {
-            console.warn('[AstroForm] Failed to redirect with window.open, falling back to location.href');
-            window.location.href = response.checkoutUrl;
-          }
-          return;
-        }
-        
-        // If this is a free report, proceed with chat setup
-        if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
-          
-          // Guest report ID is no longer stored in sessionStorage
-          
-          // Navigate to auth chat - payment flow will handle the rest
-          navigate(`/c/${response.chatId}`, { replace: true });
-          
-          return;
-        } else {
-          // Handle other cases if needed
-          onSubmit({
-            ...formData,
-            chat_id: response.chatId,
-            guest_report_id: response.guestReportId
-          });
-        }
-      } else {
-        console.error('[AstroForm] ❌ Unexpected response - no checkout URL and not paid/free');
-        toast.error('Unexpected response from server');
-      }
-    } catch (error) {
-      console.error('Error initiating report flow:', error);
-      toast.error('Something went wrong. Please try again.');
-      setIsProcessingPayment(false);
-    }
-  };
 
 
   const goBackToType = () => {
@@ -442,9 +240,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     setCurrentStep('details');
   };
 
-  const goBackToSecondPerson = () => {
-    setCurrentStep('secondPerson');
-  };
 
   const ErrorMsg = ({ msg }: { msg: string }) => (
     <div className="text-sm text-red-500 mt-1 flex items-center gap-2">
@@ -481,14 +276,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         isMobile ? 'p-4 pt-safe' : 'p-4'
       }`}>
         <div className="flex items-center gap-3">
-          {(currentStep === 'details' || currentStep === 'secondPerson' || currentStep === 'payment') && (
+          {(currentStep === 'details' || currentStep === 'secondPerson') && (
             <button
               onClick={() => {
                 if (currentStep === 'details') goBackToType();
                 else if (currentStep === 'secondPerson') setCurrentStep('details');
-                else if (currentStep === 'payment') {
-                  selectedAstroType === 'sync' ? setCurrentStep('secondPerson') : setCurrentStep('details');
-                }
               }}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
             >
@@ -500,9 +292,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               ? 'Choose Discovery Type' 
               : currentStep === 'details'
               ? 'Your Details'
-              : currentStep === 'secondPerson'
-              ? 'Second Person Details'
-              : 'Review & Payment'}
+              : 'Second Person Details'}
           </h2>
         </div>
         <div className="flex items-center space-x-2">
@@ -597,28 +387,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
                 </div>
 
-                {/* Hide email field for authenticated users */}
-                {!isAuthenticated && (
-                  <div>
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                      Email Address *
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      {...register('email', { 
-                        required: 'Email is required',
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: 'Invalid email address'
-                        }
-                      })}
-                      placeholder="your@email.com"
-                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                    />
-                    {errors.email && <ErrorMsg msg={errors.email.message || ''} />}
-                  </div>
-                )}
 
                 <div>
                   {isMobile ? (
@@ -806,122 +574,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   type="submit"
                   className="flex-1 bg-gray-900 hover:bg-gray-800"
                 >
-                  {isAuthenticated ? 'Create Astro Data' : 'Continue to Payment'}
+                  Create Astro Data
                 </Button>
               </div>
             </motion.form>
-          ) : !isAuthenticated ? (
-            <motion.div
-              key="payment"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              {/* Payment Step */}
-              <div className="text-center mb-6">
-                <p className="text-gray-600">
-                  Everything's in position. Complete your journey.
-                </p>
-              </div>
-
-              {/* Order Summary */}
-              <div className="bg-gray-50 rounded-xl p-6 space-y-4">
-                <h4 className="text-lg font-medium text-gray-900">Order Summary</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-base text-gray-700">
-                    <span>
-                      {selectedAstroType === 'essence' ? 'The Self' : selectedAstroType === 'sync' ? 'Compatibility' : 'Discovery'}
-                    </span>
-                    <span>${pricesLoading ? '...' : (trustedPricing?.trusted_base_price_usd || getBasePrice()).toFixed(2)}</span>
-                  </div>
-                  {trustedPricing?.discount_usd > 0 && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 font-light">Promo discount</span>
-                      <span className="text-green-600 font-light">
-                        -${trustedPricing.discount_usd.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <hr className="border-gray-200" />
-                <div className="flex justify-between text-lg font-medium text-gray-900">
-                  <span>Total</span>
-                  <span>${pricesLoading ? '...' : (trustedPricing?.final_price_usd || getBasePrice()).toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Promo Code */}
-              <Collapsible 
-                open={showPromoCode} 
-                onOpenChange={setShowPromoCode}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="w-full bg-gray-100 text-gray-700 px-6 py-2.5 rounded-xl text-sm font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
-                  >
-                    <Tag className="h-4 w-4 mr-2" />
-                    <span>Have a promo code?</span>
-                  </button>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent className="mt-4">
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="promoCode" className="text-base font-light text-gray-700">Promo Code</Label>
-                      
-                      <div className="relative">
-                        <Input
-                          id="promoCode"
-                          {...register('promoCode')}
-                          placeholder="Enter promo code"
-                          className={`h-12 rounded-xl text-base font-light border-gray-200 focus:border-gray-400 transition-all duration-200 ${
-                            promoError ? 'border-red-400 ring-1 ring-red-400' : ''
-                          }`}
-                          disabled={isValidatingPromo}
-                        />
-                        
-                        {isValidatingPromo && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <Loader2 className="h-4 h-4 animate-spin" />
-                          </div>
-                        )}
-                        
-                        {/* Clean text error message */}
-                        {promoError && (
-                          <p className="mt-2 text-sm text-red-600 font-light leading-relaxed">
-                            {promoError}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              {/* Action Buttons */}
-              <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    selectedAstroType === 'sync' ? setCurrentStep('secondPerson') : setCurrentStep('details');
-                  }}
-                  className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
-                >
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handlePaymentSubmit}
-                  disabled={isProcessingPayment}
-                  className="flex-1 bg-gray-900 hover:bg-gray-800"
-                >
-                  {isProcessingPayment ? 'Processing...' : 'Proceed to Payment'}
-                </Button>
-              </div>
-            </motion.div>
           ) : null}
         </AnimatePresence>
       </div>

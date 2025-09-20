@@ -298,7 +298,7 @@ serve(async (req)=>{
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
     
     // Call context-injector for astro data only reports (not AI reports)
-    if (body.is_guest && body.user_id && swiss.ok) {
+    if (body.user_id && swiss.ok) {
       try {
         // Properly handle is_ai_report - could be boolean, string "true"/"false", or missing
         let isAIReport = false;
