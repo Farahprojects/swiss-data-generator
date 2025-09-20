@@ -2,15 +2,13 @@ import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useLocation } from 'react-router-dom';
 
-export type UserType = 'authenticated' | 'guest' | 'unauthenticated';
+export type UserType = 'authenticated' | 'unauthenticated';
 
 export interface UserTypeInfo {
   type: UserType;
   isAuthenticated: boolean;
-  isGuest: boolean;
   isUnauthenticated: boolean;
   userId?: string;
-  guestId?: string;
 }
 
 /**
@@ -29,7 +27,6 @@ export const useUserType = (): UserTypeInfo => {
   
   // Determine user type with clear priority
   const isAuthenticated = !!user && (isAuthPath || isTheraiPath);
-  const isGuest = false; // No more guest functionality
   const isUnauthenticated = !isAuthenticated;
   
   let type: UserType = 'unauthenticated';
@@ -38,7 +35,6 @@ export const useUserType = (): UserTypeInfo => {
   return {
     type,
     isAuthenticated,
-    isGuest,
     isUnauthenticated,
     userId: isAuthenticated ? user?.id : undefined // Use actual user ID, not URL param
   };
@@ -68,24 +64,6 @@ export const getUserTypeConfig = (userType: UserType) => {
         showAstroData: true
       };
       
-    case 'guest':
-      return {
-        chatMenuActions: {
-          delete: {
-            label: 'Delete', // Same label but different functionality
-            description: 'Delete this chat session permanently',
-            confirmTitle: 'Delete Chat Session',
-            confirmMessage: 'Are you sure you want to delete this chat session? All messages and data will be permanently removed.',
-            confirmButton: 'Delete Session'
-          }
-        },
-        newChatLabel: null, // Guests can't create new chats
-        threadSectionLabel: null, // No thread history for guests on /c/g
-        authButtonLabel: 'Sign in',
-        showThreadHistory: false, // Skip thread history and thread fetching for guests
-        showSearchChat: false,
-        showAstroData: true // Guests can still use astro
-      };
       
     case 'unauthenticated':
       return {
@@ -110,10 +88,10 @@ export const useUserPermissions = () => {
   
   return {
     canCreateNewChat: userType.isAuthenticated,
-    canDeleteCurrentChat: userType.isAuthenticated || userType.isGuest,
+    canDeleteCurrentChat: userType.isAuthenticated,
     canSearchChats: userType.isAuthenticated,
     canAccessThreadHistory: userType.isAuthenticated,
-    canUseAstroData: userType.isAuthenticated || userType.isGuest,
+    canUseAstroData: userType.isAuthenticated,
     needsAuthentication: userType.isUnauthenticated
   };
 };
