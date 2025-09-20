@@ -19,7 +19,7 @@ import { usePricing } from '@/contexts/PricingContext';
 import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
 
@@ -42,12 +42,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const isMobile = useIsMobile();
   
-  // Auth detection
+  // Auth detection - use route-based logic
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const userId = searchParams.get('user_id');
-  const isAuthenticated = !!user && !!userId;
+  
+  // Route-based authentication: /c routes are authenticated
+  const isAuthenticated = location.pathname.startsWith('/c/');
   
   // Conversation management for authenticated users
   const { addThread } = useChatStore();
@@ -406,8 +409,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           
           // Guest report ID is no longer stored in sessionStorage
           
-          // Navigate to guest chat - payment flow will handle the rest
-          navigate(`/c/g/${response.chatId}`, { replace: true });
+          // Navigate to auth chat - payment flow will handle the rest
+          navigate(`/c/${response.chatId}`, { replace: true });
           
           return;
         } else {

@@ -21,35 +21,34 @@ function CheckoutForm() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    // Extract guest_id and chat_id from URL for proper redirect
+    // Extract chat_id from URL for authenticated user redirect
     const url = new URL(window.location.href);
-    const guest_id = url.searchParams.get('guest_id');
     const chat_id = url.searchParams.get('chat_id');
 
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: guest_id && chat_id 
-          ? `${window.location.origin}/c/g/${chat_id}?payment_status=success&guest_id=${guest_id}`
-          : `${window.location.origin}/c?payment_status=success`,
+        return_url: chat_id 
+          ? `${window.location.origin}/c/${chat_id}?payment_status=success`
+          : `${window.location.origin}/therai?payment_status=success`,
       },
       redirect: 'if_required',
     });
 
     if (error) {
       setErrorMessage(error.message || 'Payment failed.');
-      // For failures, redirect with cancelled status to match existing flow
-      if (guest_id && chat_id) {
-        window.location.replace(`/c/g/${chat_id}?payment_status=cancelled&guest_id=${guest_id}`);
+      // For failures, redirect with cancelled status
+      if (chat_id) {
+        window.location.replace(`/c/${chat_id}?payment_status=cancelled`);
       } else {
-        window.location.replace('/c?payment_status=cancelled');
+        window.location.replace('/therai?payment_status=cancelled');
       }
     } else {
       // Success - redirect with success parameters
-      if (guest_id && chat_id) {
-        window.location.replace(`/c/g/${chat_id}?payment_status=success&guest_id=${guest_id}`);
+      if (chat_id) {
+        window.location.replace(`/c/${chat_id}?payment_status=success`);
       } else {
-        window.location.replace('/c?payment_status=success');
+        window.location.replace('/therai?payment_status=success');
       }
     }
     setIsSubmitting(false);

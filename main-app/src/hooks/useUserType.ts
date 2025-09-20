@@ -23,29 +23,24 @@ export const useUserType = (): UserTypeInfo => {
   const { pathname } = useLocation();
   const { chat_id } = useChatStore();
   
-  // 🎯 Guest detection: URL path starts with "/g/"
-  const isGuestPath = pathname.startsWith('/g/');
-  
-  // 🎯 Auth detection: URL path starts with "/c/" (but not "/c/g/") or /therai
-  const isAuthPath = pathname.startsWith('/c/') && !pathname.startsWith('/c/g/');
+  // 🎯 Auth detection: URL path starts with "/c/" or /therai
+  const isAuthPath = pathname.startsWith('/c/');
   const isTheraiPath = pathname === '/therai';
   
   // Determine user type with clear priority
   const isAuthenticated = !!user && (isAuthPath || isTheraiPath);
-  const isGuest = isGuestPath && !isAuthenticated; // Guest only if not authenticated
-  const isUnauthenticated = !isAuthenticated && !isGuest;
+  const isGuest = false; // No more guest functionality
+  const isUnauthenticated = !isAuthenticated;
   
   let type: UserType = 'unauthenticated';
   if (isAuthenticated) type = 'authenticated';
-  else if (isGuest) type = 'guest';
   
   return {
     type,
     isAuthenticated,
     isGuest,
     isUnauthenticated,
-    userId: isAuthenticated ? user?.id : undefined, // Use actual user ID, not URL param
-    guestId: isGuest ? chat_id : undefined // Use chat_id as guestId for guests
+    userId: isAuthenticated ? user?.id : undefined // Use actual user ID, not URL param
   };
 };
 

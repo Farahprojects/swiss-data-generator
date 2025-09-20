@@ -130,12 +130,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     const { chatController } = await import('@/features/chat/ChatController');
     await chatController.switchToChat(conversationId);
     
-    // Navigate to the appropriate route based on user type
-    if (userType.isGuest) {
-      navigate(`/g/${conversationId}`, { replace: true });
-    } else {
-      navigate(`/c/${conversationId}`, { replace: true });
-    }
+    // Navigate to auth route
+    navigate(`/c/${conversationId}`, { replace: true });
   };
 
   // Handle deleting/clearing based on user type

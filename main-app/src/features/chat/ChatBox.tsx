@@ -13,7 +13,6 @@ import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { logUserError } from '@/services/errorService';
-import { usePaymentFlow } from '@/hooks/usePaymentFlow';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -70,7 +69,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   
   // Determine user type and ID
   const isAuthenticated = !!userId;
-  const isGuest = window.location.pathname.startsWith('/c/g/'); // Guest if URL starts with "/c/g/"
+  const isGuest = false; // No more guest functionality
   const currentUserId = userId;
   
   // User detection complete - no logging needed
@@ -89,10 +88,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
     }
   }, [isGuest, chat_id]);
   
-  usePaymentFlow({
-    chatId: chat_id,
-    enabled: shouldEnablePaymentFlow
-  });
   
   // ChatController methods for realtime updates (both text and conversation modes)
   const initializeAudioPipeline = chatController.initializeAudioPipeline.bind(chatController);
