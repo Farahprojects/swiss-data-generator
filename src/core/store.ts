@@ -274,9 +274,20 @@ export const useChatStore = create<ChatState>()(
       const { createConversation } = await import('@/services/conversations');
       const conversationId = await createConversation(userId, title);
       
-      // Don't manually reload - let real-time subscription handle it
-      // This ensures we get the authoritative data from the database
-      set({ isLoadingThreads: false });
+      // Add new thread to local state immediately for instant UI feedback
+      const newThread = {
+        id: conversationId,
+        user_id: userId,
+        title: title || 'New Chat',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        meta: null
+      };
+      
+      set(state => ({
+        threads: [newThread, ...state.threads], // Add to beginning of list
+        isLoadingThreads: false
+      }));
       
       return conversationId;
     } catch (error) {

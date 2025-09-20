@@ -34,7 +34,6 @@ const baseSchema = z.object({
   tz:            z.string().optional(),
   location:      z.string().optional(),
   house_system:  z.string().optional(),
-  is_guest:      z.boolean().optional(),
   user_id:       z.string().optional(),
 
   // Flexible payload support
@@ -156,7 +155,7 @@ async function inferTimezone(obj:any){
 
 
 /*──────────────── logging --------------------------------------------------*/
-async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;is_guest?:boolean}){
+async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string}){
   const { error } = await sb.from("translator_logs").insert({
     request_type: run.request_type,
     request_payload: run.request_payload,
@@ -167,7 +166,6 @@ async function logTranslator(run:{request_type:string;request_payload:any;swiss_
     error_message: run.error,
     google_geo: run.google_geo,
     user_id: run.user_id ?? null,
-    is_guest: run.is_guest ?? false,
     swiss_error: run.swiss_status !== 200, // Set swiss_error based on status
   });
   if(error) console.error("[translator] log fail", error.message);
@@ -181,10 +179,10 @@ serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
   const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
-  let requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
+  let requestType="unknown", googleGeo=false, userId:string|undefined;
   
   try{
-    // Extract user_id and is_guest before validation for proper error logging
+    // Extract user_id before validation for proper error logging
     const rawBodyText = await req.text();
     let rawBody: any;
     try {
@@ -196,7 +194,6 @@ serve(async (req)=>{
       }
       
       userId = rawBody.user_id;
-      isGuest = !!rawBody.is_guest;
     } catch (parseErr) {
       console.error(`[translator-edge-${reqId}] JSON parse failed:`, parseErr);
       throw new Error("Invalid JSON in request body");
@@ -285,7 +282,6 @@ serve(async (req)=>{
         reportType: parsed.reportType,  // Changed from 'report' to 'reportType'
         request: parsed.request,
         user_id: parsed.user_id,
-        is_guest: parsed.is_guest,
         house_system: parsed.person_a?.house_system ?? withLatLon.house_system ?? "P",
       };
     }
@@ -295,38 +291,23 @@ serve(async (req)=>{
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
 
-    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
+    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id });
     
-    // Call context-injector for astro data only reports (not AI reports)
+    // Call context-injector for all successful astro data reports
     if (body.user_id && swiss.ok) {
+      console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
       try {
-        // Properly handle is_ai_report - could be boolean, string "true"/"false", or missing
-        let isAIReport = false;
-        if (typeof body.is_ai_report === 'boolean') {
-          isAIReport = body.is_ai_report;
-        } else if (typeof body.is_ai_report === 'string') {
-          isAIReport = body.is_ai_report.toLowerCase().trim() === 'true';
-        }
+        const { error: injectorError } = await sb.functions.invoke('context-injector', {
+          body: { chat_id: body.user_id }
+        });
         
-        // If it's astro data only (not AI report), call context-injector
-        if (!isAIReport) {
-          console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
-          try {
-            const { error: injectorError } = await sb.functions.invoke('context-injector', {
-              body: { chat_id: body.user_id }
-            });
-            
-            if (injectorError) {
-              console.error(`[translator-edge-${reqId}] Context-injector failed:`, injectorError);
-            } else {
-              console.log(`[translator-edge-${reqId}] Context-injector completed successfully`);
-            }
-          } catch (injectorErr) {
-            console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
-          }
+        if (injectorError) {
+          console.error(`[translator-edge-${reqId}] Context-injector failed:`, injectorError);
+        } else {
+          console.log(`[translator-edge-${reqId}] Context-injector completed successfully`);
         }
-      } catch (error) {
-        console.warn(`[translator-edge-${reqId}] Failed to call context-injector:`, error);
+      } catch (injectorErr) {
+        console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
       }
     }
     
@@ -334,7 +315,7 @@ serve(async (req)=>{
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, is_guest:isGuest });
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });

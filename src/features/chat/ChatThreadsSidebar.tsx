@@ -52,7 +52,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Get messages from message store
   const { messages } = useMessageStore();
 
-  // 🎯 Simple guest detection: chat_id starts with "guest-"
   const { user } = useAuth();
   
   const { open: openReportModal } = useReportModal();
@@ -70,7 +69,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Load threads only for authenticated users (skip for guests on /c/g)
+  // Load threads for authenticated users
   useEffect(() => {
     if (userType.isAuthenticated) {
       loadThreads();
@@ -135,16 +134,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
     if (userType.isAuthenticated && conversationToDelete) {
-      // Authenticated user: Delete specific conversation
-      try {
-        await removeThread(conversationToDelete);
-        console.log('[ChatThreadsSidebar] Conversation deleted:', conversationToDelete);
-        
-        // Navigate back to /therai after deletion (clean React navigation)
-        navigate('/therai', { replace: true });
-      } catch (error) {
+      // Authenticated user: Delete specific conversation (fire-and-forget)
+      // Update UI immediately, don't wait for API call
+      removeThread(conversationToDelete).catch((error) => {
         console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
-      }
+      });
+      
+      // Navigate back to /therai after deletion (clean React navigation)
+      navigate('/therai', { replace: true });
     } else {
       // Unauthenticated user: Clear session and redirect to main page for clean slate
       try {
@@ -160,7 +157,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         // 2. Nuke all storage to prevent race conditions
         sessionStorage.clear();
         localStorage.removeItem('chat_id');
-        localStorage.removeItem('therai_active_chat_guest_');
         localStorage.removeItem('therai_active_chat_auth_');
         
         // 3. Server cleanup (simplified for authenticated users)
@@ -176,7 +172,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   };
 
 
-  // Generate thread title from first user message (same for both guest and signed-in users)
+  // Generate thread title from first user message
   const threadTitle = useMemo(() => {
     if (messages.length === 0) return 'New Chat';
     
@@ -265,80 +261,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   return (
     <div className={cn("w-full flex flex-col gap-4", className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700">Chats</h3>
-      </div>
 
-      {/* Current Chat - Show for auth users always */}
-      {(chat_id && userType.isAuthenticated) && (
-        <div 
-          className="relative group"
-          onMouseEnter={() => setHoveredThread(chat_id)}
-          onMouseLeave={() => setHoveredThread(null)}
-        >
-          <div className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
-                {threadTitle}
-              </div>
-            </div>
-            
-            {/* Three dots menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-1 hover:bg-gray-200 rounded transition-colors">
-                  <MoreHorizontal className="w-4 h-4 text-gray-600" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
-                <DropdownMenuItem
-                  onClick={() => {
-                    // Always use chat_id if available, otherwise 'new'
-                    if (chat_id) {
-                      // Use the specific chat_id for this thread
-                      openReportModal(chat_id);
-                    } else {
-                      // Fresh thread - create new report
-                      openReportModal('new');
-                    }
-                  }}
-                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                >
-                  Astro
-                </DropdownMenuItem>
-                
-                {/* Edit title option - only for authenticated users with chat_id */}
-                {userType.isAuthenticated && chat_id && (
-                  <DropdownMenuItem
-                    onClick={() => handleEditTitle(chat_id, threadTitle)}
-                    className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                  >
-                    Edit
-                  </DropdownMenuItem>
-                )}
-                
-                {/* Delete/Clear option - shown for both auth and guest users */}
-                {userPermissions.canDeleteCurrentChat && uiConfig.chatMenuActions.delete && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (userType.isAuthenticated) {
-                        setConversationToDelete(chat_id);
-                      }
-                      setShowDeleteConfirm(true);
-                    }}
-                    className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                  >
-                    {uiConfig.chatMenuActions.delete.label}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      )}
 
-      {/* Thread history (authenticated only). Guests on /c/g skip thread history */}
+      {/* Thread history for authenticated users */}
       {userType.isAuthenticated && uiConfig.showThreadHistory && (
         <div className="space-y-2">
           {uiConfig.newChatLabel && (
@@ -364,18 +289,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             </button>
           )}
           
-          {uiConfig.showAstroData && (
-            <button
-              onClick={() => {
-                // Open astro data form for current chat
-                openReportModal('new');
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
-            >
-              <User className="w-4 h-4" />
-              Astro data
-            </button>
-          )}
           
           {/* Dark gray line separator */}
           <div className="border-t border-gray-400 my-3"></div>
@@ -470,7 +383,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-      {/* Guest/Unauthenticated user sign in */}
+      {/* Unauthenticated user sign in */}
       {uiConfig.authButtonLabel && (
         <div className="mt-auto pt-4 border-t border-gray-200">
           <button

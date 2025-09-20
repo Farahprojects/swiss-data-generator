@@ -94,7 +94,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       let currentChatId = chat_id;
       
       if (!currentChatId) {
-        // For authenticated users only - guests use backend thread creation
+        // For authenticated users only
         currentChatId = await addThread(user.id, 'New Chat');
         chatController.initializeConversation(currentChatId);
       }

@@ -108,8 +108,6 @@ serve(async (req) => {
     const translatorPayload = {
       ...report_data,
       user_id: chat_id,
-      is_guest: false,
-      is_ai_report: true,
       request_id: crypto.randomUUID().slice(0, 8),
       email: email,
       name: name

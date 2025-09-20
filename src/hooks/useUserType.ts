@@ -9,7 +9,6 @@ export interface UserTypeInfo {
   isAuthenticated: boolean;
   isUnauthenticated: boolean;
   userId?: string;
-  guestId?: string;
 }
 
 /**
@@ -37,8 +36,7 @@ export const useUserType = (): UserTypeInfo => {
     type,
     isAuthenticated,
     isUnauthenticated,
-    userId: isAuthenticated ? user?.id : undefined,
-    guestId: undefined // Removed guest functionality
+    userId: isAuthenticated ? user?.id : undefined
   };
 };
 
