@@ -16,7 +16,7 @@ class LlmService {
   /**
    * Send message via chat-send (fire and forget)
    * User message is saved to DB, llm-handler is notified but no immediate response
-   * Note: chat_id is already verified by verify-chat-access, no guest_id needed
+   * Note: chat_id is already verified by authentication
    */
   async sendMessage(request: { 
     chat_id: string; 

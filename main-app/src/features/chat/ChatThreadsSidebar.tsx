@@ -7,7 +7,6 @@ import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
-import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useUserType, getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
 import {
@@ -58,7 +57,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
-  const { isPolling, isReportReady } = useReportReadyStore();
 
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -165,9 +163,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         localStorage.removeItem('therai_active_chat_guest_');
         localStorage.removeItem('therai_active_chat_auth_');
         
-        // 3. Run server cleanup and wait for completion
-        const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
-        await streamlinedSessionReset({ redirectTo: '/c', cleanDatabase: true });
+        // 3. Server cleanup (simplified for authenticated users)
         
         // 4. Now redirect only after cleanup is done (replace prevents history issues)
         window.location.replace('/c');

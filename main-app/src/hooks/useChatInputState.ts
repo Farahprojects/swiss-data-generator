@@ -1,6 +1,5 @@
 import { useSyncExternalStore, useMemo } from 'react';
 import { useChatStore } from '@/core/store';
-import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 
 /**
@@ -15,15 +14,6 @@ export const useChatInputState = () => {
     () => useChatStore.getState()
   );
 
-  // Subscribe to report ready store state
-  const reportState = useSyncExternalStore(
-    useReportReadyStore.subscribe,
-    () => useReportReadyStore.getState(),
-    () => ({
-      isPolling: false,
-      isReportReady: false,
-    })
-  );
 
   // Subscribe to conversation UI store state
   const conversationState = useSyncExternalStore(
@@ -55,9 +45,9 @@ export const useChatInputState = () => {
     chat_id: chatState.chat_id,
     addThread: chatState.addThread,
     
-    // Report state
-    isPolling: reportState.isPolling,
-    isReportReady: reportState.isReportReady,
+    // Report state (removed guest functionality)
+    isPolling: false,
+    isReportReady: false,
     
     // Conversation state
     isConversationOpen: conversationState.isConversationOpen,
@@ -67,7 +57,7 @@ export const useChatInputState = () => {
     // Payment flow state (simplified - using chat store only)
     isPaymentConfirmed: false, // Not needed anymore
     isReportGenerating: chatState.isAssistantTyping, // Use isAssistantTyping instead
-    paymentFlowIsReportReady: reportState.isReportReady, // Use report store
+    paymentFlowIsReportReady: false, // Removed guest functionality
     paymentFlowError: null, // Not needed anymore
     
     // Derived state

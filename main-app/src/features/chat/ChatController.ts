@@ -12,7 +12,6 @@ import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 import { networkErrorHandler } from '@/utils/networkErrorHandler';
-import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
 class ChatController {
   private conversationServiceInitialized = false;
@@ -176,8 +175,6 @@ class ChatController {
   private handleSystemMessage(message: Message) {
     console.log('[ChatController] 🎯 System message with context detected - triggering report ready!');
     
-    // Trigger report ready state
-    useReportReadyStore.getState().setReportReady(true);
     
     // Stop generating state (flip stop button back to wave icon)
     const { setAssistantTyping } = useChatStore.getState();

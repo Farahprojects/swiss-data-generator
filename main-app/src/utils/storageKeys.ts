@@ -1,16 +1,11 @@
 /**
  * Centralized storage key namespace system
- * Prevents guest/auth key collisions and provides consistent naming
+ * Provides consistent naming for authenticated users
  */
 
 export const STORAGE_KEYS = {
   // Chat session keys (namespace by type)
   CHAT: {
-    GUEST: {
-      CHAT_ID: 'therai_guest_chat_id',
-      SESSION_TOKEN: 'therai_guest_session_token',
-      REPORT_ID: 'therai_guest_report_id', // Deprecated - no longer used
-    },
     AUTH: {
       CHAT_ID: 'therai_auth_chat_id',
       SESSION_TOKEN: 'therai_auth_session_token',
@@ -18,7 +13,6 @@ export const STORAGE_KEYS = {
     },
     // Active chat_id storage (namespaced by user)
     ACTIVE: {
-      GUEST: (guestId: string) => `therai_active_chat_guest_${guestId}`,
       AUTH: (authId: string) => `therai_active_chat_auth_${authId}`,
     },
     SHARED: {
@@ -52,37 +46,27 @@ export const STORAGE_KEYS = {
   FORMS: {
     ASTRO_DATA: 'therai_form_astro_data',
     REPORT_FORM: 'therai_form_report_data',
-    GUEST_FORM: 'therai_form_guest_data',
   },
   
   // Legacy keys (to be cleaned up)
   LEGACY: {
-    GUEST_ID: 'guestId',
-    GUEST_REPORT_ID: 'guest_report_id',
-    CURRENT_GUEST_REPORT_ID: 'currentGuestReportId',
     CHAT_TOKEN: 'chat_token',
     CACHED_UUID: 'cached_uuid',
   }
 } as const;
 
 /**
- * Get storage key based on user type
+ * Get storage key for authenticated users
  */
-export const getChatStorageKey = (key: keyof typeof STORAGE_KEYS.CHAT.GUEST | keyof typeof STORAGE_KEYS.CHAT.AUTH, userType: 'guest' | 'auth') => {
-  if (userType === 'guest') {
-    return STORAGE_KEYS.CHAT.GUEST[key as keyof typeof STORAGE_KEYS.CHAT.GUEST];
-  } else {
-    return STORAGE_KEYS.CHAT.AUTH[key as keyof typeof STORAGE_KEYS.CHAT.AUTH];
-  }
+export const getChatStorageKey = (key: keyof typeof STORAGE_KEYS.CHAT.AUTH) => {
+  return STORAGE_KEYS.CHAT.AUTH[key];
 };
 
 /**
- * Clear all storage keys for a specific user type
+ * Clear all storage keys for authenticated users
  */
-export const clearUserStorage = (userType: 'guest' | 'auth') => {
-  const keys = userType === 'guest' 
-    ? Object.values(STORAGE_KEYS.CHAT.GUEST)
-    : Object.values(STORAGE_KEYS.CHAT.AUTH);
+export const clearUserStorage = () => {
+  const keys = Object.values(STORAGE_KEYS.CHAT.AUTH);
     
   keys.forEach(key => {
     try {

@@ -11,8 +11,6 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
-import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { logUserError } from '@/services/errorService';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,7 +21,6 @@ import { ModeDropdown } from '@/components/chat/ModeDropdown';
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
 const ConversationOverlay = lazy(() => import('./ConversationOverlay/ConversationOverlay').then(module => ({ default: module.ConversationOverlay })));
-const ErrorStateHandler = lazy(() => import('@/components/public-report/ErrorStateHandler').then(module => ({ default: module.default })));
 const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
 
 // Check if report is already generated for a chat_id
@@ -102,9 +99,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   
   const { openSettings } = useSettingsModal();
   
-  // Get error state from report ready store
-  const errorState = useReportReadyStore((state) => state.errorState);
-  const setErrorState = useReportReadyStore((state) => state.setErrorState);
 
   const handleOpenSettings = (panel: string) => {
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
@@ -131,39 +125,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
 
 
-  // Handle error logging
-  const handleTriggerErrorLogging = async (guestReportId: string, email: string) => {
-    if (errorState?.requires_error_logging) {
-      try {
-        await logUserError({
-          guestReportId,
-          errorType: errorState.type,
-          errorMessage: errorState.message,
-          timestamp: errorState.logged_at || new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('Error logging user error:', error);
-      }
-    }
-  };
-
-    // Handle session cleanup
-    const handleCleanupSession = async () => {
-      console.log('[ChatBox] Starting streamlined session cleanup');
-      
-      try {
-        // Clear error state first
-        setErrorState(null);
-        
-        // Use the streamlined reset function
-        const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
-        await streamlinedSessionReset({ redirectTo: '/', preserveNavigation: true });
-        
-        console.log('[ChatBox] Streamlined session cleanup completed');
-      } catch (error) {
-        console.error('[ChatBox] Error during session cleanup:', error);
-      }
-    };
 
   // Loading skeleton for message area
   const MessageListSkeleton = () => (
@@ -310,18 +271,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
         </div>
       </MotionConfig>
 
-      {/* Error Handler Popup */}
-      {/* Commented out as requested - keeping file but disabling flow */}
-      {/* {errorState && (
-        <Suspense fallback={<div>Loading error handler...</div>}>
-          <ErrorStateHandler
-            errorState={errorState}
-            onRetry={handleTriggerErrorLogging}
-            onCleanup={handleCleanupSession}
-            onClose={() => setErrorState(null)}
-          />
-        </Suspense>
-      )} */}
 
       {/* Settings Modal */}
       {/* {showSettings && (
