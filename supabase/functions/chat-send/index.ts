@@ -58,18 +58,23 @@ serve(async (req) => {
 
 
 
-    // Fire-and-forget: Get the next message number for this chat using the database function
-    let nextMessageNumber = 1; // Default fallback
-    supabase
-      .rpc('get_next_message_number', { p_chat_id: chat_id })
-      .then(({ data: userMessageNumber, error: userNumberError }) => {
-        if (!userNumberError && userMessageNumber) {
-          nextMessageNumber = userMessageNumber;
+    // Get the next message number for this chat using the database function (must await for proper ordering)
+    const { data: userMessageNumber, error: userNumberError } = await supabase
+      .rpc('get_next_message_number', { p_chat_id: chat_id });
+
+    if (userNumberError) {
+      return new Response(JSON.stringify({
+        error: "Failed to get message number"
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
         }
-      })
-      .catch((err) => {
-        console.error('[chat-send] Failed to get message number:', err);
       });
+    }
+
+    const nextMessageNumber = userMessageNumber;
 
     // If this is an assistant message (e.g., from LLM in conversation mode), save assistant only
     if (role === 'assistant') {
