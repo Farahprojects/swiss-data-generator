@@ -91,7 +91,6 @@ export const MessageList = () => {
     setChatId 
   } = useMessageStore();
   
-  console.log('[MessageList] Current messages:', messages.length, 'loading:', loading);
   
   // Unified store handles all messages via real-time subscriptions
   

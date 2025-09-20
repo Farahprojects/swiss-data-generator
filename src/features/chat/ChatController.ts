@@ -112,9 +112,7 @@ class ChatController {
    * Switch WebSocket subscription to different chat_id
    */
   async switchToChat(chat_id: string) {
-    console.log('[ChatController] switchToChat called with chat_id:', chat_id);
     await unifiedWebSocketService.subscribeToChat(chat_id);
-    console.log('[ChatController] switchToChat completed for chat_id:', chat_id);
   }
 
   // Heartbeat system

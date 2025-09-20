@@ -113,13 +113,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Handle switching to a different conversation
   const handleSwitchToChat = async (conversationId: string) => {
-    console.log('[ChatThreadsSidebar] Switching to chat:', conversationId);
-    
     // DIRECT FLOW: Immediately set chat_id and fetch messages
     const { setChatId } = useMessageStore.getState();
-    console.log('[ChatThreadsSidebar] About to call setChatId with:', conversationId);
     setChatId(conversationId);
-    console.log('[ChatThreadsSidebar] setChatId completed');
     
     // Also update the main chat store
     const { startConversation } = useChatStore.getState();

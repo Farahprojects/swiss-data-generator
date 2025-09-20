@@ -51,8 +51,6 @@ export const useMessageStore = create<MessageStore>()(
     const currentState = get();
     const currentChatId = currentState.chat_id;
     
-    console.log('[MessageStore] setChatId called:', { from: currentChatId, to: id });
-    
     // If switching to a different chat_id, clear messages
     // But preserve optimistic messages if they're for the new chat_id
     if (currentChatId !== id) {
@@ -69,7 +67,6 @@ export const useMessageStore = create<MessageStore>()(
     }
     
     if (id) {
-      console.log('[MessageStore] About to fetch messages for chat_id:', id);
       // Just fetch messages - WebSocket handles real-time updates
       get().fetchMessages();
     }
@@ -139,17 +136,11 @@ export const useMessageStore = create<MessageStore>()(
   // Simple fetch - just get messages, WebSocket handles real-time
   fetchMessages: async () => {
     const { chat_id } = get();
-    if (!chat_id) {
-      console.log('[MessageStore] fetchMessages: No chat_id, skipping fetch');
-      return;
-    }
+    if (!chat_id) return;
 
-    console.log('[MessageStore] fetchMessages: Starting fetch for chat_id:', chat_id);
     set({ loading: true, error: null });
 
     try {
-      console.log('[MessageStore] fetchMessages: Querying database for chat_id:', chat_id);
-      
       const { data, error } = await supabase
         .from('messages')
         .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
@@ -157,14 +148,9 @@ export const useMessageStore = create<MessageStore>()(
         .order('message_number', { ascending: true })
         .limit(50);
 
-      if (error) {
-        console.error('[MessageStore] fetchMessages: Database error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('[MessageStore] fetchMessages: Raw database response:', { data: data?.length || 0, error });
       const messages = (data || []).map(mapDbToMessage);
-      console.log('[MessageStore] fetchMessages: Fetched', messages.length, 'messages for chat_id:', chat_id);
       set({ 
         messages, 
         loading: false,
