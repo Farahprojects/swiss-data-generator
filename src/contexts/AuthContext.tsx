@@ -34,7 +34,8 @@ export type AuthContextType = {
   session: Session | null;
   loading: boolean;
   isValidating: boolean;
-  // Email verification now handled by custom system
+  pendingEmailAddress?: string;
+  isPendingEmailCheck?: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signInWithGoogle: () => Promise<{ error: Error | null }>;
@@ -42,7 +43,7 @@ export type AuthContextType = {
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
-  // clearPendingEmail removed - handled by custom system
+  clearPendingEmail?: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -329,6 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
         type: "signup",
         email: email,
+        password: password,
         options: { 
           redirectTo: "https://auth.therai.co/auth/email" // Same redirect as email-verification function
         }
@@ -339,7 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('Failed to generate verification link') };
       }
 
-      const tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
+      const tokenLink = linkData?.properties?.action_link || "";
       if (!tokenLink) {
         return { error: new Error('Failed to generate verification link') };
       }

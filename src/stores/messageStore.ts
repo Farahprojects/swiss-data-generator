@@ -209,13 +209,14 @@ export const useMessageStore = create<MessageStore>()(
           sessionStorage.removeItem(name);
         },
       },
-      // Only persist essential state, not loading states
-      partialize: (state) => ({
+      // Only persist essential state, not loading states or functions
+      partialize: (state: MessageStore) => ({
         chat_id: state.chat_id,
         messages: state.messages,
         error: state.error,
         hasOlder: state.hasOlder,
-      }),
+        loading: state.loading,
+      } as Partial<MessageStore>),
     }
   )
 );

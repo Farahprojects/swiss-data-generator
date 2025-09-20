@@ -18,7 +18,6 @@ export const useChatInitialization = () => {
   const { threadId } = useParams<{ threadId?: string }>();
   const { chat_id, startConversation, loadThreads } = useChatStore();
   const { user } = useAuth();
-  const { guestId } = useUserType();
 
   useEffect(() => {
     // Initialize WebSocket callbacks once on app startup
@@ -49,7 +48,7 @@ export const useChatInitialization = () => {
             // Use the same direct flow as handleSwitchToChat
             const { useMessageStore } = await import('@/stores/messageStore');
             useMessageStore.getState().setChatId(threadId);
-            startConversation(threadId, guestId);
+            startConversation(threadId);
             await chatController.switchToChat(threadId);
           } else {
             useChatStore.getState().clearChat();
@@ -65,5 +64,5 @@ export const useChatInitialization = () => {
       console.error('[useChatInitialization] BLOCKED: Invalid threadId "1" detected');
       useChatStore.getState().clearChat();
     }
-  }, [threadId, startConversation, guestId]);
+  }, [threadId, startConversation]);
 };

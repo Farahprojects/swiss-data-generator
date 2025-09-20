@@ -145,8 +145,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       } catch (error) {
         console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
       }
-    } else if (userType.isGuest) {
-      // Guest user: Clear session and redirect to main page for clean slate
+    } else {
+      // Unauthenticated user: Clear session and redirect to main page for clean slate
       try {
         // Set delete flag to prevent rehydration
         if (onDelete) {
@@ -270,8 +270,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         <h3 className="text-sm font-medium text-gray-700">Chats</h3>
       </div>
 
-      {/* Current Chat - Show for auth users always, guests when they have a chat_id */}
-      {(chat_id && (userType.isAuthenticated || userType.isGuest)) && (
+      {/* Current Chat - Show for auth users always */}
+      {(chat_id && userType.isAuthenticated) && (
         <div 
           className="relative group"
           onMouseEnter={() => setHoveredThread(chat_id)}
