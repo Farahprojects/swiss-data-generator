@@ -9,7 +9,6 @@ import { ReportContent } from './ReportContent';
 import { supabase } from '@/integrations/supabase/client';
 import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
 import { renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
-import { useReportData } from '@/hooks/useReportData';
 import { AstroDataRenderer } from './AstroDataRenderer';
 
 interface ReportSlideOverProps {
@@ -29,7 +28,9 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   shouldFetch = false,
   guestReportId 
 }) => {
-  const { reportData, isLoading, error, fetchReport } = useReportData();
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
   const isMobile = useIsMobile();
 
@@ -46,6 +47,31 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     }
   }, [reportData, showToggle, defaultView]);
 
+  // Direct edge function call - simplified approach
+  const fetchReport = async (reportId: string) => {
+    setIsLoading(true);
+    setError(null);
+    setReportData(null);
+    
+    try {
+      const { data, error: functionError } = await supabase.functions.invoke(
+        'get-report-data',
+        { body: { guest_report_id: reportId } }
+      );
+
+      if (functionError) {
+        throw new Error(functionError.message);
+      }
+
+      setReportData(data.data as ReportData);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error fetching report data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch when explicitly told to via shouldFetch prop
   useEffect(() => {
     if (shouldFetch && guestReportId && guestReportId !== 'new') {
@@ -53,7 +79,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     } else if (shouldFetch && !guestReportId) {
       console.warn('[ReportSlideOver] No guest report ID provided');
     }
-  }, [shouldFetch, guestReportId, fetchReport]);
+  }, [shouldFetch, guestReportId]);
 
   useEffect(() => {
     if (!isLoading) {
