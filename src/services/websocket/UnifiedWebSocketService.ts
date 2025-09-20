@@ -104,16 +104,19 @@ class UnifiedWebSocketService {
    * Subscribe to a specific chat (called when chat_id is known)
    */
   async subscribeToChat(chat_id: string) {
+    console.log('[UnifiedWebSocket] subscribeToChat called with chat_id:', chat_id);
     
     this.currentChatId = chat_id;
     
     // Clean up existing subscription
     if (this.realtimeChannel) {
+      console.log('[UnifiedWebSocket] Cleaning up existing subscription');
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
     }
 
     // Setup realtime subscription for this specific chat
+    console.log('[UnifiedWebSocket] Setting up realtime subscription for chat_id:', chat_id);
     this.setupRealtimeSubscription(chat_id);
   }
 
@@ -123,11 +126,13 @@ class UnifiedWebSocketService {
   private setupRealtimeSubscription(chat_id: string) {
     try {
       this.subscriptionRetryCount = 0;
+      console.log('[UnifiedWebSocket] setupRealtimeSubscription starting for chat_id:', chat_id);
 
       // Store callbacks in local variables to preserve context
       const onMessageCallback = this.onMessage;
       const onErrorCallback = this.onError;
 
+      console.log('[UnifiedWebSocket] Creating channel for chat_id:', chat_id);
       this.realtimeChannel = supabase
         .channel(`unified-messages:${chat_id}`)
         .on(

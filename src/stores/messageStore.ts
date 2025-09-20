@@ -51,6 +51,8 @@ export const useMessageStore = create<MessageStore>()(
     const currentState = get();
     const currentChatId = currentState.chat_id;
     
+    console.log('[MessageStore] setChatId called:', { from: currentChatId, to: id });
+    
     // If switching to a different chat_id, clear messages
     // But preserve optimistic messages if they're for the new chat_id
     if (currentChatId !== id) {
@@ -67,6 +69,7 @@ export const useMessageStore = create<MessageStore>()(
     }
     
     if (id) {
+      console.log('[MessageStore] About to fetch messages for chat_id:', id);
       // Just fetch messages - WebSocket handles real-time updates
       get().fetchMessages();
     }
@@ -136,8 +139,12 @@ export const useMessageStore = create<MessageStore>()(
   // Simple fetch - just get messages, WebSocket handles real-time
   fetchMessages: async () => {
     const { chat_id } = get();
-    if (!chat_id) return;
+    if (!chat_id) {
+      console.log('[MessageStore] fetchMessages: No chat_id, skipping fetch');
+      return;
+    }
 
+    console.log('[MessageStore] fetchMessages: Starting fetch for chat_id:', chat_id);
     set({ loading: true, error: null });
 
     try {
@@ -152,6 +159,7 @@ export const useMessageStore = create<MessageStore>()(
       if (error) throw error;
 
       const messages = (data || []).map(mapDbToMessage);
+      console.log('[MessageStore] fetchMessages: Fetched', messages.length, 'messages for chat_id:', chat_id);
       set({ 
         messages, 
         loading: false,
