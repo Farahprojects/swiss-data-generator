@@ -23,35 +23,20 @@ serve(async (req) => {
       });
     }
 
-    // Fire-and-forget: Expect multipart/form-data with: file, chat_id, mode, language
-    let file: File | null = null;
-    let chat_id: string | undefined = undefined;
-    let mode: string | undefined = undefined;
-    let language = 'en';
-    let audioBuffer = new Uint8Array();
-    let mimeType = 'audio/webm';
-    
-    req.formData()
-      .then((form) => {
-        file = form.get('file') as File | null;
-        chat_id = (form.get('chat_id') as string) || undefined;
-        mode = (form.get('mode') as string) || undefined;
-        language = (form.get('language') as string) || 'en';
-        
-        if (!file) {
-          throw new Error('Missing file in form-data');
-        }
+    // Expect multipart/form-data with: file, chat_id, mode, language
+    const form = await req.formData();
+    const file = form.get('file') as File | null;
+    const chat_id = (form.get('chat_id') as string) || undefined;
+    const mode = (form.get('mode') as string) || undefined;
+    const language = (form.get('language') as string) || 'en';
 
-        return file.arrayBuffer();
-      })
-      .then((arrayBuffer) => {
-        audioBuffer = new Uint8Array(arrayBuffer);
-        mimeType = file?.type || 'audio/webm';
-        return audioBuffer;
-      })
-      .catch((err) => {
-        console.error('[openai-whisper] Form data processing error:', err);
-      });
+    if (!file) {
+      throw new Error('Missing file in form-data');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = new Uint8Array(arrayBuffer);
+    const mimeType = file.type || 'audio/webm';
 
     console.log('[openai-whisper] 📥 RECEIVED:', {
       audioSize: audioBuffer.length,
@@ -101,10 +86,8 @@ serve(async (req) => {
     formData.append('language', language || 'en');
     formData.append('response_format', 'json');
 
-    // Fire-and-forget: Call OpenAI Whisper API
-    let transcript = '';
-    
-    fetch(
+    // Call OpenAI Whisper API (wait for result - frontend needs the transcript)
+    const response = await fetch(
       'https://api.openai.com/v1/audio/transcriptions',
       {
         method: 'POST',
@@ -113,27 +96,76 @@ serve(async (req) => {
         },
         body: formData,
       }
-    )
-    .then(async (response) => {
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[openai-whisper] OpenAI API error:', errorText);
-        throw new Error(`OpenAI Whisper API error: ${response.status} - ${errorText}`);
-      }
+    );
 
-      const result = await response.json();
-      transcript = result.text || '';
-      return transcript;
-    })
-    .catch((error) => {
-      console.error('[openai-whisper] Whisper API error:', error);
-      transcript = '';
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[openai-whisper] OpenAI API error:', errorText);
+      throw new Error(`OpenAI Whisper API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    const transcript = result.text || '';
+
+    console.log('[openai-whisper] 📤 OPENAI API RESPONSE:', {
+      transcriptLength: transcript.length,
+      transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
+      mode
     });
 
-    // Return immediately - processing happens in background
-    console.log('[openai-whisper] 📤 RETURNING: Audio processing started in background');
+    // Handle empty transcription results
+    if (!transcript || transcript.trim().length === 0) {
+      console.log('[openai-whisper] ⚠️ Empty transcript - returning empty result');
+      return new Response(
+        JSON.stringify({ transcript: '' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Fire-and-forget: For conversation mode, save user message and call LLM separately
+    if (mode === 'conversation' && chat_id) {
+      console.log('[openai-whisper] 🔄 CONVERSATION MODE: Saving user message and calling LLM');
+      
+      // Fire-and-forget: Save user message to chat-send
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: transcript,
+          client_msg_id: crypto.randomUUID(),
+          mode: 'conversation'
+        })
+      }).catch((error) => {
+        console.error('[openai-whisper] ❌ User message save failed:', error);
+      });
+
+      // Fire-and-forget: Call LLM
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: transcript,
+          mode: 'conversation'
+        })
+      }).catch((error) => {
+        console.error('[openai-whisper] ❌ LLM call failed:', error);
+      });
+    }
+
+    // Return the actual transcript - frontend needs this to trigger thinking mode
+    console.log('[openai-whisper] ✅ SUCCESS: Transcript received');
     return new Response(
-      JSON.stringify({ transcript: '' }),
+      JSON.stringify({ transcript }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
