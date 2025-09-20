@@ -130,9 +130,6 @@ verify_jwt = false
 [functions.context-injector]
 verify_jwt = false
 
-[functions.verify-chat-access]
-verify_jwt = false
-
 [functions.llm-handler-openai]
 verify_jwt = false
 
