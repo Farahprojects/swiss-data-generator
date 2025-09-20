@@ -1,103 +1,42 @@
-# TheRAI Monorepo
+# TheRAI - Celestial Nexus
 
-Professional monorepo setup with workspaces for clean separation between main app and auth app.
+Auto-sync enabled! 🚀
 
-## 🏗️ Architecture
+An AI-driven astrology platform that provides personalized insights and reports based on birth details and astrological data.
 
-```
-therai-monorepo/
-├── main-app/          # Main TheRAI application (therai.co)
-├── auth-app/          # Auth-only app (auth.therai.co)
-├── supabase/          # Shared Supabase functions & migrations
-└── package.json       # Root workspace configuration
-```
+## Features
 
-## 🚀 Development
+- **Personalized Astrology Reports**: Generate detailed reports based on birth date, time, and location
+- **AI-Powered Insights**: Advanced AI analysis of astrological data
+- **Modern UI/UX**: Clean, elegant interface built with React and Tailwind CSS
+- **Mobile Responsive**: Optimized for all devices
+- **Real-time Processing**: Instant report generation and delivery
+- **React + Vite frontend**
+- **Supabase backend**
+- **Error handling improvements**
+- **Auto-sync with GitHub**
 
-### Start Main App (Default)
-```bash
-npm run dev
-# or
-npm run dev:main
-```
+## Tech Stack
 
-### Start Auth App
-```bash
-npm run dev:auth
-```
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, Radix UI
+- **Backend**: Supabase (Database, Auth, Functions)
+- **AI/ML**: Custom AI models for astrological analysis
+- **Deployment**: Vercel
 
-### Start Both Apps (Advanced)
-```bash
-npm run dev:both
-```
+## Getting Started
 
-### Build Commands
-```bash
-npm run build          # Build main app
-npm run build:main     # Build main app
-npm run build:auth     # Build auth app
-npm run build:all      # Build both apps
-```
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables
+4. Run development server: `npm run dev`
 
-## 🌐 Deployment
+## Development
 
-### Vercel Projects
-- **Main App**: `therai.co` (Root Directory: `main-app`)
-- **Auth App**: `auth.therai.co` (Root Directory: `auth-app`)
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
 
-### Environment Variables
-Each app has its own environment variables in Vercel:
-- `main-app`: Full app environment
-- `auth-app`: Minimal auth environment (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`)
+## License
 
-## 🔧 Workspace Benefits
-
-✅ **Clean Separation**: Each app is independent  
-✅ **Shared Dependencies**: Common packages managed at root  
-✅ **Simple Commands**: `npm run dev` works from anywhere  
-✅ **Professional Structure**: Industry standard monorepo pattern  
-✅ **Easy Deployment**: Vercel handles root directory per project  
-
-## 📁 App Responsibilities
-
-### Main App (`main-app/`)
-- Full TheRAI application
-- Chat, reports, clients, settings
-- Complex UI and business logic
-- Runs on `therai.co`
-
-### Auth App (`auth-app/`)
-- Email verification only
-- Password reset
-- Minimal, focused UI
-- Runs on `auth.therai.co`
-
-### Shared (`supabase/`)
-- Edge functions
-- Database migrations
-- Shared business logic
-- Used by both apps
-
-## 🛠️ Maintenance
-
-### Install Dependencies
-```bash
-npm run install:all
-```
-
-### Clean Build Artifacts
-```bash
-npm run clean
-```
-
-### Add New Dependencies
-```bash
-# To main app
-npm install <package> --workspace=main-app
-
-# To auth app  
-npm install <package> --workspace=auth-app
-
-# To root (shared)
-npm install <package>
-```
+Private project - All rights reserved.
