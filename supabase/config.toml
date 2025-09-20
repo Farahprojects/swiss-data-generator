@@ -70,16 +70,10 @@ verify_jwt = false
 [functions.process-credits]
 verify_jwt = false
 
-[functions.process-guest-report-pdf]
-verify_jwt = false
-
 [functions.process-paid-report]
 verify_jwt = false
 
 [functions.report-orchestrator]
-verify_jwt = false
-
-[functions.retrieve-temp-report]
 verify_jwt = false
 
 [functions.send-email]
@@ -126,9 +120,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.verify-email-token]
-verify_jwt = false
-
-[functions.verify-guest-payment]
 verify_jwt = false
 
 
