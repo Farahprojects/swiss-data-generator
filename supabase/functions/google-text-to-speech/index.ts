@@ -46,8 +46,8 @@ for (let i = 0; i < drop; i++) cache.delete(oldest[i][0]);
 }
 }
 
-async function synthesizeMP3(text: string, voiceName: string, signal?: AbortSignal): Promise<Uint8Array> {
-  const resp = await fetch(
+function synthesizeMP3(text: string, voiceName: string, signal?: AbortSignal): Promise<Uint8Array> {
+  return fetch(
     `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
 {
 method: "POST",
@@ -59,20 +59,21 @@ audioConfig: { audioEncoding: "MP3" },
 }),
 signal,
 }
-);
+)
+.then(async (resp) => {
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    throw new Error(`Google TTS API error (${resp.status}): ${errText}`);
+  }
 
-if (!resp.ok) {
-const errText = await resp.text().catch(() => "");
-throw new Error(`Google TTS API error (${resp.status}): ${errText}`);
-}
+  const json = await resp.json();
+  if (!json?.audioContent) {
+    throw new Error("Google TTS API returned no audioContent");
+  }
 
-const json = await resp.json();
-if (!json?.audioContent) {
-throw new Error("Google TTS API returned no audioContent");
-}
-
-// More efficient than atob + charCode loop
-return decodeBase64(json.audioContent);
+  // More efficient than atob + charCode loop
+  return decodeBase64(json.audioContent);
+});
 }
 
 function fireAndForget(p: Promise<unknown>) {
@@ -112,7 +113,7 @@ if (!voice) {
 
 const voiceName = `en-US-Chirp3-HD-${voice}`;
 
-// cache + inflight de-dup
+// Fire-and-forget: cache + inflight de-dup
 const key = cacheKey(text, voiceName);
 let audioBytes = getFromCache(key);
 if (!audioBytes) {
@@ -122,14 +123,23 @@ if (!audioBytes) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000); // 15s
     pending = synthesizeMP3(text, voiceName, controller.signal)
-      .finally(() => {
+      .then((result) => {
         clearTimeout(timeout);
         inflight.delete(key);
+        setCache(key, result);
+        return result;
+      })
+      .catch((err) => {
+        clearTimeout(timeout);
+        inflight.delete(key);
+        console.error('[google-tts] Synthesis failed:', err);
+        return new Uint8Array(); // Return empty audio on error
       });
     inflight.set(key, pending);
   }
-  audioBytes = await pending;
-  setCache(key, audioBytes);
+  
+  // Fire-and-forget: Don't wait for audio, return immediately
+  audioBytes = new Uint8Array(); // Return empty audio immediately
 }
 
 const processingTime = Date.now() - startTime;

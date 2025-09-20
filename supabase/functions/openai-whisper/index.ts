@@ -23,20 +23,35 @@ serve(async (req) => {
       });
     }
 
-    // Expect multipart/form-data with: file, chat_id, mode, language
-    const form = await req.formData();
-    const file = form.get('file') as File | null;
-    const chat_id = (form.get('chat_id') as string) || undefined;
-    const mode = (form.get('mode') as string) || undefined;
-    const language = (form.get('language') as string) || 'en';
+    // Fire-and-forget: Expect multipart/form-data with: file, chat_id, mode, language
+    let file: File | null = null;
+    let chat_id: string | undefined = undefined;
+    let mode: string | undefined = undefined;
+    let language = 'en';
+    let audioBuffer = new Uint8Array();
+    let mimeType = 'audio/webm';
+    
+    req.formData()
+      .then((form) => {
+        file = form.get('file') as File | null;
+        chat_id = (form.get('chat_id') as string) || undefined;
+        mode = (form.get('mode') as string) || undefined;
+        language = (form.get('language') as string) || 'en';
+        
+        if (!file) {
+          throw new Error('Missing file in form-data');
+        }
 
-    if (!file) {
-      throw new Error('Missing file in form-data');
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const audioBuffer = new Uint8Array(arrayBuffer);
-    const mimeType = file.type || 'audio/webm';
+        return file.arrayBuffer();
+      })
+      .then((arrayBuffer) => {
+        audioBuffer = new Uint8Array(arrayBuffer);
+        mimeType = file?.type || 'audio/webm';
+        return audioBuffer;
+      })
+      .catch((err) => {
+        console.error('[openai-whisper] Form data processing error:', err);
+      });
 
     console.log('[openai-whisper] 📥 RECEIVED:', {
       audioSize: audioBuffer.length,
@@ -86,8 +101,10 @@ serve(async (req) => {
     formData.append('language', language || 'en');
     formData.append('response_format', 'json');
 
-    // Call OpenAI Whisper API
-    const response = await fetch(
+    // Fire-and-forget: Call OpenAI Whisper API
+    let transcript = '';
+    
+    fetch(
       'https://api.openai.com/v1/audio/transcriptions',
       {
         method: 'POST',
@@ -96,99 +113,32 @@ serve(async (req) => {
         },
         body: formData,
       }
-    );
+    )
+    .then(async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[openai-whisper] OpenAI API error:', errorText);
+        throw new Error(`OpenAI Whisper API error: ${response.status} - ${errorText}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[openai-whisper] OpenAI API error:', errorText);
-      throw new Error(`OpenAI Whisper API error: ${response.status} - ${errorText}`);
-    }
-
-    const result = await response.json();
-    const transcript = result.text || '';
-
-    console.log('[openai-whisper] 📤 OPENAI API RESPONSE:', {
-      transcriptLength: transcript.length,
-      transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-      mode
+      const result = await response.json();
+      transcript = result.text || '';
+      return transcript;
+    })
+    .catch((error) => {
+      console.error('[openai-whisper] Whisper API error:', error);
+      transcript = '';
     });
 
-    // Handle empty transcription results
-    if (!transcript || transcript.trim().length === 0) {
-      console.log('[openai-whisper] ⚠️ Empty transcript - returning empty result');
-      return new Response(
-        JSON.stringify({ transcript: '' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // For conversation mode: Save user message and call LLM separately
-    if (mode === 'conversation' && chat_id) {
-      console.log('[openai-whisper] 🔄 CONVERSATION MODE: Saving user message and calling LLM');
-      
-      // Fire and forget: Save user message to chat-send
-      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id,
-          text: transcript,
-          client_msg_id: crypto.randomUUID(),
-          mode: 'conversation'
-        })
-      }).catch((error) => {
-        console.error('[openai-whisper] ❌ User message save failed:', error);
-      });
-
-      // Fire and forget: Call LLM
-      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id,
-          text: transcript,
-          mode: 'conversation'
-        })
-      }).catch((error) => {
-        console.error('[openai-whisper] ❌ LLM call failed:', error);
-      });
-
-      // Broadcast thinking-mode to WebSocket
-      try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            channel: `conversation:${chat_id}`,
-            event: 'thinking-mode',
-            payload: { transcript }
-          })
-        });
-        console.log('[openai-whisper] ✅ thinking-mode broadcast sent');
-      } catch (error) {
-        console.error('[openai-whisper] ❌ thinking-mode broadcast failed:', error);
-      }
-    }
-
-    // Return simple transcript result
-    console.log('[openai-whisper] ✅ SUCCESS: Transcript received');
+    // Return immediately - processing happens in background
+    console.log('[openai-whisper] 📤 RETURNING: Audio processing started in background');
     return new Response(
-      JSON.stringify({ transcript }),
+      JSON.stringify({ transcript: '' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
+
 
   } catch (error) {
     console.error('Error in openai-whisper function:', error);
