@@ -86,7 +86,7 @@ serve(async (req) => {
     formData.append('language', language || 'en');
     formData.append('response_format', 'json');
 
-    // Call OpenAI Whisper API (wait for result - frontend needs the transcript)
+    // Call OpenAI Whisper API
     const response = await fetch(
       'https://api.openai.com/v1/audio/transcriptions',
       {
@@ -124,15 +124,15 @@ serve(async (req) => {
       );
     }
 
-    // Fire-and-forget: For conversation mode, save user message and call LLM separately
+    // For conversation mode: Save user message and call LLM separately
     if (mode === 'conversation' && chat_id) {
       console.log('[openai-whisper] 🔄 CONVERSATION MODE: Saving user message and calling LLM');
       
-      // Fire-and-forget: Save user message to chat-send
+      // Fire and forget: Save user message to chat-send
       fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -145,11 +145,11 @@ serve(async (req) => {
         console.error('[openai-whisper] ❌ User message save failed:', error);
       });
 
-      // Fire-and-forget: Call LLM
+      // Fire and forget: Call LLM
       fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -160,9 +160,28 @@ serve(async (req) => {
       }).catch((error) => {
         console.error('[openai-whisper] ❌ LLM call failed:', error);
       });
+
+      // Broadcast thinking-mode to WebSocket
+      try {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channel: `conversation:${chat_id}`,
+            event: 'thinking-mode',
+            payload: { transcript }
+          })
+        });
+        console.log('[openai-whisper] ✅ thinking-mode broadcast sent');
+      } catch (error) {
+        console.error('[openai-whisper] ❌ thinking-mode broadcast failed:', error);
+      }
     }
 
-    // Return the actual transcript - frontend needs this to trigger thinking mode
+    // Return simple transcript result
     console.log('[openai-whisper] ✅ SUCCESS: Transcript received');
     return new Response(
       JSON.stringify({ transcript }),
@@ -170,7 +189,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-
 
   } catch (error) {
     console.error('Error in openai-whisper function:', error);

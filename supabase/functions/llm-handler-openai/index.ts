@@ -53,11 +53,9 @@ serve(async (req) => {
 
     // Supabase client now created at module scope
 
-    // Fire-and-forget: Fetch conversation history (last 6 completed messages, optimized)
+    // Fetch conversation history (last 6 completed messages, optimized)
     const HISTORY_LIMIT = 6;
-    let history: any[] = [];
-    
-    supabase
+    const { data: history, error: historyError } = await supabase
       .from("messages")
       .select("role, text")
       .eq("chat_id", chat_id)
@@ -65,19 +63,13 @@ serve(async (req) => {
       .not("text", "is", null)
       .neq("text", "")
       .order("created_at", { ascending: false })
-      .limit(HISTORY_LIMIT)
-      .then(({ data: historyData, error: historyError }) => {
-        if (historyError) {
-          console.error("[llm-handler-openai] Failed to fetch conversation history:", historyError);
-        } else {
-          history = historyData || [];
-        }
-      })
-      .catch((err) => {
-        console.error("[llm-handler-openai] History fetch error:", err);
-      });
+      .limit(HISTORY_LIMIT);
 
-    // Fire-and-forget: Call OpenAI GPT-4 API
+    if (historyError) {
+      throw new Error("Failed to fetch conversation history");
+    }
+
+    // Call OpenAI GPT-4 API
     const requestStartTime = Date.now();
     
     // System prompt
@@ -123,15 +115,11 @@ Content Rules:
       content: text
     });
 
-    // Fire-and-forget OpenAI API call
-    let assistantText = "I'm processing your request...";
-    let usage = { total_tokens: null, input_tokens: null, output_tokens: null };
-    
     // Create AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    fetch(
+    const resp = await fetch(
       "https://api.openai.com/v1/chat/completions",
       {
         method: "POST",
@@ -146,35 +134,31 @@ Content Rules:
         }),
         signal: controller.signal
       }
-    )
-    .then(async (resp) => {
-      clearTimeout(timeoutId);
+    );
 
-      if (!resp.ok) {
-        const errorText = await resp.text();
-        throw new Error(`OpenAI API request failed: ${resp.status} - ${errorText}`);
-      }
+    clearTimeout(timeoutId);
 
-      const data = await resp.json();
-      assistantText = data.choices?.[0]?.message?.content || "No response text from OpenAI";
-      
-      // Extract usage metrics from OpenAI response
-      usage = {
-        total_tokens: data.usage?.total_tokens || null,
-        input_tokens: data.usage?.prompt_tokens || null,
-        output_tokens: data.usage?.completion_tokens || null,
-      };
-      
-      return { assistantText, usage };
-    })
-    .catch((error) => {
-      clearTimeout(timeoutId);
-      console.error("[llm-handler-openai] OpenAI API error:", error);
-      assistantText = "Sorry, I encountered an error processing your request.";
-    });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      throw new Error(`OpenAI API request failed: ${resp.status} - ${errorText}`);
+    }
+
+    const data = await resp.json();
+    const assistantText = data.choices?.[0]?.message?.content;
+
+    if (!assistantText) {
+      throw new Error("No response text from OpenAI");
+    }
 
     // Sanitize assistant response
     const sanitizedText = sanitizePlainText(assistantText);
+
+    // Extract usage metrics from OpenAI response
+    const usage = {
+      total_tokens: data.usage?.total_tokens || null,
+      input_tokens: data.usage?.prompt_tokens || null,
+      output_tokens: data.usage?.completion_tokens || null,
+    };
 
     const llmLatency_ms = Date.now() - requestStartTime;
     const totalLatency_ms = Date.now() - requestStartTime;

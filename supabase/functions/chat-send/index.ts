@@ -58,18 +58,23 @@ serve(async (req) => {
 
 
 
-    // Fire-and-forget: Get the next message number for this chat using the database function
-    let nextMessageNumber = 1; // Default fallback
-    supabase
-      .rpc('get_next_message_number', { p_chat_id: chat_id })
-      .then(({ data: userMessageNumber, error: userNumberError }) => {
-        if (!userNumberError && userMessageNumber) {
-          nextMessageNumber = userMessageNumber;
+    // Get the next message number for this chat using the database function
+    const { data: userMessageNumber, error: userNumberError } = await supabase
+      .rpc('get_next_message_number', { p_chat_id: chat_id });
+
+    if (userNumberError) {
+      return new Response(JSON.stringify({
+        error: "Failed to get message number"
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
         }
-      })
-      .catch((err) => {
-        console.error('[chat-send] Failed to get message number:', err);
       });
+    }
+
+    const nextMessageNumber = userMessageNumber;
 
     // If this is an assistant message (e.g., from LLM in conversation mode), save assistant only
     if (role === 'assistant') {
@@ -87,24 +92,25 @@ serve(async (req) => {
 
       console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB - message_number: ${nextMessageNumber}`);
       
-      // Fire-and-forget: Save assistant message to database
-      supabase
+      const { data: insertData, error: assistantError } = await supabase
         .from("messages")
         .insert(assistantMessageData, {
           onConflict: "client_msg_id",
           ignoreDuplicates: true,
           returning: "minimal"
-        })
-        .then(({ data: insertData, error: assistantError }) => {
-          if (assistantError) {
-            console.error('[chat-send] ❌ FAILED TO SAVE ASSISTANT MESSAGE:', assistantError);
-          } else {
-            console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, insertData);
-          }
-        })
-        .catch((err) => {
-          console.error('[chat-send] ❌ ASSISTANT MESSAGE SAVE ERROR:', err);
         });
+
+      if (assistantError) {
+        console.error('[chat-send] ❌ FAILED TO SAVE ASSISTANT MESSAGE:', assistantError);
+        return new Response(JSON.stringify({
+          error: "Failed to save assistant message"
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, insertData);
       return new Response(JSON.stringify({
         message: "Assistant message saved successfully",
         assistant_message: assistantMessageData
@@ -128,24 +134,28 @@ serve(async (req) => {
 
     console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB - message_number: ${nextMessageNumber}`);
     
-    // Fire-and-forget: Save user message to database
-    supabase
+    const { data: userInsertData, error: userError } = await supabase
       .from("messages")
       .insert(userMessageData, {
         onConflict: "client_msg_id",
         ignoreDuplicates: true,
         returning: "minimal"
-      })
-      .then(({ data: userInsertData, error: userError }) => {
-        if (userError) {
-          console.error('[chat-send] ❌ FAILED TO SAVE USER MESSAGE:', userError);
-        } else {
-          console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, userInsertData);
-        }
-      })
-      .catch((err) => {
-        console.error('[chat-send] ❌ USER MESSAGE SAVE ERROR:', err);
       });
+
+    if (userError) {
+      console.error('[chat-send] ❌ FAILED TO SAVE USER MESSAGE:', userError);
+      return new Response(JSON.stringify({
+        error: "Failed to save message"
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, userInsertData);
 
     // For conversation mode, just save user message (STT handles LLM call separately)
     if (mode === 'conversation') {
