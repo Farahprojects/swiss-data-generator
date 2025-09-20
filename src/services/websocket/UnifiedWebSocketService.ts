@@ -33,8 +33,14 @@ class UnifiedWebSocketService {
   }) {
     
     this.onMessage = callbacks?.onMessageReceived;
-    this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
+    this.onMessageUpdated = callbacks?.onMessageUpdated;
+    this.onStatusChange = callbacks?.onStatusChange;
+    this.onOptimisticMessage = callbacks?.onOptimisticMessage;
+    this.onAssistantMessage = callbacks?.onAssistantMessage;
     this.onSystemMessage = callbacks?.onSystemMessage;
+    this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
+    
+    console.log('[UnifiedWebSocket] Callbacks initialized, ready for chat subscription');
   }
 
   /**

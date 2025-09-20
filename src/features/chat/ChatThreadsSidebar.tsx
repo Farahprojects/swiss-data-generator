@@ -362,8 +362,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       </DropdownMenu>
                     </div>
                   </div>
-                  );
-                })}
+                );
+              })}
                 
                 {/* Load More Button */}
                 {hasMoreThreads && (
