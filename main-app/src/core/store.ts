@@ -18,7 +18,6 @@ export type ChatStatus =
 interface ChatState {
   // Current active chat
   chat_id: string | null;
-  guest_id: string | null;
   // Messages moved to useMessageStore - single source of truth
   status: ChatStatus;
   error: string | null;
@@ -38,8 +37,8 @@ interface ChatState {
   conversationChannel: any;
   isConversationSyncActive: boolean;
 
-  // Chat actions (unified for both auth and guest)
-  startConversation: (chat_id: string, guest_id?: string) => void;
+  // Chat actions (authenticated users only)
+  startConversation: (chat_id: string) => void;
   startNewConversation: (user_id?: string) => Promise<string>;
   // Message management moved to useMessageStore - single source of truth
   setStatus: (status: ChatStatus) => void;
@@ -54,8 +53,8 @@ interface ChatState {
   setPaymentFlowStopIcon: (show: boolean) => void;
   
   // Hydration and persistence
-  hydrateFromStorage: (authId?: string, guestId?: string) => string | null;
-  persistActiveChat: (chat_id: string, authId?: string, guestId?: string) => void;
+  hydrateFromStorage: (authId?: string) => string | null;
+  persistActiveChat: (chat_id: string, authId?: string) => void;
 
   // Thread actions
   loadThreads: () => Promise<void>;
@@ -71,10 +70,6 @@ interface ChatState {
   initializeConversationSync: (userId: string) => void;
   cleanupConversationSync: () => void;
   
-  // Guest management helpers
-  getGuestId: () => string | null;
-  setGuestId: (guestId: string) => void;
-  clearGuestData: () => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -82,7 +77,6 @@ export const useChatStore = create<ChatState>()(
     (set, get) => ({
   // Current active chat
   chat_id: null,
-  guest_id: null,
   // Messages moved to useMessageStore - single source of truth
   status: 'idle',
   error: null,
@@ -102,10 +96,9 @@ export const useChatStore = create<ChatState>()(
   conversationChannel: null,
   isConversationSyncActive: false,
 
-  startConversation: (id, guest_id) => {
+  startConversation: (id) => {
     set({ 
       chat_id: id, 
-      guest_id: guest_id,
       // messages removed - use useMessageStore instead
       status: 'idle', 
       error: null,
@@ -114,8 +107,8 @@ export const useChatStore = create<ChatState>()(
       isAssistantTyping: false
     });
     
-    // Persist active chat_id to sessionStorage (always writes to cache)
-    get().persistActiveChat(id, undefined, guest_id);
+    // Persist active chat_id to sessionStorage
+    get().persistActiveChat(id);
   },
 
   startNewConversation: async (user_id?: string) => {
