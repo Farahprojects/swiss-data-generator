@@ -6,11 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Utility function to validate UUID format
-function isValidUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-}
 
 serve(async (req) => {
   const startTime = Date.now();
@@ -22,53 +17,24 @@ serve(async (req) => {
   }
 
   try {
-    // Validate environment variables
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    // Parse request body
+    const requestBody = await req.json();
+    console.log(`[context-injector][${requestId}] Request body received:`, { keys: Object.keys(requestBody) });
     
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("[context-injector] Missing environment variables");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Server configuration error",
-          timestamp: new Date().toISOString()
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Parse and validate request body
-    let requestBody;
-    try {
-      requestBody = await req.json();
-      console.log(`[context-injector][${requestId}] Request body received:`, { keys: Object.keys(requestBody) });
-      
-      // Warm-up check
-      if (requestBody?.warm === true) {
-        return new Response("Warm-up", { status: 200, headers: corsHeaders });
-      }
-    } catch (parseError) {
-      console.error(`[context-injector][${requestId}] Failed to parse JSON:`, parseError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Invalid JSON in request body",
-          timestamp: new Date().toISOString()
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Warm-up check
+    if (requestBody?.warm === true) {
+      return new Response("Warm-up", { status: 200, headers: corsHeaders });
     }
 
     const { chat_id } = requestBody;
 
-    // Validate chat_id
-    if (!chat_id || typeof chat_id !== 'string' || !isValidUUID(chat_id)) {
-      console.error(`[context-injector][${requestId}] Invalid chat_id format:`, chat_id);
+    // Basic chat_id validation
+    if (!chat_id || typeof chat_id !== 'string') {
+      console.error(`[context-injector][${requestId}] Invalid chat_id:`, chat_id);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "chat_id must be a valid UUID",
+          error: "chat_id is required",
           timestamp: new Date().toISOString()
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -77,31 +43,10 @@ serve(async (req) => {
 
     console.log(`[context-injector][${requestId}] 📋 Processing context injection for chat_id: ${chat_id}`);
 
-    // Initialize Supabase client with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get the guest report using chat_id
-    console.log(`[context-injector][${requestId}] 🔍 Fetching guest report from chat_id...`);
-    const { data: guestReport, error: guestError } = await supabase
-      .from("guest_reports")
-      .select("id, chat_id, email, report_type, is_ai_report, created_at, payment_status, report_data")
-      .eq("chat_id", chat_id)
-      .single();
-
-    if (guestError || !guestReport) {
-      console.error(`[context-injector][${requestId}] Guest report not found for chat_id:`, guestError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Guest report not found for chat_id",
-          timestamp: new Date().toISOString()
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const guest_report_id = guestReport.id;
-    console.log(`[context-injector][${requestId}] 🎯 Found guest_report_id: ${guest_report_id} for chat_id: ${chat_id}`);
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     // Check if context has already been injected for this chat_id
     console.log(`[context-injector][${requestId}] 🔍 Checking if context already injected...`);
@@ -125,96 +70,21 @@ serve(async (req) => {
       );
     }
 
-    // Get report data if it exists (using chat_id via guest_report_id)
-    console.log(`[context-injector][${requestId}] 🔍 Fetching report data...`);
-    const { data: reportLogs } = await supabase
-      .from("report_logs")
-      .select("report_text")
-      .eq("user_id", chat_id)
-      .single();
-
-    // Get Swiss data if it exists (using chat_id via guest_report_id)
+    // Get Swiss data if it exists
+    console.log(`[context-injector][${requestId}] 🔍 Fetching Swiss data...`);
     const { data: translatorLogs } = await supabase
       .from("translator_logs")
       .select("swiss_data")
       .eq("user_id", chat_id)
       .single();
 
-    // Helper function to extract user-relevant content from report text
-    function extractUserContent(reportText: string): string {
-      // Remove technical metadata and calculation engine info
-      let cleanText = reportText;
-      
-      // Remove common technical prefixes and metadata
-      const technicalPatterns = [
-        /^.*?calculation engine.*?$/gmi,
-        /^.*?time basis.*?$/gmi,
-        /^.*?processing time.*?$/gmi,
-        /^.*?token count.*?$/gmi,
-        /^.*?model.*?$/gmi,
-        /^.*?temperature.*?$/gmi,
-        /^.*?max tokens.*?$/gmi,
-        /^.*?engine used.*?$/gmi,
-        /^.*?metadata.*?$/gmi,
-        /^.*?duration.*?$/gmi,
-        /^.*?latency.*?$/gmi,
-        /^.*?cost.*?$/gmi,
-        /^.*?status.*?$/gmi
-      ];
-      
-      technicalPatterns.forEach(pattern => {
-        cleanText = cleanText.replace(pattern, '');
-      });
-      
-      // Remove empty lines and clean up
-      cleanText = cleanText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
-      
-      return cleanText;
-    }
-    
-    // Helper function to extract user-relevant data from Swiss data
-    function extractUserSwissData(swissData: any): any {
-      if (!swissData || typeof swissData !== 'object') {
-        return swissData;
-      }
-      
-      // Create a clean copy without technical metadata
-      const cleanData: any = {};
-      
-      // Only include user-relevant fields
-      const userRelevantFields = [
-        'report', 'content', 'narrative', 'text', 'title',
-        'subjects', 'person_a', 'person_b', 'natal', 'transits',
-        'compatibility', 'synastry', 'essence', 'flow', 'mindset'
-      ];
-      
-      for (const [key, value] of Object.entries(swissData)) {
-        if (userRelevantFields.includes(key) || 
-            (typeof value === 'string' && value.length > 50) ||
-            (typeof value === 'object' && value !== null)) {
-          cleanData[key] = value;
-        }
-      }
-      
-      return cleanData;
-    }
-    
-    // Build context with filtered user-relevant data only
+    // Build context content
     let contextContent = "";
     
-    if (reportLogs?.report_text) {
-      const userContent = extractUserContent(reportLogs.report_text);
-      if (userContent.trim()) {
-        contextContent += `REPORT CONTENT:\n${userContent}`;
-      }
-    }
-    
     if (translatorLogs?.swiss_data) {
-      const userSwissData = extractUserSwissData(translatorLogs.swiss_data);
-      if (Object.keys(userSwissData).length > 0) {
-        if (contextContent) contextContent += "\n\n";
-        contextContent += `Astro report:\n${JSON.stringify(userSwissData, null, 2)}`;
-      }
+      contextContent = `Astro data available for this conversation:\n${JSON.stringify(translatorLogs.swiss_data, null, 2)}`;
+    } else {
+      contextContent = "Astro data context injected for this conversation.";
     }
 
     console.log(`[context-injector][${requestId}] 💉 Injecting context message (${contextContent.length} chars)...`);
@@ -224,13 +94,11 @@ serve(async (req) => {
       .from("messages")
       .insert({
         chat_id,
-        role: "system", // System messages are typically hidden from UI
+        role: "system",
         text: contextContent,
         status: "complete",
         context_injected: true,
         meta: {
-          guest_report_id,
-          has_report: !!reportLogs?.report_text,
           has_swiss_data: !!translatorLogs?.swiss_data,
           injection_timestamp: new Date().toISOString()
         }
@@ -263,7 +131,6 @@ serve(async (req) => {
           message_id: contextMessage.id,
           chat_id,
           content_length: contextContent.length,
-          has_report: !!reportLogs?.report_text,
           has_swiss_data: !!translatorLogs?.swiss_data,
           processing_time_ms: processingTime
         },
