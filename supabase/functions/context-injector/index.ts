@@ -10,6 +10,7 @@ const corsHeaders = {
 serve(async (req) => {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
+  // Context injector for authenticated users - simplified version
   console.log(`[context-injector][${requestId}] 🚀 Context injection started at ${new Date().toISOString()}`);
 
   if (req.method === "OPTIONS") {
