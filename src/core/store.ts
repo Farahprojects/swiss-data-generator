@@ -292,9 +292,11 @@ export const useChatStore = create<ChatState>()(
       const { deleteConversation } = await import('@/services/conversations');
       await deleteConversation(threadId);
       
-      // Don't manually update local state - let real-time subscription handle it
-      // This ensures consistency across all tabs/devices
-      set({ isLoadingThreads: false });
+      // Update local state immediately for instant UI feedback
+      set(state => ({
+        threads: state.threads.filter(thread => thread.id !== threadId),
+        isLoadingThreads: false
+      }));
       
       // If this was the current chat, clear the session
       if (get().chat_id === threadId) {
@@ -481,8 +483,8 @@ export const useChatStore = create<ChatState>()(
         lastMessagesFetch: state.lastMessagesFetch,
         isLoadingThreads: state.isLoadingThreads,
         threadsError: state.threadsError,
-        conversationChannel: state.conversationChannel,
-        isConversationSyncActive: state.isConversationSyncActive,
+        // Exclude conversationChannel and isConversationSyncActive from persistence
+        // as they contain circular references and should be re-initialized
       } as Partial<ChatState>),
     }
   )
