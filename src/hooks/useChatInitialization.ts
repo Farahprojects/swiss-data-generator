@@ -36,21 +36,28 @@ export const useChatInitialization = () => {
   useEffect(() => {
     // Handle direct URL navigation (typing /c/123 in browser)
     if (threadId && threadId !== "1") {
+      console.log('[useChatInitialization] Processing threadId:', threadId);
       
       // Validate threadId exists in DB before using it
       const validateAndLoadThread = async () => {
         try {
           // Check if this thread exists in our loaded threads
           const { threads } = useChatStore.getState();
+          console.log('[useChatInitialization] Loaded threads:', threads.length);
+          console.log('[useChatInitialization] Threads:', threads.map(t => t.id));
+          
           const threadExists = threads.some(thread => thread.id === threadId);
+          console.log('[useChatInitialization] Thread exists:', threadExists);
           
           if (threadExists) {
             // Use the same direct flow as handleSwitchToChat
+            console.log('[useChatInitialization] Setting chat_id and switching to chat:', threadId);
             const { useMessageStore } = await import('@/stores/messageStore');
             useMessageStore.getState().setChatId(threadId);
             startConversation(threadId);
             await chatController.switchToChat(threadId);
           } else {
+            console.log('[useChatInitialization] Thread not found, clearing chat');
             useChatStore.getState().clearChat();
           }
         } catch (error) {

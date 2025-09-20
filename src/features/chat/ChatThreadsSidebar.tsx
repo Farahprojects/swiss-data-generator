@@ -117,7 +117,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     
     // DIRECT FLOW: Immediately set chat_id and fetch messages
     const { setChatId } = useMessageStore.getState();
+    console.log('[ChatThreadsSidebar] About to call setChatId with:', conversationId);
     setChatId(conversationId);
+    console.log('[ChatThreadsSidebar] setChatId completed');
     
     // Also update the main chat store
     const { startConversation } = useChatStore.getState();

@@ -4,14 +4,13 @@ import { useMessageStore } from '@/stores/messageStore';
 import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { useAutoScroll } from '@/hooks/useAutoScroll'; // Auto-scroll hook for message list - TypeScript refresh
+import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
-import { useMode } from '@/contexts/ModeContext';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
 const renderMessages = (messages: Message[]) => {
@@ -35,6 +34,9 @@ const renderMessages = (messages: Message[]) => {
             <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
               {message.text || ''}
             </p>
+            {message.pending && (
+              <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
+            )}
           </div>
         </div>
       );
@@ -89,6 +91,8 @@ export const MessageList = () => {
     setChatId 
   } = useMessageStore();
   
+  console.log('[MessageList] Current messages:', messages.length, 'loading:', loading);
+  
   // Unified store handles all messages via real-time subscriptions
   
   // Auth detection
@@ -96,11 +100,8 @@ export const MessageList = () => {
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('user_id');
   const guestReportId = searchParams.get('guest_id');
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && !!userId;
   const isGuest = !!guestReportId;
-  
-  // Mode detection
-  const { mode } = useMode();
   
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
@@ -116,11 +117,12 @@ export const MessageList = () => {
   };
   
   // Set chat ID when it changes
-  useEffect(() => {
-    if (chat_id) {
-      setChatId(chat_id);
-    }
-  }, [chat_id, setChatId]);
+  // Removed redundant setChatId call - chat switching already handles this
+  // useEffect(() => {
+  //   if (chat_id) {
+  //     setChatId(chat_id);
+  //   }
+  // }, [chat_id, setChatId]);
 
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
@@ -190,7 +192,7 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!astroChoiceMade && mode === 'astro' ? (
+                {!astroChoiceMade && !chat_id ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
                       onClose={() => {

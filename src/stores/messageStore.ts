@@ -148,6 +148,7 @@ export const useMessageStore = create<MessageStore>()(
     set({ loading: true, error: null });
 
     try {
+      console.log('[MessageStore] fetchMessages: Querying database for chat_id:', chat_id);
       
       const { data, error } = await supabase
         .from('messages')
@@ -156,8 +157,12 @@ export const useMessageStore = create<MessageStore>()(
         .order('message_number', { ascending: true })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[MessageStore] fetchMessages: Database error:', error);
+        throw error;
+      }
 
+      console.log('[MessageStore] fetchMessages: Raw database response:', { data: data?.length || 0, error });
       const messages = (data || []).map(mapDbToMessage);
       console.log('[MessageStore] fetchMessages: Fetched', messages.length, 'messages for chat_id:', chat_id);
       set({ 
