@@ -189,6 +189,9 @@ export const MessageList = () => {
                 {mode === 'astro' && !astroChoiceMade ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
+                      onClose={() => {
+                        setAstroChoiceMade(true);
+                      }}
                       onSubmit={(data) => {
                         console.log('Astro data submitted:', data);
                         handleAddAstroData();

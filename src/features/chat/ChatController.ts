@@ -143,6 +143,14 @@ class ChatController {
       if (message.role === 'assistant') {
         const { setAssistantTyping } = useChatStore.getState();
         setAssistantTyping(false);
+        
+        // Remove pending status from user messages when assistant responds
+        const { messages: currentMessages, updateMessage } = useMessageStore.getState();
+        currentMessages.forEach(userMsg => {
+          if (userMsg.role === 'user' && userMsg.pending) {
+            updateMessage(userMsg.id, { pending: false });
+          }
+        });
       }
     }
   }

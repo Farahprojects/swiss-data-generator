@@ -34,6 +34,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>('type');
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = useIsMobile();
   
   // Auth detection - use route-based logic
@@ -91,6 +92,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const handleAuthenticatedSubmit = async (data: ReportFormData) => {
     if (!user) return;
     
+    setIsProcessing(true);
+    
     try {
       // Ensure we have a chat_id
       let currentChatId = chat_id;
@@ -112,6 +115,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       if (error) {
         console.error('[AstroDataForm] Initiate-auth-report error:', error);
         toast.error('Failed to process astro data. Please try again.');
+        setIsProcessing(false);
         return;
       }
 
@@ -122,6 +126,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     } catch (error) {
       console.error('[AstroDataForm] Error submitting astro data:', error);
       toast.error('Failed to submit astro data. Please try again.');
+      setIsProcessing(false);
     }
   };
 
@@ -472,9 +477,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                  disabled={isProcessing}
+                  className="flex-1 bg-gray-900 hover:bg-gray-800 disabled:opacity-50"
                 >
-                  Next
+                  {isProcessing ? 'Processing...' : 'Next'}
                 </Button>
               </div>
             </motion.form>
@@ -575,9 +581,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                  disabled={isProcessing}
+                  className="flex-1 bg-gray-900 hover:bg-gray-800 disabled:opacity-50"
                 >
-                  Create Astro Data
+                  {isProcessing ? 'Processing...' : 'Create Astro Data'}
                 </Button>
               </div>
             </motion.form>
