@@ -165,21 +165,20 @@ serve(async (req) => {
       });
 
       // Broadcast thinking-mode to WebSocket
-      try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            channel: `conversation:${chat_id}`,
-            event: 'thinking-mode',
-            payload: { transcript }
-          })
-        });
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel: `conversation:${chat_id}`,
+          event: 'thinking-mode',
+          payload: { transcript }
+        })
+      }).then(() => {
         console.log('[openai-whisper] ✅ thinking-mode broadcast sent');
-      } catch (error) {
+      }).catch((error) => {
         console.error('[openai-whisper] ❌ thinking-mode broadcast failed:', error);
       }
     }
