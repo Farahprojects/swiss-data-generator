@@ -197,7 +197,8 @@ Content Rules:
           text: sanitizedText,
           client_msg_id: assistantClientId,
           role: 'assistant',
-          chattype: 'voice'
+          chattype: 'voice',
+          mode: mode
         })
       }).then((response) => {
         console.log(`[llm-handler-openai] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
@@ -221,7 +222,8 @@ Content Rules:
           chat_id,
           text: sanitizedText,
           client_msg_id: assistantClientId,
-          role: 'assistant'
+          role: 'assistant',
+          mode: mode
         })
       }).then((response) => {
         console.log(`[llm-handler-openai] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);

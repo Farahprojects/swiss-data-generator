@@ -177,7 +177,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         chat_id,
-        text: text
+        text: text,
+        mode: mode
       })
     }).then((response) => {
       console.log(`[chat-send] ✅ LLM HANDLER CALLED SUCCESSFULLY - status: ${response.status}`);

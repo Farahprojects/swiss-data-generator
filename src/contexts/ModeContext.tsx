@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useMessageStore } from '@/stores/messageStore';
+import { supabase } from '@/integrations/supabase/client';
 
 export type ChatMode = 'chat' | 'astro';
 
@@ -29,6 +30,41 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
   
   const { messages, chat_id } = useMessageStore();
 
+  // Load mode from conversations.meta when chat_id changes
+  useEffect(() => {
+    if (chat_id) {
+      const loadModeFromConversation = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('conversations')
+            .select('meta')
+            .eq('id', chat_id)
+            .single();
+
+          if (error) {
+            console.error('[ModeContext] Error loading conversation mode:', error);
+            return;
+          }
+
+          // If mode exists in meta, use it; otherwise default to 'chat'
+          const savedMode = data?.meta?.mode;
+          if (savedMode && (savedMode === 'chat' || savedMode === 'astro')) {
+            setMode(savedMode);
+            console.log(`[ModeContext] Loaded mode '${savedMode}' from conversations.meta`);
+          } else {
+            setMode('chat'); // Default mode for new chats
+            console.log('[ModeContext] No saved mode found, defaulting to chat');
+          }
+        } catch (error) {
+          console.error('[ModeContext] Error loading mode from conversation:', error);
+          setMode('chat'); // Fallback to default
+        }
+      };
+      
+      loadModeFromConversation();
+    }
+  }, [chat_id]);
+
   // Lock mode when user sends their first message in the current chat
   useEffect(() => {
     const userMessages = messages.filter(m => m.role === 'user' && m.chat_id === chat_id);
@@ -47,9 +83,40 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
     }
   }, [chat_id, messages]);
 
-  const handleSetMode = (newMode: ChatMode) => {
+  const handleSetMode = async (newMode: ChatMode) => {
     if (!isModeLocked) {
       setMode(newMode);
+      
+      // Save mode to conversations.meta immediately when selected
+      if (chat_id) {
+        try {
+          // First get existing meta to preserve other data
+          const { data: existingData } = await supabase
+            .from('conversations')
+            .select('meta')
+            .eq('id', chat_id)
+            .single();
+
+          const existingMeta = existingData?.meta || {};
+          
+          // Update meta with new mode
+          const { error } = await supabase
+            .from('conversations')
+            .update({ 
+              meta: { ...existingMeta, mode: newMode },
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', chat_id);
+
+          if (error) {
+            console.error('[ModeContext] Error saving mode to conversation:', error);
+          } else {
+            console.log(`[ModeContext] Saved mode '${newMode}' to conversations.meta`);
+          }
+        } catch (error) {
+          console.error('[ModeContext] Error saving mode to conversation:', error);
+        }
+      }
     }
   };
 

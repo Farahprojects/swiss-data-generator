@@ -7,6 +7,7 @@ import { useUniversalMic } from '@/hooks/microphone/useUniversalMic';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+import { useMode } from '@/contexts/ModeContext';
 import { useChatInputState } from '@/hooks/useChatInputState';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
@@ -23,6 +24,7 @@ const StopIcon = () => (
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const [isMuted, setIsMuted] = useState(false);
+  const { mode } = useMode();
   
   // Get chat locked state
   
@@ -121,7 +123,8 @@ export const ChatInput = () => {
         body: {
           chat_id: currentChatId!,
           text: text.trim(),
-          client_msg_id
+          client_msg_id,
+          mode: mode
         }
       }).catch((error) => {
         console.error('[ChatInput] Direct invoke failed:', error);
