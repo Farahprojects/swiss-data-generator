@@ -8,6 +8,7 @@ import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
+import { useMode } from '@/contexts/ModeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
@@ -80,6 +81,7 @@ const renderMessages = (messages: Message[]) => {
 
 export const MessageList = () => {
   const chat_id = useChatStore((state) => state.chat_id);
+  const { mode } = useMode();
   
   // Use unified message store
   const { 
@@ -188,33 +190,31 @@ export const MessageList = () => {
       {/* Empty state or content */}
       {!windowError && (
         <>
-          {messages.length === 0 ? (
+          {/* Show AstroDataForm when mode is 'astro' (always) OR when no messages and no chat_id */}
+          {mode === 'astro' || (messages.length === 0 && !astroChoiceMade && !chat_id) ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!astroChoiceMade && !chat_id ? (
-                  <div className="w-full max-w-2xl lg:max-w-4xl">
-                    <AstroDataForm
-                      onClose={() => {
-                        // Close form and show auth overlay for guests; authenticated users simply close
-                        setAstroChoiceMade(true);
-                        if (!isAuthenticated) {
-                          setShowWelcomeOverlay(true);
-                        }
-                      }}
-                      onSubmit={(data) => {
-                        console.log('Astro data submitted:', data);
-                        handleAddAstroData();
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm">Ready to chat! Type your message below.</p>
-                  </div>
-                )}
+                <div className="w-full max-w-2xl lg:max-w-4xl">
+                  <AstroDataForm
+                    onClose={() => {
+                      // Close form and show auth overlay for guests; authenticated users simply close
+                      setAstroChoiceMade(true);
+                      if (!isAuthenticated) {
+                        setShowWelcomeOverlay(true);
+                      }
+                    }}
+                    onSubmit={(data) => {
+                      console.log('Astro data submitted:', data);
+                      handleAddAstroData();
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          ) : (
+          ) : null}
+          
+          {/* Show messages when mode is 'chat' OR when there are messages */}
+          {mode === 'chat' || messages.length > 0 ? (
             <div className="flex flex-col p-4">
               {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
@@ -226,7 +226,7 @@ export const MessageList = () => {
               {/* Sentinel element for auto-scroll */}
               <div ref={bottomRef} />
             </div>
-          )}
+          ) : null}
         </>
       )}
     </div>
