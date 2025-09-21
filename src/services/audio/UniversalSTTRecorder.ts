@@ -8,6 +8,7 @@ export interface STTRecorderOptions {
   silenceMargin?: number; // percentage below baseline to trigger silence (default: 0.15)
   silenceHangover?: number; // ms before triggering silence (default: 300)
   chattype?: string; // e.g., 'voice' or 'text'
+  mode?: string; // e.g., 'chat' or 'astro'
   onProcessingStart?: () => void; // fired when recording stops and processing begins
   triggerPercent?: number; // percentage above baseline to start capture (default: 0.2)
   preRollMs?: number; // how much audio before trigger to include (default: 300)
@@ -486,7 +487,7 @@ export class UniversalSTTRecorder {
         }
         
         // Fire-and-forget STT call - backend handles everything
-        sttService.transcribe(audioBlob, chat_id, {}, this.options.mode).catch((error) => {
+        sttService.transcribe(audioBlob, chat_id, {}, this.options.chattype, this.options.mode).catch((error) => {
           console.error('[UniversalSTTRecorder] STT fire-and-forget failed:', error);
           this.options.onError?.(error as Error);
         });
@@ -498,7 +499,8 @@ export class UniversalSTTRecorder {
         audioBlob,
         chat_id,
         {},
-        this.options.chattype
+        this.options.chattype,
+        this.options.mode
       );
       
       if (transcript && transcript.trim().length > 0 && this.options.onTranscriptReady) {

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
 import { useAudioStore } from '@/stores/audioStore';
+import { useMode } from '@/contexts/ModeContext';
 // Old audio level hook removed - using AudioWorklet + WebWorker pipeline
 import { VoiceBubble } from './VoiceBubble';
 // Universal audio pipeline
@@ -20,6 +21,7 @@ type ConversationState = 'listening' | 'thinking' | 'replying' | 'connecting' | 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
+  const { mode } = useMode();
   const [state, setState] = useState<ConversationState>('connecting');
   
   // Audio context management
@@ -260,6 +262,7 @@ export const ConversationOverlay: React.FC = () => {
       // 6. STEP 4: Initialize Universal Recorder
       recorderRef.current = new UniversalSTTRecorder({
         chattype: 'voice',
+        mode: mode,
         silenceHangover: 600,
         onTranscriptReady: (transcript: string) => {
           if (isShuttingDown.current || isProcessingRef.current) {

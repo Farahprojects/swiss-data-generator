@@ -23,11 +23,12 @@ serve(async (req) => {
       });
     }
 
-    // Expect multipart/form-data with: file, chat_id, chattype, language
+    // Expect multipart/form-data with: file, chat_id, chattype, mode, language
     const form = await req.formData();
     const file = form.get('file') as File | null;
     const chat_id = (form.get('chat_id') as string) || undefined;
     const chattype = (form.get('chattype') as string) || undefined;
+    const mode = (form.get('mode') as string) || undefined;
     const language = (form.get('language') as string) || 'en';
 
     if (!file) {
@@ -139,7 +140,8 @@ serve(async (req) => {
           chat_id,
           text: transcript,
           client_msg_id: crypto.randomUUID(),
-          chattype: 'voice'
+          chattype: 'voice',
+          mode: mode
         })
       }).catch((error) => {
         console.error('[openai-whisper] ❌ User message save failed:', error);
@@ -155,7 +157,8 @@ serve(async (req) => {
         body: JSON.stringify({
           chat_id,
           text: transcript,
-          chattype: 'voice'
+          chattype: 'voice',
+          mode: mode
         })
       }).catch((error) => {
         console.error('[openai-whisper] ❌ LLM call failed:', error);
