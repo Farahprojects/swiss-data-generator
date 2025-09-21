@@ -119,8 +119,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         return;
       }
 
-      // Success - show toast and close modal
-      toast.success('Astro data submitted successfully!');
+      // Success - close modal
       onClose();
       
     } catch (error) {

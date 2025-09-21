@@ -18,6 +18,7 @@ export interface Message {
   message_number?: number; // Global per-chat ordering key
   pending?: boolean; // Optimistic message flag
   tempId?: string; // Temporary ID for reconciliation
+  source?: 'websocket' | 'fetch'; // Message source for animation logic
 }
 
 export interface Conversation {

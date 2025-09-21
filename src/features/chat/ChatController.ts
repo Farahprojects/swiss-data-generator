@@ -59,7 +59,7 @@ class ChatController {
       
       // Then add the fetched messages to the store
       messages.forEach(message => {
-        addMessage(message);
+        addMessage({ ...message, source: 'fetch' });
       });
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
@@ -137,7 +137,7 @@ class ChatController {
     
     // Only add if not already present and no reconciliation occurred
     if (!messages.find(m => m.id === message.id)) {
-      addMessage(message);
+      addMessage({ ...message, source: 'websocket' });
       
       // Handle side-effects after adding to store
       if (message.role === 'assistant') {
@@ -173,7 +173,7 @@ class ChatController {
       updateMessage(message.id, message);
     } else {
       // Message not in store yet, add it
-      addMessage(message);
+      addMessage({ ...message, source: 'websocket' });
     }
   }
 

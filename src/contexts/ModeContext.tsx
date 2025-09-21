@@ -8,6 +8,7 @@ interface ModeContextType {
   mode: ChatMode;
   setMode: (mode: ChatMode) => void;
   isModeLocked: boolean;
+  isLoading: boolean;
 }
 
 const ModeContext = createContext<ModeContextType | undefined>(undefined);
@@ -27,12 +28,14 @@ interface ModeProviderProps {
 export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
   const [mode, setMode] = useState<ChatMode>('chat');
   const [isModeLocked, setIsModeLocked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const { messages, chat_id } = useMessageStore();
 
   // Load mode from conversations.meta when chat_id changes
   useEffect(() => {
     if (chat_id) {
+      setIsLoading(true);
       const loadModeFromConversation = async () => {
         try {
           const { data, error } = await supabase
@@ -42,7 +45,14 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .single();
 
           if (error) {
-            console.error('[ModeContext] Error loading conversation mode:', error);
+            // Handle deleted conversation gracefully
+            if (error.code === 'PGRST116' || error.message?.includes('no rows returned')) {
+              console.log('[ModeContext] Conversation not found (likely deleted), defaulting to chat mode');
+            } else {
+              console.error('[ModeContext] Error loading conversation mode:', error);
+            }
+            setMode('chat');
+            setIsLoading(false);
             return;
           }
 
@@ -58,10 +68,14 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
         } catch (error) {
           console.error('[ModeContext] Error loading mode from conversation:', error);
           setMode('chat'); // Fallback to default
+        } finally {
+          setIsLoading(false);
         }
       };
       
       loadModeFromConversation();
+    } else {
+      setIsLoading(false);
     }
   }, [chat_id]);
 
@@ -124,7 +138,8 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
     <ModeContext.Provider value={{ 
       mode, 
       setMode: handleSetMode, 
-      isModeLocked 
+      isModeLocked,
+      isLoading
     }}>
       {children}
     </ModeContext.Provider>

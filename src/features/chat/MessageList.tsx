@@ -6,6 +6,7 @@ import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
+import { TypewriterText } from '@/components/ui/TypewriterText';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +30,7 @@ const renderMessages = (messages: Message[]) => {
       elements.push(
         <div key={`user-${message.id}`} className="flex items-end gap-3 justify-end mb-4">
           <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
-            message.pending ? 'bg-gray-300 opacity-75' : 'bg-gray-200'
+            message.pending ? 'bg-gray-200 opacity-75' : 'bg-gray-200'
           }`}>
             <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
               {message.text || ''}
@@ -48,9 +49,16 @@ const renderMessages = (messages: Message[]) => {
         <div key={`assistant-${message.id}`} className="flex items-end gap-3 justify-start mb-8">
           <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
             <p className="text-base font-light leading-relaxed text-left selectable-text">
-              <span className="whitespace-pre-wrap">
-                {message.text || ''}
-              </span>
+              {message.source === 'websocket' ? (
+                <TypewriterText 
+                  text={message.text || ''} 
+                  msPerWord={32}
+                />
+              ) : (
+                <span className="whitespace-pre-wrap">
+                  {message.text || ''}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -80,7 +88,7 @@ const renderMessages = (messages: Message[]) => {
 
 export const MessageList = () => {
   const chat_id = useChatStore((state) => state.chat_id);
-  const { mode } = useMode();
+  const { mode, isLoading: modeLoading } = useMode();
   
   // Use unified message store
   const { 
@@ -102,6 +110,11 @@ export const MessageList = () => {
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const [astroChoiceMade, setAstroChoiceMade] = useState(false);
+  
+  // Reset astro choice when switching to a new conversation
+  useEffect(() => {
+    setAstroChoiceMade(false);
+  }, [chat_id]);
   const navigate = useNavigate();
   
   const handleAddAstroData = () => {
@@ -186,7 +199,7 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {mode === 'astro' && !astroChoiceMade ? (
+                {!modeLoading && mode === 'astro' && !astroChoiceMade ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
                       onClose={() => {

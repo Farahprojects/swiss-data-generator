@@ -176,6 +176,11 @@ export const useChatStore = create<ChatState>()(
   clearChat: () => {
     const state = get();
     
+    // Clear message store when clearing chat
+    import('@/stores/messageStore').then(({ useMessageStore }) => {
+      useMessageStore.getState().clearMessages();
+    });
+    
     set({ 
       chat_id: null, 
       // messages removed - use useMessageStore instead

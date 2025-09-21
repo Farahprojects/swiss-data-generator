@@ -131,6 +131,8 @@ export const useMessageStore = create<MessageStore>()(
   // Clear all messages
   clearMessages: () => {
     set({ messages: [], error: null });
+    // Also clear from sessionStorage since we use persist middleware
+    sessionStorage.removeItem('therai-message-store');
   },
 
   // Simple fetch - just get messages, WebSocket handles real-time
