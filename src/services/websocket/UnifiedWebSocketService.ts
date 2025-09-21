@@ -12,8 +12,12 @@ class UnifiedWebSocketService {
 
   // Callbacks for message fetching only
   private onMessage?: (message: Message) => void;
-  private onError?: (error: string) => void;
+  private onMessageUpdated?: (message: Message) => void;
+  private onStatusChange?: (status: string) => void;
+  private onOptimisticMessage?: (message: Message) => void;
+  private onAssistantMessage?: (message: Message) => void;
   private onSystemMessage?: (message: Message) => void;
+  private onError?: (error: string) => void;
 
   constructor() {
     // No content area watching - only message fetching
