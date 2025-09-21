@@ -155,7 +155,7 @@ async function inferTimezone(obj:any){
 
 
 /*──────────────── logging --------------------------------------------------*/
-async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string}){
+async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;mode?:string}){
   const { error } = await sb.from("translator_logs").insert({
     request_type: run.request_type,
     request_payload: run.request_payload,
@@ -166,6 +166,7 @@ async function logTranslator(run:{request_type:string;request_payload:any;swiss_
     error_message: run.error,
     google_geo: run.google_geo,
     user_id: run.user_id ?? null,
+    mode: run.mode ?? 'chat',
     swiss_error: run.swiss_status !== 200, // Set swiss_error based on status
   });
   if(error) console.error("[translator] log fail", error.message);
@@ -291,7 +292,7 @@ serve(async (req)=>{
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
 
-    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id });
+    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, mode:body.mode });
     
     // Call context-injector for all successful astro data reports
     if (body.user_id && swiss.ok) {
@@ -315,7 +316,7 @@ serve(async (req)=>{
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId });
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, mode:body?.mode });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });

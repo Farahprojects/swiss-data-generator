@@ -87,6 +87,7 @@ serve(async (req) => {
         client_msg_id: client_msg_id || crypto.randomUUID(),
         status: "complete",
         message_number: nextMessageNumber,
+        mode: mode || 'chat',
         meta: {}
       };
 
@@ -128,6 +129,7 @@ serve(async (req) => {
       client_msg_id: client_msg_id || crypto.randomUUID(),
       status: "complete",
       message_number: nextMessageNumber,
+      mode: mode || 'chat',
       meta: {}
     };
 

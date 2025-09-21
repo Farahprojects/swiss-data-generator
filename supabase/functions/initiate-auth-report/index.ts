@@ -35,6 +35,7 @@ interface AuthReportRequest {
   };
   email: string;
   name: string;
+  mode: string;
 }
 
 serve(async (req) => {
@@ -44,7 +45,7 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, report_data, email, name } = await req.json() as AuthReportRequest;
+    const { chat_id, report_data, email, name, mode } = await req.json() as AuthReportRequest;
     
     console.log(`🔄 [initiate-auth-report] Processing request for chat_id: ${chat_id}`);
 
@@ -110,7 +111,8 @@ serve(async (req) => {
       user_id: chat_id,
       request_id: crypto.randomUUID().slice(0, 8),
       email: email,
-      name: name
+      name: name,
+      mode: mode
     };
 
     console.log(`🔄 [initiate-auth-report] Built translator payload for: ${chat_id}`);

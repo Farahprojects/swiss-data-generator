@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMode } from '@/contexts/ModeContext';
 import { useLocation } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
@@ -45,6 +46,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Conversation management for authenticated users
   const { addThread } = useChatStore();
   const chat_id = useChatStore((state) => state.chat_id);
+  const { mode } = useMode();
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -189,6 +191,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       report_data: reportData,
       email: user?.email || '',
       name: data.name,
+      mode: mode, // Add mode to payload
     };
   };
 
