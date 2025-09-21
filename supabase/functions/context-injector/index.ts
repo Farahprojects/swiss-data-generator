@@ -27,7 +27,7 @@ serve(async (req) => {
       return new Response("Warm-up", { status: 200, headers: corsHeaders });
     }
 
-    const { chat_id } = requestBody;
+        const { chat_id, mode } = requestBody;
 
     // Basic chat_id validation
     if (!chat_id || typeof chat_id !== 'string') {
@@ -71,11 +71,11 @@ serve(async (req) => {
       );
     }
 
-    // Get Swiss data and mode if it exists
+    // Get Swiss data if it exists
     console.log(`[context-injector][${requestId}] 🔍 Fetching Swiss data...`);
     const { data: translatorLogs } = await supabase
       .from("translator_logs")
-      .select("swiss_data, mode")
+      .select("swiss_data")
       .eq("user_id", chat_id)
       .single();
 
@@ -99,7 +99,7 @@ serve(async (req) => {
         text: contextContent,
         status: "complete",
         context_injected: true,
-        mode: translatorLogs?.mode || 'chat',
+        mode: mode || 'chat',
         meta: {
           has_swiss_data: !!translatorLogs?.swiss_data,
           injection_timestamp: new Date().toISOString()

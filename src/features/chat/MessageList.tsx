@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
+import { useNavigate } from 'react-router-dom';
+import { useMode } from '@/contexts/ModeContext';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
 const renderMessages = (messages: Message[]) => {
@@ -80,6 +80,7 @@ const renderMessages = (messages: Message[]) => {
 
 export const MessageList = () => {
   const chat_id = useChatStore((state) => state.chat_id);
+  const { mode } = useMode();
   
   // Use unified message store
   const { 
@@ -96,17 +97,11 @@ export const MessageList = () => {
   
   // Auth detection
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const userId = searchParams.get('user_id');
-  const guestReportId = searchParams.get('guest_id');
-  const isAuthenticated = !!user && !!userId;
-  const isGuest = !!guestReportId;
   
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const [astroChoiceMade, setAstroChoiceMade] = useState(false);
-  const [showWelcomeOverlay, setShowWelcomeOverlay] = useState(false);
   const navigate = useNavigate();
   
   const handleAddAstroData = () => {
@@ -191,16 +186,9 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!astroChoiceMade && !chat_id ? (
+                {mode === 'astro' && !astroChoiceMade ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
-                      onClose={() => {
-                        // Close form and show auth overlay for guests; authenticated users simply close
-                        setAstroChoiceMade(true);
-                        if (!isAuthenticated) {
-                          setShowWelcomeOverlay(true);
-                        }
-                      }}
                       onSubmit={(data) => {
                         console.log('Astro data submitted:', data);
                         handleAddAstroData();
@@ -230,13 +218,6 @@ export const MessageList = () => {
         </>
       )}
     </div>
-    
-    {/* Welcome overlay after closing astro form (guests) */}
-    <WelcomeBackModal
-      isOpen={showWelcomeOverlay}
-      onClose={() => setShowWelcomeOverlay(false)}
-      onBackToForm={() => setAstroChoiceMade(false)}
-    />
     </>
   );
 };

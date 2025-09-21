@@ -166,7 +166,6 @@ async function logTranslator(run:{request_type:string;request_payload:any;swiss_
     error_message: run.error,
     google_geo: run.google_geo,
     user_id: run.user_id ?? null,
-    mode: run.mode ?? 'chat',
     swiss_error: run.swiss_status !== 200, // Set swiss_error based on status
   });
   if(error) console.error("[translator] log fail", error.message);
@@ -299,7 +298,7 @@ serve(async (req)=>{
       console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
       try {
         const { error: injectorError } = await sb.functions.invoke('context-injector', {
-          body: { chat_id: body.user_id }
+          body: { chat_id: body.user_id, mode: body.mode }
         });
         
         if (injectorError) {
