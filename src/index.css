@@ -170,34 +170,21 @@ html, body {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  BROWSER CONTROL - BLOCK ALL INTERFERENCE                                  */
+/*  BROWSER CONTROL - TARGETED INTERFERENCE PREVENTION                       */
 /* -------------------------------------------------------------------------- */
+/* Remove tap highlights globally but allow text selection by default */
 * {
-  -webkit-touch-callout: none;           /* Disable iOS callout menu */
-  -webkit-user-select: none;             /* Disable text selection */
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlights */
+}
+
+/* Prevent text selection only on UI elements, not content */
+button, [role="button"], [onclick], nav, header, footer {
+  -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  -webkit-tap-highlight-color: transparent; /* Remove tap highlights */
-  touch-action: manipulation;            /* Force immediate touch response */
-}
-
-/* Allow text selection in inputs and content areas */
-input, textarea, [contenteditable], .selectable-text {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
-}
-
-/* Force all buttons to respond immediately */
-button, [role="button"], [onclick] {
-  touch-action: manipulation;
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   cursor: pointer;
 }
 
@@ -207,13 +194,6 @@ button, [role="button"], [onclick] {
   -webkit-touch-callout: default !important;
   -webkit-user-select: none !important;
   user-select: none !important;
-}
-
-/* Prevent context menus on all interactive elements */
-button, [role="button"], [onclick], a {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 /* Prevent iOS from auto‑zooming form fields */
@@ -296,43 +276,16 @@ gmp-place-autocomplete::part(result-item) {
 /*  MOBILE FORM PROTECTOR                                                    */
 /* -------------------------------------------------------------------------- */
 .mobile-form-protector {
-  /* Prevent all browser interference */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  
-  /* Prevent text selection */
-  -webkit-touch-callout: none;
+  /* Prevent pull-to-refresh and zoom interference */
   -webkit-tap-highlight-color: transparent;
-  
-  /* Allow scrolling but prevent zoom */
   touch-action: pan-y;
-  
-  /* Prevent pull-to-refresh */
   overscroll-behavior: contain;
-  
-  /* Smooth scrolling */
   -webkit-overflow-scrolling: touch;
-  
-  /* Prevent context menu */
-  -webkit-touch-callout: none;
   
   /* Ensure proper stacking */
   position: relative;
   isolation: isolate;
   z-index: 1000;
-}
-
-/* Allow text selection in inputs and textareas */
-.mobile-form-protector input,
-.mobile-form-protector textarea,
-.mobile-form-protector [contenteditable] {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
 }
 
 /* Fixed footer at bottom of viewport, resists keyboard push */
