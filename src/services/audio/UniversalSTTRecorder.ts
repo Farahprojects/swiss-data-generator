@@ -7,7 +7,7 @@ export interface STTRecorderOptions {
   baselineCaptureDuration?: number; // ms to capture baseline energy (default: 1000)
   silenceMargin?: number; // percentage below baseline to trigger silence (default: 0.15)
   silenceHangover?: number; // ms before triggering silence (default: 300)
-  mode?: string; // e.g., 'conversation'
+  chattype?: string; // e.g., 'voice' or 'text'
   onProcessingStart?: () => void; // fired when recording stops and processing begins
   triggerPercent?: number; // percentage above baseline to start capture (default: 0.2)
   preRollMs?: number; // how much audio before trigger to include (default: 300)
@@ -24,6 +24,7 @@ export class UniversalSTTRecorder {
   private dataArray: Float32Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
+  private bandpassFilter: BiquadFilterNode | null = null; // unused (kept for backward type compat if imported elsewhere)
   private adaptiveGain: GainNode | null = null; // desktop-only dynamic gain
   private scriptProcessor: ScriptProcessorNode | null = null;
   private silentGain: GainNode | null = null;
@@ -463,19 +464,22 @@ export class UniversalSTTRecorder {
     }
   }
 
+  private processRecording(): void {}
 
   private async sendToSTT(audioBlob: Blob): Promise<void> {
     try {
       // Import STT service dynamically to avoid circular dependencies
-      const { sttService } = await import('@/services/voice/stt');
-      const { chat_id } = (await import('@/core/store')).useChatStore.getState();
-      
+      const sttModule = await import('@/services/voice/stt');
+      const storeModule = await import('@/core/store');
+      const { sttService } = sttModule;
+      const { chat_id } = storeModule.useChatStore.getState();
+
       if (!chat_id) {
         throw new Error('No chat_id available for STT');
       }
       
-      // In conversation mode, STT is fire-and-forget - no transcript return
-      if (this.options.mode === 'conversation') {
+      // In voice mode, STT is fire-and-forget - no transcript return
+      if (this.options.chattype === 'voice') {
         // Immediately trigger thinking state via callback
         if (this.options.onTranscriptReady) {
           this.options.onTranscriptReady(''); // Empty string triggers thinking state
@@ -489,12 +493,12 @@ export class UniversalSTTRecorder {
         return;
       }
       
-      // For non-conversation mode (chat bar), await transcript and call callback
+      // For non-voice mode (text chat), await transcript and call callback
       const { transcript } = await sttService.transcribe(
         audioBlob,
         chat_id,
         {},
-        this.options.mode
+        this.options.chattype
       );
       
       if (transcript && transcript.trim().length > 0 && this.options.onTranscriptReady) {
@@ -506,6 +510,7 @@ export class UniversalSTTRecorder {
     }
   }
 
+  private getSupportedMimeType(): string { return 'audio/wav'; }
 
   // Resample Float32 mono buffer from inputSampleRate to 16kHz using linear interpolation
   private resampleTo16k(input: Float32Array, inputSampleRate: number): Int16Array {
@@ -602,6 +607,7 @@ export class UniversalSTTRecorder {
     this.analyser = null;
     this.highPassFilter = null;
     this.lowPassFilter = null;
+    this.bandpassFilter = null;
     this.dataArray = null;
     this.vadActive = false;
     

@@ -36,7 +36,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, mode } = body;
+    const { chat_id, text, mode, chattype } = body;
 
     console.log(`[llm-handler-openai] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, mode: ${mode || 'default'}, text: ${text.substring(0, 50)}...`);
 
@@ -163,8 +163,8 @@ Content Rules:
     const llmLatency_ms = Date.now() - requestStartTime;
     const totalLatency_ms = Date.now() - requestStartTime;
 
-    // Fire-and-forget TTS call - ONLY for conversation mode
-    if (mode === 'conversation') {
+    // Fire-and-forget TTS call - ONLY for voice mode
+    if (chattype === 'voice') {
       console.log(`[llm-handler-openai] 💬 CONVERSATION MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
       
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
@@ -197,7 +197,7 @@ Content Rules:
           text: sanitizedText,
           client_msg_id: assistantClientId,
           role: 'assistant',
-          mode: 'conversation'
+          chattype: 'voice'
         })
       }).then((response) => {
         console.log(`[llm-handler-openai] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
@@ -205,8 +205,8 @@ Content Rules:
         console.error(`[llm-handler-openai] ❌ CHAT-SEND CALL FAILED - client_msg_id: ${assistantClientId}, error:`, err);
       });
     } else {
-      // Non-conversation mode - also send to chat-send
-      console.log(`[llm-handler-openai] 🤖 NON-CONVERSATION MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
+      // Non-voice mode - also send to chat-send
+      console.log(`[llm-handler-openai] 🤖 NON-VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
       
       const assistantClientId = crypto.randomUUID();
       console.log(`[llm-handler-openai] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);

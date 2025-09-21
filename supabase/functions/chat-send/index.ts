@@ -39,7 +39,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, client_msg_id, mode, role, sessionId } = body;
+    const { chat_id, text, client_msg_id, mode, chattype, role, sessionId } = body;
 
     console.log(`[chat-send] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, role: ${role || 'user'}, mode: ${mode || 'default'}`);
     console.log(`[chat-send] 📥 REQUEST BODY DEBUG:`, JSON.stringify({ chat_id, text: text?.substring(0, 50), client_msg_id, mode, role, sessionId }, null, 2));
@@ -154,8 +154,8 @@ serve(async (req) => {
         console.error('[chat-send] ❌ USER MESSAGE SAVE ERROR:', err);
       });
 
-    // For conversation mode, just save user message (STT handles LLM call separately)
-    if (mode === 'conversation') {
+    // For voice mode, just save user message (STT handles LLM call separately)
+    if (chattype === 'voice') {
       console.log('[chat-send] 💬 CONVERSATION MODE: User message saved, no LLM call needed');
       return new Response(JSON.stringify({
         message: "User message saved successfully",

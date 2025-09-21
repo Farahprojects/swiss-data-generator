@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
-  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, mode?: string): Promise<{ transcript: string }> {
+  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, chattype?: string): Promise<{ transcript: string }> {
     
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
@@ -27,7 +27,7 @@ class SttService {
     const form = new FormData();
     form.append('file', audioBlob, 'audio');
     if (chat_id) form.append('chat_id', chat_id);
-    if (mode) form.append('mode', mode);
+    if (chattype) form.append('chattype', chattype);
     form.append('language', 'en');
 
     const { data, error } = await supabase.functions.invoke('openai-whisper', {
