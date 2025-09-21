@@ -21,14 +21,13 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
     setShowForm(false);
   };
 
-  const handleFormSubmit = (data: ReportFormData & { chat_id?: string; guest_report_id?: string }) => {
+  const handleFormSubmit = (data: ReportFormData & { chat_id?: string }) => {
     console.log('Astro data submitted:', data);
     
-    if (data.chat_id && data.guest_report_id) {
-      // Success! We have a chat_id and guest_report_id
+    if (data.chat_id) {
+      // Success! We have a chat_id
       console.log('Success data:', {
-        chat_id: data.chat_id,
-        guest_report_id: data.guest_report_id
+        chat_id: data.chat_id
       });
       
       // TODO: Store these in the chat store or context
@@ -36,7 +35,7 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
       setShowForm(false);
       onAddAstroData();
     } else {
-      console.error('Missing chat_id or guest_report_id from form submission');
+      console.error('Missing chat_id from form submission');
     }
   };
 

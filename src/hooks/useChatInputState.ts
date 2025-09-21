@@ -45,7 +45,7 @@ export const useChatInputState = () => {
     chat_id: chatState.chat_id,
     addThread: chatState.addThread,
     
-    // Report state (removed guest functionality)
+    // Report state
     isPolling: false,
     isReportReady: false,
     
@@ -57,8 +57,8 @@ export const useChatInputState = () => {
     // Payment flow state (simplified - using chat store only)
     isPaymentConfirmed: false, // Not needed anymore
     isReportGenerating: chatState.isAssistantTyping, // Use isAssistantTyping instead
-    paymentFlowIsReportReady: false, // Removed guest functionality
-    paymentFlowError: null, // Not needed anymore
+    paymentFlowIsReportReady: false,
+    paymentFlowError: null,
     
     // Derived state
     isAssistantGenerating,

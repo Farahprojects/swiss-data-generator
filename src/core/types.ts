@@ -24,7 +24,6 @@ export interface Message {
 export interface Conversation {
   id: string;
   user_id?: string;
-  guestId?: string;
   reportId?: string;
   title?: string;
   created_at: string;

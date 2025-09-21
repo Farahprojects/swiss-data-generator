@@ -31,7 +31,6 @@ export const reportSchema = z.object({
   promoCode: z.string().optional(),
   // Chat-related fields
   chat_id: z.string().optional(),
-  guest_report_id: z.string().optional(),
 // Removed all tight validation - let backend handle validation
 });
 

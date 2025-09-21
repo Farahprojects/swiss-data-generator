@@ -49,8 +49,8 @@ export const SettingsModal = () => {
     }
   };
 
-  const handleGuestAction = (panel: string) => {
-    if (!user && panel !== 'general') {
+  const handlePanelClick = (panel: string) => {
+    if (!user && panel !== 'general' && panel !== 'support') {
       setShowSignInPrompt(true);
       return;
     }
@@ -91,7 +91,7 @@ export const SettingsModal = () => {
                     className={`w-full justify-start hover:bg-gray-100 hover:text-gray-900 ${
                       activePanel === tab.id ? "bg-muted font-semibold" : "text-gray-700"
                     }`}
-                    onClick={() => handleGuestAction(tab.id)}
+                    onClick={() => handlePanelClick(tab.id)}
                   >
                   <tab.icon className="mr-2 h-4 w-4" />
                   {tab.label}

@@ -55,13 +55,6 @@ export const SignInPrompt: React.FC<SignInPromptProps> = ({ feature, onClose }) 
               Create Account
             </Button>
             
-            <Button 
-              variant="ghost" 
-              onClick={onClose}
-              className="w-full text-gray-500 font-light"
-            >
-              Continue as Guest
-            </Button>
           </div>
         </div>
       </div>

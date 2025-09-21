@@ -132,9 +132,7 @@ export const useChatStore = create<ChatState>()(
       
       return conversationId;
     } else {
-      // Guest user: No longer create chat IDs on frontend
-      // All guest chat IDs must come from backend (threads-manager edge function)
-      throw new Error('Guest users cannot create chat IDs on frontend. Use threads-manager edge function.');
+      throw new Error('User authentication required to create conversations.');
     }
   },
 
@@ -207,13 +205,6 @@ export const useChatStore = create<ChatState>()(
           sessionStorage.removeItem(key);
         });
         
-        // Clear any guest keys (in case of mixed state)
-        const guestKeys = Object.keys(sessionStorage).filter(key => 
-          key.startsWith('therai_active_chat_guest_')
-        );
-        guestKeys.forEach(key => {
-          sessionStorage.removeItem(key);
-        });
         
         // Extra safety: Clear any remaining chat-related keys
         const chatKeys = Object.keys(sessionStorage).filter(key => 
