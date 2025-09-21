@@ -126,7 +126,7 @@ serve(async (req) => {
 
     // For voice mode: Save user message and call LLM separately
     if (chattype === 'voice' && chat_id) {
-      console.log('[openai-whisper] 🔄 CONVERSATION MODE: Saving user message and calling LLM');
+      console.log('[openai-whisper] 🔄 VOICE MODE: Saving user message and calling LLM');
       
       // Fire and forget: Save user message to chat-send
       fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {

@@ -76,7 +76,7 @@ serve(async (req) => {
 
     const nextMessageNumber = userMessageNumber;
 
-    // If this is an assistant message (e.g., from LLM in conversation mode), save assistant only
+    // If this is an assistant message (e.g., from LLM in voice mode), save assistant only
     if (role === 'assistant') {
       console.log(`[chat-send] 🎯 ASSISTANT MESSAGE RECEIVED - chat_id: ${chat_id}, text: ${text.substring(0, 50)}...`);
       
@@ -156,7 +156,7 @@ serve(async (req) => {
 
     // For voice mode, just save user message (STT handles LLM call separately)
     if (chattype === 'voice') {
-      console.log('[chat-send] 💬 CONVERSATION MODE: User message saved, no LLM call needed');
+      console.log('[chat-send] 🎤 VOICE MODE: User message saved, no LLM call needed');
       return new Response(JSON.stringify({
         message: "User message saved successfully",
         user_message: userMessageData

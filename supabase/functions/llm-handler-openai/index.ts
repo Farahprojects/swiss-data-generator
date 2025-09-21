@@ -165,7 +165,7 @@ Content Rules:
 
     // Fire-and-forget TTS call - ONLY for voice mode
     if (chattype === 'voice') {
-      console.log(`[llm-handler-openai] 💬 CONVERSATION MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
+      console.log(`[llm-handler-openai] 🎤 VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
       
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
