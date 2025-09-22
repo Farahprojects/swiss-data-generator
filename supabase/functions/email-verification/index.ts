@@ -36,7 +36,7 @@ serve(async (req) => {
     emailOtp = body.email_otp ?? "";
     templateType = body.template_type ?? "email_change";
     confirmationToken = body.confirmation_token ?? "";
-    log("✓ Request received:", { userId, hasUserId: !!userId, hasTokenLink: !!tokenLink, hasConfirmationToken: !!confirmationToken, templateType });
+    log("✓ Request received:", { userId, hasUserId: !!userId, hasTokenLink: !!tokenLink, hasEmailOtp: !!emailOtp, hasConfirmationToken: !!confirmationToken, templateType });
   } catch (e) {
     log("✗ JSON parsing failed:", e);
     return respond(400, { error: "Invalid JSON" });
@@ -81,8 +81,10 @@ serve(async (req) => {
         return respond(400, { error: "User does not have a valid email" });
       }
       
-      // Use confirmation token if provided, otherwise use the tokenLink
-      if (confirmationToken) {
+      // Use email_otp if provided (from generateLink), otherwise use confirmation_token
+      if (emailOtp) {
+        log("✓ Using email_otp from generateLink for email verification");
+      } else if (confirmationToken) {
         emailOtp = confirmationToken; // Use confirmation token as OTP for template
         log("✓ Using confirmation token for email verification");
       }

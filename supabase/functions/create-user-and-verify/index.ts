@@ -87,36 +87,75 @@ serve(async (req) => {
     console.log(`[create-user-and-verify] ============================================`);
     console.log(`[create-user-and-verify] Full response data:`, JSON.stringify(signUpData, null, 2));
     console.log(`[create-user-and-verify] User object:`, JSON.stringify(signUpData.user, null, 2));
-    console.log(`[create-user-and-verify] User identities:`, JSON.stringify(signUpData.user.identities, null, 2));
-    if (signUpData.user.identities?.[0]) {
-      console.log(`[create-user-and-verify] First identity:`, JSON.stringify(signUpData.user.identities[0], null, 2));
-      console.log(`[create-user-and-verify] Confirmation token:`, signUpData.user.identities[0].confirmation_token);
-    }
     console.log(`[create-user-and-verify] ============================================`);
 
-    // Step 2: Extract confirmation token from the response
-    const confirmationToken = signUpData.user.identities?.[0]?.confirmation_token;
-    if (!confirmationToken) {
-      console.error(`[create-user-and-verify] No confirmation token found in response`);
+    // Step 2: Generate verification link using generateLink (this creates the actual token)
+    console.log(`[create-user-and-verify] Generating verification link with generateLink...`);
+    const { data: linkData, error: linkError } = await supabaseClient.auth.admin.generateLink({
+      type: "signup",
+      email: email,
+      password: password,
+      options: { 
+        redirectTo: "https://auth.therai.co/auth/email"
+      }
+    });
+
+    if (linkError) {
+      console.error(`[create-user-and-verify] Link generation error:`, linkError);
+      
+      // Handle specific error cases for link generation
+      if (linkError.message?.includes('already been registered') || 
+          linkError.message?.includes('already registered') || 
+          linkError.status === 422 || 
+          linkError.code === 'email_exists') {
+        return new Response(JSON.stringify({ 
+          error: 'An account with this email already exists. Please sign in instead.',
+          code: 'EMAIL_EXISTS'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409, // Conflict status for already exists
+        });
+      }
+      
       return new Response(JSON.stringify({ 
-        error: 'Failed to get confirmation token',
-        code: 'TOKEN_EXTRACTION_FAILED'
+        error: 'Failed to generate verification link',
+        code: 'LINK_GENERATION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    // Build the verification link using the confirmation token
-    const tokenLink = `https://auth.therai.co/auth/email?token=${confirmationToken}&type=signup`;
-    
-    console.log(`[create-user-and-verify] Confirmation token extracted and link built successfully`);
+    console.log(`[create-user-and-verify] 🔗 GENERATED LINK DATA:`);
+    console.log(`[create-user-and-verify] ============================================`);
+    console.log(`[create-user-and-verify] Link data:`, JSON.stringify(linkData, null, 2));
+    console.log(`[create-user-and-verify] Action link:`, linkData?.action_link);
+    console.log(`[create-user-and-verify] Properties:`, JSON.stringify(linkData?.properties, null, 2));
+    console.log(`[create-user-and-verify] ============================================`);
 
-    // Step 3: Call email-verification Edge Function with the confirmation token
+    const tokenLink = linkData?.action_link || "";
+    const emailOtp = linkData?.properties?.email_otp || "";
+    
+    if (!tokenLink) {
+      console.error(`[create-user-and-verify] No action_link in generateLink response`);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to generate verification link',
+        code: 'LINK_GENERATION_FAILED'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
+    console.log(`[create-user-and-verify] Verification link generated successfully`);
+    console.log(`[create-user-and-verify] Token link: ${tokenLink}`);
+    console.log(`[create-user-and-verify] Email OTP: ${emailOtp}`);
+
+    // Step 3: Call email-verification Edge Function with the generated link and OTP
     const emailPayload = {
       user_id: signUpData.user.id,
       token_link: tokenLink,
-      confirmation_token: confirmationToken,
+      email_otp: emailOtp,
       template_type: "email_verification"
     };
 
@@ -124,7 +163,7 @@ serve(async (req) => {
     console.log(`[create-user-and-verify] ============================================`);
     console.log(`[create-user-and-verify] user_id: ${emailPayload.user_id}`);
     console.log(`[create-user-and-verify] token_link: ${emailPayload.token_link}`);
-    console.log(`[create-user-and-verify] confirmation_token: ${emailPayload.confirmation_token}`);
+    console.log(`[create-user-and-verify] email_otp: ${emailPayload.email_otp}`);
     console.log(`[create-user-and-verify] template_type: ${emailPayload.template_type}`);
     console.log(`[create-user-and-verify] ============================================`);
 
