@@ -64,6 +64,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showEditTitle, setShowEditTitle] = useState(false);
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -220,12 +221,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Save title changes
   const handleSaveTitle = async () => {
-    if (!editingConversationId || !editTitle.trim()) return;
+    if (!editingConversationId || !editTitle.trim() || isSavingTitle) return;
+    
+    setIsSavingTitle(true);
     
     try {
-      await updateConversationTitle(editingConversationId, editTitle.trim());
+      // Fire-and-forget API call - don't wait for it
+      updateConversationTitle(editingConversationId, editTitle.trim()).catch((error) => {
+        console.error('[ChatThreadsSidebar] Failed to update title:', error);
+      });
       
-      // Manually update the local state immediately for instant UI update
+      // Immediately update the local state for instant UI feedback
       const { updateConversation, threads } = useChatStore.getState();
       const existingConversation = threads.find(t => t.id === editingConversationId);
       
@@ -238,16 +244,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         updateConversation(updatedConversation);
       }
       
+      // Close modal immediately after local update
       setShowEditTitle(false);
       setEditingConversationId(null);
       setEditTitle('');
     } catch (error) {
       console.error('[ChatThreadsSidebar] Failed to update title:', error);
+    } finally {
+      setIsSavingTitle(false);
     }
   };
 
   // Cancel edit
   const handleCancelEdit = () => {
+    if (isSavingTitle) return; // Prevent canceling while saving
     setShowEditTitle(false);
     setEditingConversationId(null);
     setEditTitle('');
@@ -440,7 +450,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <h3 className="text-lg font-medium text-gray-900">Edit Chat Title</h3>
               <button
                 onClick={handleCancelEdit}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                disabled={isSavingTitle}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -454,8 +465,16 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && editTitle.trim() && !isSavingTitle) {
+                      handleSaveTitle();
+                    } else if (e.key === 'Escape') {
+                      handleCancelEdit();
+                    }
+                  }}
                   placeholder="Enter chat title..."
-                  className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent placeholder-gray-400"
+                  disabled={isSavingTitle}
+                  className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   autoFocus
                 />
               </div>
@@ -463,10 +482,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <div className="flex justify-end">
                 <button
                   onClick={handleSaveTitle}
-                  disabled={!editTitle.trim()}
-                  className="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={!editTitle.trim() || isSavingTitle}
+                  className="px-6 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 >
-                  Save
+                  {isSavingTitle && (
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                  {isSavingTitle ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
