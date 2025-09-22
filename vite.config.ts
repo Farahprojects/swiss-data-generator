@@ -4,28 +4,36 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-    cors: {
-      origin: true,
-      credentials: true
-    }
-  },
-  plugins: [
-    react(),
-    mode === 'development' && componentTagger(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  // Log environment variables during build
+  console.log('🔧 Vite Build Configuration:');
+  console.log('Mode:', mode);
+  console.log('VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? 'SET' : 'NOT SET');
+  console.log('VITE_SUPABASE_PUBLISHABLE_KEY:', process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'SET' : 'NOT SET');
+  
+  return {
+    server: {
+      host: "::",
+      port: 8080,
+      cors: {
+        origin: true,
+        credentials: true
+      }
     },
-  },
-  worker: {
-    format: 'es'
-  },
-  optimizeDeps: {
-    exclude: ['src/workers/audio/ConversationAudioProcessor.js']
-  }
-}));
+    plugins: [
+      react(),
+      mode === 'development' && componentTagger(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    worker: {
+      format: 'es'
+    },
+    optimizeDeps: {
+      exclude: ['src/workers/audio/ConversationAudioProcessor.js']
+    }
+  };
+});
