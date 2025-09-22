@@ -11,7 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /* ─────────────────────────── ENV ───────────────────────────────────────── */
 
-const SUPABASE_URL  = Deno.env.get("VITE_SUPABASE_URL")!;
+const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 if (!SUPABASE_URL || !SERVICE_KEY)
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");

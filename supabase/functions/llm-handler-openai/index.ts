@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Create Supabase client once at module scope for better performance
 const supabase = createClient(
-  Deno.env.get("VITE_SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   { auth: { persistSession: false } }
 );
@@ -167,7 +167,7 @@ Content Rules:
     if (chattype === 'voice') {
       console.log(`[llm-handler-openai] 🎤 VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
       
-      fetch(`${Deno.env.get("VITE_SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ Content Rules:
       const assistantClientId = crypto.randomUUID();
       console.log(`[llm-handler-openai] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
       
-      fetch(`${Deno.env.get("VITE_SUPABASE_URL")}/functions/v1/chat-send`, {
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,7 +212,7 @@ Content Rules:
       const assistantClientId = crypto.randomUUID();
       console.log(`[llm-handler-openai] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
       
-      fetch(`${Deno.env.get("VITE_SUPABASE_URL")}/functions/v1/chat-send`, {
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

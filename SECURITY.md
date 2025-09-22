@@ -6,7 +6,7 @@ Create a `.env.local` file in the root directory with the following variables:
 
 ```bash
 # Supabase Configuration (REQUIRED)
-VITE_SUPABASE_URL=https://api.therai.co
+VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key-here
 
 # API Keys (Optional - for local development)

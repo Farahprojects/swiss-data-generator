@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno
 /// ---- Config / helpers -------------------------------------------------------
 
 const SITE_URL = Deno.env.get('SITE_URL') || 'https://therai.co';
-const SUPABASE_URL = Deno.env.get('VITE_SUPABASE_URL')!;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const LOG_LEVEL = Deno.env.get('LOG_LEVEL') ?? 'info';
 const debug = (...a: any[]) => (LOG_LEVEL === 'debug' ? console.log(...a) : void 0);
