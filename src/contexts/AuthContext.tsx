@@ -312,11 +312,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Create user first using admin API
-      const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+      // Use regular Supabase Auth signup (not admin API)
+      const { data: userData, error: createError } = await supabase.auth.signUp({
         email,
         password,
-        email_confirm: false // Don't auto-confirm email
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
       });
 
       if (createError) {
@@ -336,43 +338,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       log('debug', 'User created successfully', { userId: userData.user.id }, 'auth');
 
-      // Generate signup verification link using admin API
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: "signup",
-        email: email,
-        password: password,
-        options: { 
-          redirectTo: "https://auth.therai.co/auth/email" // Same redirect as email-verification function
-        }
-      });
-
-      if (linkError) {
-        log('debug', 'Link generation error', { error: linkError }, 'auth');
-        return { error: new Error('Failed to generate verification link') };
-      }
-
-      const tokenLink = linkData?.properties?.action_link || "";
-      if (!tokenLink) {
-        return { error: new Error('Failed to generate verification link') };
-      }
-
-      log('debug', 'Signup link generated', { hasLink: !!tokenLink }, 'auth');
-
-      // Call email-verification edge function to send the email
-      const { error: emailError } = await supabase.functions.invoke('email-verification', {
-        body: {
-          user_id: userData.user.id,
-          token_link: tokenLink,
-          template_type: "email_verification"
-        }
-      });
-
-      if (emailError) {
-        log('debug', 'Email sending error', { error: emailError }, 'auth');
-        return { error: new Error('Failed to send verification email') };
-      }
-
-      // Success case - verification email sent
+      // Regular signup automatically sends verification email
+      // No need for additional admin API calls
+      
+      // Success case - verification email sent automatically
       return { 
         error: null, 
         data: { 
