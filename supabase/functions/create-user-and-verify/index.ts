@@ -50,17 +50,22 @@ serve(async (req) => {
       console.error(`[create-user-and-verify] SignUp error:`, signUpError);
       
       // Handle specific error cases
-      if (signUpError.message?.includes('already been registered') || signUpError.status === 422) {
+      if (signUpError.message?.includes('already been registered') || 
+          signUpError.message?.includes('already registered') ||
+          signUpError.status === 422 || 
+          signUpError.code === 'email_exists') {
         return new Response(JSON.stringify({ 
-          error: 'An account with this email already exists. Please sign in instead.' 
+          error: 'An account with this email already exists. Please sign in instead.',
+          code: 'EMAIL_EXISTS'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 409, // Conflict status for already exists
         });
       }
       
       return new Response(JSON.stringify({ 
-        error: signUpError.message || 'Failed to create account' 
+        error: signUpError.message || 'Failed to create account',
+        code: 'USER_CREATION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -69,7 +74,8 @@ serve(async (req) => {
 
     if (!signUpData.user) {
       return new Response(JSON.stringify({ 
-        error: 'Failed to create user account' 
+        error: 'Failed to create user account',
+        code: 'USER_CREATION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -90,8 +96,24 @@ serve(async (req) => {
 
     if (linkError) {
       console.error(`[create-user-and-verify] Link generation error:`, linkError);
+      
+      // Handle specific error cases for link generation
+      if (linkError.message?.includes('already been registered') || 
+          linkError.message?.includes('already registered') || 
+          linkError.status === 422 || 
+          linkError.code === 'email_exists') {
+        return new Response(JSON.stringify({ 
+          error: 'An account with this email already exists. Please sign in instead.',
+          code: 'EMAIL_EXISTS'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409, // Conflict status for already exists
+        });
+      }
+      
       return new Response(JSON.stringify({ 
-        error: 'Failed to generate verification link' 
+        error: 'Failed to generate verification link',
+        code: 'LINK_GENERATION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -101,7 +123,8 @@ serve(async (req) => {
     const tokenLink = linkData?.properties?.action_link || "";
     if (!tokenLink) {
       return new Response(JSON.stringify({ 
-        error: 'Failed to generate verification link' 
+        error: 'Failed to generate verification link',
+        code: 'LINK_GENERATION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -122,7 +145,8 @@ serve(async (req) => {
     if (emailError) {
       console.error(`[create-user-and-verify] Email sending error:`, emailError);
       return new Response(JSON.stringify({ 
-        error: 'Failed to send verification email' 
+        error: 'Failed to send verification email',
+        code: 'EMAIL_SEND_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -144,7 +168,8 @@ serve(async (req) => {
   } catch (error) {
     console.error('[create-user-and-verify] Unexpected error:', error);
     return new Response(JSON.stringify({ 
-      error: 'An unexpected error occurred during signup' 
+      error: 'An unexpected error occurred during signup',
+      code: 'UNEXPECTED_ERROR'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

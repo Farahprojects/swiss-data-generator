@@ -329,6 +329,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!data?.success) {
         log('debug', 'Edge function returned error', { data }, 'auth');
+        
+        // Handle specific error codes for better user experience
+        if (data?.code === 'EMAIL_EXISTS') {
+          return { error: new Error('An account with this email already exists. Please sign in instead.') };
+        }
+        
         return { error: new Error(data?.error || 'Failed to create account') };
       }
 
