@@ -44,39 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_keys: {
-        Row: {
-          api_key: string
-          created_at: string
-          id: string
-          is_active: boolean
-          last_used_at: string | null
-          name: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          api_key: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_used_at?: string | null
-          name?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          api_key?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_used_at?: string | null
-          name?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       api_usage: {
         Row: {
           created_at: string | null
@@ -229,57 +196,6 @@ export type Database = {
           chat_id?: string
           created_at?: string | null
           id?: string
-        }
-        Relationships: []
-      }
-      clients: {
-        Row: {
-          avatar_url: string | null
-          birth_date: string | null
-          birth_location: string | null
-          birth_time: string | null
-          coach_id: string
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          latitude: number | null
-          longitude: number | null
-          notes: string | null
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          birth_date?: string | null
-          birth_location?: string | null
-          birth_time?: string | null
-          coach_id: string
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          latitude?: number | null
-          longitude?: number | null
-          notes?: string | null
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          birth_date?: string | null
-          birth_location?: string | null
-          birth_time?: string | null
-          coach_id?: string
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          latitude?: number | null
-          longitude?: number | null
-          notes?: string | null
-          phone?: string | null
-          updated_at?: string
         }
         Relationships: []
       }
@@ -706,33 +622,6 @@ export type Database = {
           place?: string | null
           place_id?: string
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      guest_reports: {
-        Row: {
-          created_at: string
-          email: string
-          has_report_log: boolean | null
-          id: string
-          report_data: Json | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          has_report_log?: boolean | null
-          id?: string
-          report_data?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          has_report_log?: boolean | null
-          id?: string
-          report_data?: Json | null
-          updated_at?: string
         }
         Relationships: []
       }
