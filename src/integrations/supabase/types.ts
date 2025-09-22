@@ -179,15 +179,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_client_id"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       chat_audio_clips: {
         Row: {
@@ -206,152 +198,6 @@ export type Database = {
           id?: string
         }
         Relationships: []
-      }
-      clients: {
-        Row: {
-          avatar_url: string | null
-          birth_date: string | null
-          birth_location: string | null
-          birth_time: string | null
-          coach_id: string
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          latitude: number | null
-          longitude: number | null
-          notes: string | null
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          birth_date?: string | null
-          birth_location?: string | null
-          birth_time?: string | null
-          coach_id: string
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          latitude?: number | null
-          longitude?: number | null
-          notes?: string | null
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          birth_date?: string | null
-          birth_location?: string | null
-          birth_time?: string | null
-          coach_id?: string
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          latitude?: number | null
-          longitude?: number | null
-          notes?: string | null
-          phone?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      coach_profiles: {
-        Row: {
-          brand_color: string | null
-          business_name: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string
-          logo_url: string | null
-          phone: string | null
-          title: string | null
-          updated_at: string | null
-          user_id: string
-          website: string | null
-        }
-        Insert: {
-          brand_color?: string | null
-          business_name?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          logo_url?: string | null
-          phone?: string | null
-          title?: string | null
-          updated_at?: string | null
-          user_id: string
-          website?: string | null
-        }
-        Update: {
-          brand_color?: string | null
-          business_name?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          logo_url?: string | null
-          phone?: string | null
-          title?: string | null
-          updated_at?: string | null
-          user_id?: string
-          website?: string | null
-        }
-        Relationships: []
-      }
-      coach_websites: {
-        Row: {
-          coach_id: string
-          created_at: string
-          customization_data: Json
-          draft_customization_data: Json | null
-          has_unpublished_changes: boolean | null
-          id: string
-          is_published: boolean
-          published_at: string | null
-          site_slug: string
-          template_id: string
-          updated_at: string
-        }
-        Insert: {
-          coach_id: string
-          created_at?: string
-          customization_data?: Json
-          draft_customization_data?: Json | null
-          has_unpublished_changes?: boolean | null
-          id?: string
-          is_published?: boolean
-          published_at?: string | null
-          site_slug: string
-          template_id: string
-          updated_at?: string
-        }
-        Update: {
-          coach_id?: string
-          created_at?: string
-          customization_data?: Json
-          draft_customization_data?: Json | null
-          has_unpublished_changes?: boolean | null
-          id?: string
-          is_published?: boolean
-          published_at?: string | null
-          site_slug?: string
-          template_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coach_websites_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "website_templates"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       conversation_broadcasts: {
         Row: {
@@ -571,10 +417,13 @@ export type Database = {
       }
       email_messages: {
         Row: {
+          attachment_count: number | null
+          attachments: Json | null
           body: string | null
           created_at: string | null
           direction: string
           from_address: string
+          has_attachments: boolean | null
           id: string
           is_archived: boolean
           is_read: boolean
@@ -585,10 +434,13 @@ export type Database = {
           to_address: string
         }
         Insert: {
+          attachment_count?: number | null
+          attachments?: Json | null
           body?: string | null
           created_at?: string | null
           direction: string
           from_address: string
+          has_attachments?: boolean | null
           id?: string
           is_archived?: boolean
           is_read?: boolean
@@ -599,10 +451,13 @@ export type Database = {
           to_address: string
         }
         Update: {
+          attachment_count?: number | null
+          attachments?: Json | null
           body?: string | null
           created_at?: string | null
           direction?: string
           from_address?: string
+          has_attachments?: boolean | null
           id?: string
           is_archived?: boolean
           is_read?: boolean
@@ -770,69 +625,6 @@ export type Database = {
         }
         Relationships: []
       }
-      guest_reports: {
-        Row: {
-          amount_paid: number
-          chat_id: string
-          checkout_url: string | null
-          created_at: string
-          email: string
-          email_sent: boolean
-          email_sent_at: string | null
-          id: string
-          is_ai_report: boolean | null
-          payment_status: string
-          promo_code_used: string | null
-          purchase_type: string | null
-          report_data: Json
-          report_generated: boolean | null
-          report_type: string | null
-          stripe_session_id: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          amount_paid: number
-          chat_id: string
-          checkout_url?: string | null
-          created_at?: string
-          email: string
-          email_sent?: boolean
-          email_sent_at?: string | null
-          id?: string
-          is_ai_report?: boolean | null
-          payment_status?: string
-          promo_code_used?: string | null
-          purchase_type?: string | null
-          report_data?: Json
-          report_generated?: boolean | null
-          report_type?: string | null
-          stripe_session_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          amount_paid?: number
-          chat_id?: string
-          checkout_url?: string | null
-          created_at?: string
-          email?: string
-          email_sent?: boolean
-          email_sent_at?: string | null
-          id?: string
-          is_ai_report?: boolean | null
-          payment_status?: string
-          promo_code_used?: string | null
-          purchase_type?: string | null
-          report_data?: Json
-          report_generated?: boolean | null
-          report_type?: string | null
-          stripe_session_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       insight_entries: {
         Row: {
           client_id: string
@@ -867,15 +659,7 @@ export type Database = {
           type?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_insight_entries_client_id"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       insight_prompts: {
         Row: {
@@ -968,15 +752,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entries_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       landing_page_config: {
         Row: {
@@ -1085,6 +861,7 @@ export type Database = {
           latency_ms: number | null
           message_number: number | null
           meta: Json
+          mode: string | null
           model: string | null
           reply_to_id: string | null
           role: string
@@ -1103,6 +880,7 @@ export type Database = {
           latency_ms?: number | null
           message_number?: number | null
           meta?: Json
+          mode?: string | null
           model?: string | null
           reply_to_id?: string | null
           role: string
@@ -1121,6 +899,7 @@ export type Database = {
           latency_ms?: number | null
           message_number?: number | null
           meta?: Json
+          mode?: string | null
           model?: string | null
           reply_to_id?: string | null
           role?: string
@@ -1302,9 +1081,7 @@ export type Database = {
           subscription_start_date: string | null
           subscription_status: string | null
           updated_at: string | null
-          verification_status:
-            | Database["public"]["Enums"]["verification_status_type"]
-            | null
+          verification_token: string | null
         }
         Insert: {
           created_at?: string
@@ -1324,9 +1101,7 @@ export type Database = {
           subscription_start_date?: string | null
           subscription_status?: string | null
           updated_at?: string | null
-          verification_status?:
-            | Database["public"]["Enums"]["verification_status_type"]
-            | null
+          verification_token?: string | null
         }
         Update: {
           created_at?: string
@@ -1346,9 +1121,7 @@ export type Database = {
           subscription_start_date?: string | null
           subscription_status?: string | null
           updated_at?: string | null
-          verification_status?:
-            | Database["public"]["Enums"]["verification_status_type"]
-            | null
+          verification_token?: string | null
         }
         Relationships: []
       }
@@ -1487,75 +1260,6 @@ export type Database = {
           id?: string
           name?: string
           system_prompt?: string
-        }
-        Relationships: []
-      }
-      service_purchases: {
-        Row: {
-          amount_cents: number
-          coach_id: string | null
-          coach_payout_cents: number
-          coach_slug: string
-          completed_at: string | null
-          created_at: string
-          customer_email: string
-          customer_name: string | null
-          id: string
-          payment_status: string
-          platform_fee_cents: number
-          purchase_metadata: Json | null
-          receipt_url: string | null
-          service_description: string | null
-          service_price_original: string
-          service_title: string
-          stripe_customer_id: string | null
-          stripe_payment_intent_id: string | null
-          stripe_session_id: string
-          updated_at: string
-        }
-        Insert: {
-          amount_cents: number
-          coach_id?: string | null
-          coach_payout_cents?: number
-          coach_slug: string
-          completed_at?: string | null
-          created_at?: string
-          customer_email: string
-          customer_name?: string | null
-          id?: string
-          payment_status?: string
-          platform_fee_cents?: number
-          purchase_metadata?: Json | null
-          receipt_url?: string | null
-          service_description?: string | null
-          service_price_original: string
-          service_title: string
-          stripe_customer_id?: string | null
-          stripe_payment_intent_id?: string | null
-          stripe_session_id: string
-          updated_at?: string
-        }
-        Update: {
-          amount_cents?: number
-          coach_id?: string | null
-          coach_payout_cents?: number
-          coach_slug?: string
-          completed_at?: string | null
-          created_at?: string
-          customer_email?: string
-          customer_name?: string | null
-          id?: string
-          payment_status?: string
-          platform_fee_cents?: number
-          purchase_metadata?: Json | null
-          receipt_url?: string | null
-          service_description?: string | null
-          service_price_original?: string
-          service_title?: string
-          stripe_customer_id?: string | null
-          stripe_payment_intent_id?: string | null
-          stripe_session_id?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -1893,15 +1597,7 @@ export type Database = {
           translator_payload?: Json | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "translator_logs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_credits: {
         Row: {
@@ -2244,7 +1940,6 @@ export type Database = {
     Enums: {
       queue_status: "pending" | "processing" | "completed" | "failed"
       user_role: "admin" | "user"
-      verification_status_type: "pending" | "verified" | "blocked"
     }
     CompositeTypes: {
       http_header: {
@@ -2390,7 +2085,6 @@ export const Constants = {
     Enums: {
       queue_status: ["pending", "processing", "completed", "failed"],
       user_role: ["admin", "user"],
-      verification_status_type: ["pending", "verified", "blocked"],
     },
   },
 } as const
