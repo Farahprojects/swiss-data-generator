@@ -29,7 +29,7 @@ serve(async (req) => {
     tokenLink = body.token_link ?? "";
     emailOtp = body.email_otp ?? "";
     templateType = body.template_type ?? "email_verification";
-    log("✓ Request received:", { userId, hasUserId: !!userId, hasTokenLink: !!tokenLink, hasEmailOtp: !!emailOtp, templateType });
+      log("✓ Request received:", { userId, templateType });
   } catch (e) {
     log("✗ JSON parsing failed:", e);
     return respond(400, { error: "Invalid JSON" });
@@ -99,11 +99,7 @@ serve(async (req) => {
     }
 
     templateData = data;
-    log("✓ Template fetched successfully:", {
-      subject: templateData.subject,
-      htmlLength: templateData.body_html?.length || 0,
-      textLength: templateData.body_text?.length || 0,
-    });
+        log("✓ Template fetched successfully:", { subject: templateData.subject });
   } catch (err: any) {
     log("✗ Exception during template fetch:", err.message);
     return respond(500, { error: "Template processing failed", details: err.message });
@@ -123,36 +119,27 @@ serve(async (req) => {
     const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;
     const otpReplacements = (originalHtml.match(/\{\{\s*\.OTP\s*\}\}/g) || []).length;
     
-    log("✓ Template processing complete (email_verification):", {
-      linkReplacements,
-      otpReplacements,
-      originalLength: originalHtml.length,
-      processedLength: html.length,
-    });
+        log("✓ Template processing complete:", { linkReplacements, otpReplacements });
   }
 
-  // Send email via VPS SMTP endpoint
+  // Build VPS-compatible payload
+  const payload = {
+    slug: "noreply",                    // Hardcoded for verification pipeline
+    domain: "therai.co",               // Hardcoded for verification pipeline
+    to_email: currentEmail,            // Dynamic: user's email
+    subject: templateData.subject,     // Dynamic: from template
+    body: html,                        // Dynamic: processed HTML template
+    request_id: userId,                // Use auth user ID for correlation
+    timestamp: new Date().toISOString() // Dynamic: current timestamp
+  };
+
+  // Log final payload being sent to VPS
+  log("📧 FINAL PAYLOAD TO VPS:");
+  log("============================================");
+  log(JSON.stringify(payload, null, 2));
+  log("============================================");
+
   try {
-    log("→ Sending email via VPS SMTP endpoint");
-    log("Email details:", {
-      to: currentEmail,
-      subject: templateData.subject,
-      htmlLength: html.length,
-      userId: userId,
-      smtpEndpoint: new URL(smtpEndpoint).hostname,
-    });
-
-    // Build VPS-compatible payload
-    const payload = {
-      slug: "noreply",                    // Hardcoded for verification pipeline
-      domain: "therai.co",               // Hardcoded for verification pipeline
-      to_email: currentEmail,            // Dynamic: user's email
-      subject: templateData.subject,     // Dynamic: from template
-      body: html,                        // Dynamic: processed HTML template
-      request_id: userId,                // Use auth user ID for correlation
-      timestamp: new Date().toISOString() // Dynamic: current timestamp
-    };
-
     const send = await fetch(smtpEndpoint, {
       method: "POST",
       headers: { 

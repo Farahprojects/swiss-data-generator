@@ -125,6 +125,12 @@ serve(async (req) => {
       timestamp: timestamp
     };
 
+    // Log final payload being sent to VPS
+    logMessage("📧 FINAL PAYLOAD TO VPS:", { 
+      level: 'info',
+      data: { payload: smtpPayload }
+    });
+
     let smtpResponse;
     let smtpResult;
     
