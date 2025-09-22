@@ -133,7 +133,7 @@ serve(async (req) => {
     console.log(`[create-user-and-verify] Properties:`, JSON.stringify(linkData?.properties, null, 2));
     console.log(`[create-user-and-verify] ============================================`);
 
-    const tokenLink = linkData?.action_link || "";
+    const tokenLink = linkData?.properties?.action_link || "";
     const emailOtp = linkData?.properties?.email_otp || "";
     
     if (!tokenLink) {
