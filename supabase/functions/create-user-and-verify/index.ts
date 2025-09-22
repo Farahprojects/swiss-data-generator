@@ -151,23 +151,35 @@ serve(async (req) => {
     console.log(`[create-user-and-verify] Token link: ${tokenLink}`);
     console.log(`[create-user-and-verify] Email OTP: ${emailOtp}`);
 
-    // Step 3: Call email-verification Edge Function with the generated link and OTP
+    // Step 3: Call verification-emailer Edge Function with the generated link
     const emailPayload = {
-      user_id: signUpData.user.id,
-      token_link: tokenLink,
-      email_otp: emailOtp,
-      template_type: "email_verification"
+      to: email,
+      subject: "Verify your email address",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Welcome to TheRAI!</h2>
+          <p>Please click the button below to verify your email address:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${tokenLink}" 
+               style="background-color: #1f2937; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">
+              Verify Email Address
+            </a>
+          </div>
+          <p>Or copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color: #6b7280;">${tokenLink}</p>
+          <p>If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+      `
     };
 
     console.log(`[create-user-and-verify] 📧 EMAIL PAYLOAD TO SEND:`);
     console.log(`[create-user-and-verify] ============================================`);
-    console.log(`[create-user-and-verify] user_id: ${emailPayload.user_id}`);
-    console.log(`[create-user-and-verify] token_link: ${emailPayload.token_link}`);
-    console.log(`[create-user-and-verify] email_otp: ${emailPayload.email_otp}`);
-    console.log(`[create-user-and-verify] template_type: ${emailPayload.template_type}`);
+    console.log(`[create-user-and-verify] to: ${emailPayload.to}`);
+    console.log(`[create-user-and-verify] subject: ${emailPayload.subject}`);
+    console.log(`[create-user-and-verify] token_link: ${tokenLink}`);
     console.log(`[create-user-and-verify] ============================================`);
 
-    const { error: emailError } = await supabaseClient.functions.invoke('email-verification', {
+    const { error: emailError } = await supabaseClient.functions.invoke('verification-emailer', {
       body: emailPayload
     });
 
