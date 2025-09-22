@@ -5,12 +5,12 @@ import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketSe
 import { useChatStore } from '@/core/store';
 import type { Message } from '@/core/types';
 
-// Self-cleaning logic - continuously monitor auth state
-const shouldSelfClean = (): boolean => {
+// Self-cleaning logic - only clean when explicitly needed
+const shouldSelfClean = async (): Promise<boolean> => {
   try {
-    // Check if there's a valid auth user
-    const { data: { user } } = supabase.auth.getUser();
-    if (!user) return true;
+    // Check if there's a valid auth user (async)
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return true;
     
     // Check if chat_id exists in chat store
     const chatState = useChatStore.getState();
@@ -19,6 +19,7 @@ const shouldSelfClean = (): boolean => {
     return false;
   } catch (error) {
     // If any error checking auth/chat state, assume we should clean
+    console.warn('[MessageStore] Error checking auth state:', error);
     return true;
   }
 };
@@ -97,24 +98,18 @@ export const useMessageStore = create<MessageStore>()(
     }
   },
 
-  // Self-cleaning method - continuously check auth state
-  selfClean: () => {
-    if (shouldSelfClean()) {
-      console.log('[MessageStore] Self-cleaning: No auth user or chat_id detected');
-      set({ chat_id: null, messages: [], error: null, hasOlder: false });
-    }
-  },
+      // Self-cleaning method - only clean when explicitly needed
+      selfClean: async () => {
+        const shouldClean = await shouldSelfClean();
+        if (shouldClean) {
+          console.log('[MessageStore] Self-cleaning: No auth user or chat_id detected');
+          set({ chat_id: null, messages: [], error: null, hasOlder: false });
+        }
+      },
 
-  // Add message with deduplication by message_number and optimistic handling
-  addMessage: (message: Message) => {
-    // Self-clean check before adding message
-    get().selfClean();
-    
-    set((state) => {
-      // Double-check after self-clean
-      if (shouldSelfClean()) {
-        return { chat_id: null, messages: [], error: null, hasOlder: false };
-      }
+      // Add message with deduplication by message_number and optimistic handling
+      addMessage: (message: Message) => {
+        set((state) => {
       
       // Check if message already exists by message_number or id
       const exists = state.messages.some(m => 
@@ -139,16 +134,9 @@ export const useMessageStore = create<MessageStore>()(
     });
   },
 
-  // Add optimistic message with temporary number for instant UI
-  addOptimisticMessage: (message: Message) => {
-    // Self-clean check before adding optimistic message
-    get().selfClean();
-    
-    set((state) => {
-      // Double-check after self-clean
-      if (shouldSelfClean()) {
-        return { chat_id: null, messages: [], error: null, hasOlder: false };
-      }
+      // Add optimistic message with temporary number for instant UI
+      addOptimisticMessage: (message: Message) => {
+        set((state) => {
       
       // Get next optimistic number
       const currentMax = state.messages.reduce((max, m) => Math.max(max, m.message_number ?? 0), 0);
@@ -183,13 +171,10 @@ export const useMessageStore = create<MessageStore>()(
     sessionStorage.removeItem('therai-message-store');
   },
 
-  // Simple fetch - just get messages, WebSocket handles real-time
-  fetchMessages: async () => {
-    // Self-clean check before fetching
-    get().selfClean();
-    
-    const { chat_id } = get();
-    if (!chat_id || shouldSelfClean()) return;
+      // Simple fetch - just get messages, WebSocket handles real-time
+      fetchMessages: async () => {
+        const { chat_id } = get();
+        if (!chat_id) return;
 
     set({ loading: true, error: null });
 
@@ -282,29 +267,26 @@ export const cleanupMessageStore = () => {
   }
 };
 
-// Self-cleaning mechanism - runs periodically to check auth state
-let selfCleanInterval: NodeJS.Timeout | null = null;
-
-export const startMessageStoreSelfClean = () => {
-  if (selfCleanInterval) return; // Already running
-  
-  // Run self-clean every 5 seconds
-  selfCleanInterval = setInterval(() => {
-    useMessageStore.getState().selfClean();
-  }, 5000);
-  
-  console.log('[MessageStore] Self-cleaning mechanism started');
+// Self-cleaning mechanism - only called on auth state changes
+export const triggerMessageStoreSelfClean = async () => {
+  await useMessageStore.getState().selfClean();
 };
 
-export const stopMessageStoreSelfClean = () => {
-  if (selfCleanInterval) {
-    clearInterval(selfCleanInterval);
-    selfCleanInterval = null;
-    console.log('[MessageStore] Self-cleaning mechanism stopped');
-  }
-};
-
-// Start self-cleaning when module loads
+// Initialize message store - clear if no authenticated user
 if (typeof window !== 'undefined') {
-  startMessageStoreSelfClean();
+  // Check auth state on store initialization
+  setTimeout(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // No authenticated user, clear the message store
+        console.log('[MessageStore] No authenticated user on init, clearing store');
+        useMessageStore.getState().setChatId(null);
+      }
+    } catch (error) {
+      console.warn('[MessageStore] Error checking auth state on init:', error);
+      // On error, clear the store to be safe
+      useMessageStore.getState().setChatId(null);
+    }
+  }, 100); // Small delay to ensure auth context is initialized
 }

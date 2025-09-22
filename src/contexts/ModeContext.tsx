@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useMessageStore } from '@/stores/messageStore';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
 
 export type ChatMode = 'chat' | 'astro';
 
@@ -31,10 +32,12 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   
   const { messages, chat_id } = useMessageStore();
+  const { user } = useAuth();
 
   // Load mode from conversations.meta when chat_id changes
   useEffect(() => {
-    if (chat_id) {
+    // Only load conversation data if user is authenticated
+    if (chat_id && user) {
       setIsLoading(true);
       const loadModeFromConversation = async () => {
         try {
@@ -78,7 +81,16 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
     } else {
       setIsLoading(false);
     }
-  }, [chat_id]);
+  }, [chat_id, user]);
+
+  // Reset mode when user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      setMode('chat');
+      setIsModeLocked(false);
+      setIsLoading(false);
+    }
+  }, [user]);
 
   // Lock mode when user sends their first message in the current chat
   useEffect(() => {

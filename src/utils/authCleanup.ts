@@ -1,14 +1,14 @@
 /**
  * Utility for cleaning up authentication state to prevent limbo states
  */
-export const cleanupAuthState = () => {
+export const cleanupAuthState = async () => {
   console.log('🧹 Cleaning up auth state...');
   
   // Clear chat stores first (downstream from auth)
   try {
-    // Clear message store - this will naturally clear when chat_id becomes null
-    const { useMessageStore } = require('@/stores/messageStore');
-    useMessageStore.getState().setChatId(null);
+    // Clear message store using the new trigger function
+    const { triggerMessageStoreSelfClean } = require('@/stores/messageStore');
+    await triggerMessageStoreSelfClean();
     
     // Clear chat store
     const { useChatStore } = require('@/core/store');
@@ -42,9 +42,9 @@ export const cleanupAuthState = () => {
 /**
  * Emergency cleanup for when user data is deleted but session still exists
  */
-export const emergencyAuthCleanup = () => {
+export const emergencyAuthCleanup = async () => {
   console.log('🚨 Emergency auth cleanup...');
-  cleanupAuthState();
+  await cleanupAuthState();
   
   // Force a hard reload to clear any remaining state
   setTimeout(() => {
