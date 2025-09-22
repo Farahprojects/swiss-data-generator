@@ -10,7 +10,7 @@ const corsHeaders = {
 
 // Create Supabase client once at module scope for better performance
 const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("VITE_SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   {
     auth: {
@@ -20,7 +20,7 @@ const supabase = createClient(
 );
 
 // Cache environment variables at module scope
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 serve(async (req) => {

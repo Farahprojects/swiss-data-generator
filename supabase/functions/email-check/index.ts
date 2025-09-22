@@ -28,7 +28,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   /* ENV check */
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+  const SUPABASE_URL = Deno.env.get('VITE_SUPABASE_URL');
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     console.error('[Environment Error] Missing required env variables');
