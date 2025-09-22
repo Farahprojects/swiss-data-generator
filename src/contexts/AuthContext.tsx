@@ -175,6 +175,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setSession(null);
+        
+        // Clear chat stores when user signs out (downstream cleanup)
+        try {
+          const { useMessageStore } = await import('@/stores/messageStore');
+          const { useChatStore } = await import('@/core/store');
+          useMessageStore.getState().setChatId(null);
+          useChatStore.getState().clearAllData();
+        } catch (error) {
+          console.warn('Could not clear chat stores on sign out:', error);
+        }
       }
       
       // Additional check for user deletion - validate user still exists
@@ -474,13 +484,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
       }
       
-      // Force page reload to ensure clean state
-      window.location.href = '/';
+      // Force page refresh to ensure clean state - this will naturally empty message store
+      // when there's no logged user, rather than manually clearing it
+      window.location.reload();
       
     } catch (error) {
       console.error('Sign out error:', error);
       // Force reload even on error to ensure clean state
-      window.location.href = '/';
+      window.location.reload();
     } finally {
       setLoading(false);
     }

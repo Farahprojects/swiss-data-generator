@@ -5,6 +5,24 @@ import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketSe
 import { useChatStore } from '@/core/store';
 import type { Message } from '@/core/types';
 
+// Self-cleaning logic - continuously monitor auth state
+const shouldSelfClean = (): boolean => {
+  try {
+    // Check if there's a valid auth user
+    const { data: { user } } = supabase.auth.getUser();
+    if (!user) return true;
+    
+    // Check if chat_id exists in chat store
+    const chatState = useChatStore.getState();
+    if (!chatState.chat_id) return true;
+    
+    return false;
+  } catch (error) {
+    // If any error checking auth/chat state, assume we should clean
+    return true;
+  }
+};
+
 interface MessageStore {
   // State
   chat_id: string | null;
@@ -21,6 +39,7 @@ interface MessageStore {
   clearMessages: () => void;
   fetchMessages: () => Promise<void>;
   loadOlder: () => Promise<void>;
+  selfClean: () => void; // Self-cleaning method
 }
 
 const mapDbToMessage = (db: any): Message => ({
@@ -54,6 +73,12 @@ export const useMessageStore = create<MessageStore>()(
     // If switching to a different chat_id, clear messages
     // But preserve optimistic messages if they're for the new chat_id
     if (currentChatId !== id) {
+      // If setting to null (no user logged in), clear everything
+      if (id === null) {
+        set({ chat_id: null, messages: [], error: null, hasOlder: false });
+        return;
+      }
+      
       const optimisticMessages = currentState.messages.filter(m => m.status === 'thinking');
       const shouldPreserveOptimistic = optimisticMessages.some(m => m.chat_id === id);
       
@@ -72,9 +97,24 @@ export const useMessageStore = create<MessageStore>()(
     }
   },
 
+  // Self-cleaning method - continuously check auth state
+  selfClean: () => {
+    if (shouldSelfClean()) {
+      console.log('[MessageStore] Self-cleaning: No auth user or chat_id detected');
+      set({ chat_id: null, messages: [], error: null, hasOlder: false });
+    }
+  },
+
   // Add message with deduplication by message_number and optimistic handling
   addMessage: (message: Message) => {
+    // Self-clean check before adding message
+    get().selfClean();
+    
     set((state) => {
+      // Double-check after self-clean
+      if (shouldSelfClean()) {
+        return { chat_id: null, messages: [], error: null, hasOlder: false };
+      }
       
       // Check if message already exists by message_number or id
       const exists = state.messages.some(m => 
@@ -101,7 +141,15 @@ export const useMessageStore = create<MessageStore>()(
 
   // Add optimistic message with temporary number for instant UI
   addOptimisticMessage: (message: Message) => {
+    // Self-clean check before adding optimistic message
+    get().selfClean();
+    
     set((state) => {
+      // Double-check after self-clean
+      if (shouldSelfClean()) {
+        return { chat_id: null, messages: [], error: null, hasOlder: false };
+      }
+      
       // Get next optimistic number
       const currentMax = state.messages.reduce((max, m) => Math.max(max, m.message_number ?? 0), 0);
       const nextOptimisticNumber = currentMax + 1;
@@ -137,8 +185,11 @@ export const useMessageStore = create<MessageStore>()(
 
   // Simple fetch - just get messages, WebSocket handles real-time
   fetchMessages: async () => {
+    // Self-clean check before fetching
+    get().selfClean();
+    
     const { chat_id } = get();
-    if (!chat_id) return;
+    if (!chat_id || shouldSelfClean()) return;
 
     set({ loading: true, error: null });
 
@@ -230,3 +281,30 @@ export const cleanupMessageStore = () => {
     (useMessageStore as any)._channel = null;
   }
 };
+
+// Self-cleaning mechanism - runs periodically to check auth state
+let selfCleanInterval: NodeJS.Timeout | null = null;
+
+export const startMessageStoreSelfClean = () => {
+  if (selfCleanInterval) return; // Already running
+  
+  // Run self-clean every 5 seconds
+  selfCleanInterval = setInterval(() => {
+    useMessageStore.getState().selfClean();
+  }, 5000);
+  
+  console.log('[MessageStore] Self-cleaning mechanism started');
+};
+
+export const stopMessageStoreSelfClean = () => {
+  if (selfCleanInterval) {
+    clearInterval(selfCleanInterval);
+    selfCleanInterval = null;
+    console.log('[MessageStore] Self-cleaning mechanism stopped');
+  }
+};
+
+// Start self-cleaning when module loads
+if (typeof window !== 'undefined') {
+  startMessageStoreSelfClean();
+}

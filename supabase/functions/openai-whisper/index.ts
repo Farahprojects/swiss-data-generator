@@ -180,7 +180,7 @@ serve(async (req) => {
         console.log('[openai-whisper] ✅ thinking-mode broadcast sent');
       }).catch((error) => {
         console.error('[openai-whisper] ❌ thinking-mode broadcast failed:', error);
-      }
+      });
     }
 
     // Return simple transcript result

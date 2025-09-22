@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { LogoutConfirmationDialog } from '@/components/ui/logout-confirmation-dialog';
 // Dashboard sidebar removed
 import { Sheet, SheetContent, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from "@radix-ui/react-dialog";
@@ -61,6 +62,7 @@ const UnifiedNavigation = ({
 }: UnifiedNavigationProps = {}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -94,8 +96,17 @@ const UnifiedNavigation = ({
     setIsSidebarOpen(false);
   };
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutDialog(false);
     await signOut();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
   };
 
   const handleOpenSettings = (panel: string) => {
@@ -326,7 +337,7 @@ const UnifiedNavigation = ({
                       
                       <DropdownMenuSeparator />
                       
-                      <DropdownMenuItem onClick={handleSignOut} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <DropdownMenuItem onClick={handleSignOutClick} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                         <LogOut className="mr-2 h-4 w-4" />
                         Logout
                       </DropdownMenuItem>
@@ -426,6 +437,13 @@ const UnifiedNavigation = ({
           </SheetPortal>
         </Sheet>
       )}
+
+      {/* Logout Confirmation Dialog */}
+      <LogoutConfirmationDialog
+        isOpen={showLogoutDialog}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+      />
     </>
   );
 };

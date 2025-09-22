@@ -7,9 +7,9 @@
 const SUPABASE_URL_ENV = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY_ENV = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Fallback values for development
-const FALLBACK_URL = "https://api.therai.co";
-const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+// Fallback values for development - should be overridden by environment variables
+const FALLBACK_URL = "https://your-project.supabase.co";
+const FALLBACK_ANON_KEY = "your-anon-key-here";
 
 // Use environment variables if available, otherwise use fallbacks
 export const SUPABASE_URL = SUPABASE_URL_ENV || FALLBACK_URL;

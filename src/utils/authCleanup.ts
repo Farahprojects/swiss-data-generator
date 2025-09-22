@@ -4,6 +4,19 @@
 export const cleanupAuthState = () => {
   console.log('🧹 Cleaning up auth state...');
   
+  // Clear chat stores first (downstream from auth)
+  try {
+    // Clear message store - this will naturally clear when chat_id becomes null
+    const { useMessageStore } = require('@/stores/messageStore');
+    useMessageStore.getState().setChatId(null);
+    
+    // Clear chat store
+    const { useChatStore } = require('@/core/store');
+    useChatStore.getState().clearAllData();
+  } catch (error) {
+    console.warn('Could not clear chat stores during auth cleanup:', error);
+  }
+  
   // Clear all Supabase auth keys from localStorage (more aggressive patterns)
   Object.keys(localStorage).forEach((key) => {
     if (key.startsWith('supabase') || key.includes('sb-') || key.includes('auth')) {
