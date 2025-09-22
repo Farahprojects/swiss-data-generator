@@ -45,6 +45,15 @@ serve(async (req) => {
     return respond(400, { error: "token_link is required" });
   }
 
+  // Validation: Fail if Supabase URL is passed (should be handled by create-user-and-verify)
+  if (tokenLink.includes('api.therai.co/auth/v1/verify')) {
+    log("✗ Supabase URL detected in payload - this should be handled by create-user-and-verify");
+    return respond(400, { 
+      error: "Invalid token_link format. Supabase URLs should be processed by create-user-and-verify function.",
+      code: "INVALID_TOKEN_LINK_FORMAT"
+    });
+  }
+
   const url = Deno.env.get("VITE_SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const smtpEndpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
@@ -112,33 +121,14 @@ serve(async (req) => {
   
   // For email_verification template, use {{verification_link}} and {{.OTP}}
   if (templateType === "email_verification") {
-    // Extract token from Supabase URL and create custom confirmation URL
-    let customVerificationLink = tokenLink;
-    try {
-      const url = new URL(tokenLink);
-      const token = url.searchParams.get('token');
-      const type = url.searchParams.get('type');
-      const email = url.searchParams.get('email');
-      
-      if (token && type && email) {
-        // Create custom URL pointing to your confirmation page
-        customVerificationLink = `https://auth.therai.co/email?token=${token}&type=${type}&email=${encodeURIComponent(email)}`;
-        log("✓ Custom verification URL created:", { 
-          originalUrl: tokenLink,
-          customUrl: customVerificationLink,
-          token: token.substring(0, 10) + "...",
-          type,
-          email 
-        });
-      } else {
-        log("⚠️ Could not extract token from URL, using original:", tokenLink);
-      }
-    } catch (error) {
-      log("⚠️ Error parsing token URL, using original:", error);
-    }
+    // tokenLink is already processed by create-user-and-verify, use it directly
+    log("✓ Using pre-processed verification URL from create-user-and-verify:", {
+      url: tokenLink,
+      isCustomUrl: tokenLink.includes('auth.therai.co/email')
+    });
     
     html = html
-      .replace(/\{\{verification_link\}\}/g, customVerificationLink)
+      .replace(/\{\{verification_link\}\}/g, tokenLink)
       .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
     
     const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;

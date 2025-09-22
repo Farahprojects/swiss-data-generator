@@ -127,29 +127,42 @@ serve(async (req) => {
       );
     }
 
-    // Extract token from Supabase URL and create custom confirmation URL
+    // Extract token and build custom verification URL (same logic as create-user-and-verify)
     let customVerificationLink = data.properties.action_link;
+    let extractedToken = "";
+    let extractedType = "";
+    let extractedEmail = "";
+    
     try {
       const url = new URL(data.properties.action_link);
-      const token = url.searchParams.get('token');
-      const type = url.searchParams.get('type');
-      const email = url.searchParams.get('email');
+      extractedToken = url.searchParams.get('token') || "";
+      extractedType = url.searchParams.get('type') || "";
+      extractedEmail = url.searchParams.get('email') || email; // Fallback to original email
       
-      if (token && type && email) {
-        // Create custom URL pointing to your confirmation page
-        customVerificationLink = `https://auth.therai.co/email?token=${token}&type=${type}&email=${encodeURIComponent(email)}`;
+      if (extractedToken && extractedType && extractedEmail) {
+        // Build custom URL pointing to your confirmation page
+        customVerificationLink = `https://auth.therai.co/email?token=${extractedToken}&type=${extractedType}&email=${encodeURIComponent(extractedEmail)}`;
         console.log('✓ Custom verification URL created for resend:', { 
           originalUrl: data.properties.action_link,
           customUrl: customVerificationLink,
-          token: token.substring(0, 10) + "...",
-          type,
-          email 
+          token: extractedToken.substring(0, 10) + "...",
+          type: extractedType,
+          email: extractedEmail
         });
       } else {
-        console.log('⚠️ Could not extract token from URL, using original:', data.properties.action_link);
+        console.error('✗ Failed to extract token parameters for resend:', {
+          hasToken: !!extractedToken,
+          hasType: !!extractedType,
+          hasEmail: !!extractedEmail
+        });
+        throw new Error('Failed to extract token parameters from Supabase URL');
       }
     } catch (error) {
-      console.log('⚠️ Error parsing token URL, using original:', error);
+      console.error('✗ Error parsing token URL for resend:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process verification token for resend' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Replace template variables

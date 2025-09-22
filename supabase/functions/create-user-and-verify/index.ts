@@ -128,17 +128,56 @@ serve(async (req) => {
       });
     }
 
-    // Step 3: Call email-verification Edge Function with the generated link and template type
+    // Step 3: Extract token and build custom verification URL
+    let customVerificationLink = tokenLink;
+    let extractedToken = "";
+    let extractedType = "";
+    let extractedEmail = "";
+    
+    try {
+      const url = new URL(tokenLink);
+      extractedToken = url.searchParams.get('token') || "";
+      extractedType = url.searchParams.get('type') || "";
+      extractedEmail = url.searchParams.get('email') || email; // Fallback to original email
+      
+      if (extractedToken && extractedType && extractedEmail) {
+        // Build custom URL pointing to your confirmation page
+        customVerificationLink = `https://auth.therai.co/email?token=${extractedToken}&type=${extractedType}&email=${encodeURIComponent(extractedEmail)}`;
+        console.log(`[create-user-and-verify] ✓ Custom verification URL created:`, {
+          originalUrl: tokenLink,
+          customUrl: customVerificationLink,
+          token: extractedToken.substring(0, 10) + "...",
+          type: extractedType,
+          email: extractedEmail
+        });
+      } else {
+        console.error(`[create-user-and-verify] ✗ Failed to extract token parameters:`, {
+          hasToken: !!extractedToken,
+          hasType: !!extractedType,
+          hasEmail: !!extractedEmail
+        });
+        throw new Error('Failed to extract token parameters from Supabase URL');
+      }
+    } catch (error) {
+      console.error(`[create-user-and-verify] ✗ Error parsing token URL:`, error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to process verification token',
+        code: 'TOKEN_PROCESSING_FAILED'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
+    // Step 4: Call email-verification Edge Function with the custom link
     const emailPayload = {
       user_id: signUpData.user.id,
-      token_link: tokenLink,
+      token_link: customVerificationLink, // Use custom URL, not Supabase URL
       email_otp: emailOtp,
       template_type: "email_verification"
     };
 
-    // Extract token from Supabase URL for logging
-    const token = tokenLink.split('token=')[1]?.split('&')[0];
-    console.log(`[create-user-and-verify] Token extracted: ${token}`);
+    console.log(`[create-user-and-verify] Token extracted: ${extractedToken}`);
     console.log(`[create-user-and-verify] Final payload:`, JSON.stringify(emailPayload, null, 2));
 
     const { error: emailError } = await supabaseClient.functions.invoke('email-verification', {
