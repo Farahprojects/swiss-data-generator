@@ -101,13 +101,23 @@ serve(async (req) => {
     console.log(`[create-user-and-verify] Confirmation token extracted and link built successfully`);
 
     // Step 3: Call email-verification Edge Function with the confirmation token
+    const emailPayload = {
+      user_id: signUpData.user.id,
+      token_link: tokenLink,
+      confirmation_token: confirmationToken,
+      template_type: "email_verification"
+    };
+
+    console.log(`[create-user-and-verify] 📧 EMAIL PAYLOAD TO SEND:`);
+    console.log(`[create-user-and-verify] ============================================`);
+    console.log(`[create-user-and-verify] user_id: ${emailPayload.user_id}`);
+    console.log(`[create-user-and-verify] token_link: ${emailPayload.token_link}`);
+    console.log(`[create-user-and-verify] confirmation_token: ${emailPayload.confirmation_token}`);
+    console.log(`[create-user-and-verify] template_type: ${emailPayload.template_type}`);
+    console.log(`[create-user-and-verify] ============================================`);
+
     const { error: emailError } = await supabaseClient.functions.invoke('email-verification', {
-      body: {
-        user_id: signUpData.user.id,
-        token_link: tokenLink,
-        confirmation_token: confirmationToken,
-        template_type: "email_verification"
-      }
+      body: emailPayload
     });
 
     if (emailError) {
