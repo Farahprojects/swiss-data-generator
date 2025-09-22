@@ -127,9 +127,34 @@ serve(async (req) => {
       );
     }
 
+    // Extract token from Supabase URL and create custom confirmation URL
+    let customVerificationLink = data.properties.action_link;
+    try {
+      const url = new URL(data.properties.action_link);
+      const token = url.searchParams.get('token');
+      const type = url.searchParams.get('type');
+      const email = url.searchParams.get('email');
+      
+      if (token && type && email) {
+        // Create custom URL pointing to your confirmation page
+        customVerificationLink = `https://auth.therai.co/email?token=${token}&type=${type}&email=${encodeURIComponent(email)}`;
+        console.log('✓ Custom verification URL created for resend:', { 
+          originalUrl: data.properties.action_link,
+          customUrl: customVerificationLink,
+          token: token.substring(0, 10) + "...",
+          type,
+          email 
+        });
+      } else {
+        console.log('⚠️ Could not extract token from URL, using original:', data.properties.action_link);
+      }
+    } catch (error) {
+      console.log('⚠️ Error parsing token URL, using original:', error);
+    }
+
     // Replace template variables
-    const htmlContent = templateData.body_html.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
-    const textContent = templateData.body_text.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
+    const htmlContent = templateData.body_html.replace(/\{\{verification_link\}\}/g, customVerificationLink);
+    const textContent = templateData.body_text.replace(/\{\{verification_link\}\}/g, customVerificationLink);
 
     console.log('Sending verification email via verification-emailer');
 

@@ -112,8 +112,33 @@ serve(async (req) => {
   
   // For email_verification template, use {{verification_link}} and {{.OTP}}
   if (templateType === "email_verification") {
+    // Extract token from Supabase URL and create custom confirmation URL
+    let customVerificationLink = tokenLink;
+    try {
+      const url = new URL(tokenLink);
+      const token = url.searchParams.get('token');
+      const type = url.searchParams.get('type');
+      const email = url.searchParams.get('email');
+      
+      if (token && type && email) {
+        // Create custom URL pointing to your confirmation page
+        customVerificationLink = `https://auth.therai.co/email?token=${token}&type=${type}&email=${encodeURIComponent(email)}`;
+        log("✓ Custom verification URL created:", { 
+          originalUrl: tokenLink,
+          customUrl: customVerificationLink,
+          token: token.substring(0, 10) + "...",
+          type,
+          email 
+        });
+      } else {
+        log("⚠️ Could not extract token from URL, using original:", tokenLink);
+      }
+    } catch (error) {
+      log("⚠️ Error parsing token URL, using original:", error);
+    }
+    
     html = html
-      .replace(/\{\{verification_link\}\}/g, tokenLink)
+      .replace(/\{\{verification_link\}\}/g, customVerificationLink)
       .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
     
     const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;
