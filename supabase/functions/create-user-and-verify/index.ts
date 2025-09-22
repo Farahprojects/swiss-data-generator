@@ -37,13 +37,11 @@ serve(async (req) => {
 
     console.log(`[create-user-and-verify] Starting signup process for email: ${email}`);
 
-    // Step 1: Create user using supabase.auth.signUp()
-    const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
+    // Step 1: Create user using admin API with email_confirm: false to get the confirmation token
+    const { data: signUpData, error: signUpError } = await supabaseClient.auth.admin.createUser({
       email,
       password,
-      options: {
-        emailRedirectTo: "https://auth.therai.co/auth/email"
-      }
+      email_confirm: false // Don't auto-confirm, get the token instead
     });
 
     if (signUpError) {
@@ -84,60 +82,30 @@ serve(async (req) => {
 
     console.log(`[create-user-and-verify] User created successfully: ${signUpData.user.id}`);
 
-    // Step 2: Generate verification link using admin API
-    const { data: linkData, error: linkError } = await supabaseClient.auth.admin.generateLink({
-      type: "signup",
-      email: email,
-      password: password,
-      options: { 
-        redirectTo: "https://auth.therai.co/auth/email"
-      }
-    });
-
-    if (linkError) {
-      console.error(`[create-user-and-verify] Link generation error:`, linkError);
-      
-      // Handle specific error cases for link generation
-      if (linkError.message?.includes('already been registered') || 
-          linkError.message?.includes('already registered') || 
-          linkError.status === 422 || 
-          linkError.code === 'email_exists') {
-        return new Response(JSON.stringify({ 
-          error: 'An account with this email already exists. Please sign in instead.',
-          code: 'EMAIL_EXISTS'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 409, // Conflict status for already exists
-        });
-      }
-      
+    // Step 2: Extract confirmation token from the response
+    const confirmationToken = signUpData.user.identities?.[0]?.confirmation_token;
+    if (!confirmationToken) {
+      console.error(`[create-user-and-verify] No confirmation token found in response`);
       return new Response(JSON.stringify({ 
-        error: 'Failed to generate verification link',
-        code: 'LINK_GENERATION_FAILED'
+        error: 'Failed to get confirmation token',
+        code: 'TOKEN_EXTRACTION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    const tokenLink = linkData?.properties?.action_link || "";
-    if (!tokenLink) {
-      return new Response(JSON.stringify({ 
-        error: 'Failed to generate verification link',
-        code: 'LINK_GENERATION_FAILED'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
+    // Build the verification link using the confirmation token
+    const tokenLink = `https://auth.therai.co/auth/email?token=${confirmationToken}&type=signup`;
+    
+    console.log(`[create-user-and-verify] Confirmation token extracted and link built successfully`);
 
-    console.log(`[create-user-and-verify] Verification link generated successfully`);
-
-    // Step 3: Call email-verification Edge Function
+    // Step 3: Call email-verification Edge Function with the confirmation token
     const { error: emailError } = await supabaseClient.functions.invoke('email-verification', {
       body: {
         user_id: signUpData.user.id,
         token_link: tokenLink,
+        confirmation_token: confirmationToken,
         template_type: "email_verification"
       }
     });

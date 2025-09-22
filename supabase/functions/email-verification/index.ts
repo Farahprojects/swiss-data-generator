@@ -27,6 +27,7 @@ serve(async (req) => {
   let tokenLink = "";
   let emailOtp = "";
   let templateType = "email_change";
+  let confirmationToken = "";
   
   try {
     const body = await req.json();
@@ -34,7 +35,8 @@ serve(async (req) => {
     tokenLink = body.token_link ?? "";
     emailOtp = body.email_otp ?? "";
     templateType = body.template_type ?? "email_change";
-    log("✓ Request received:", { userId, hasUserId: !!userId, hasTokenLink: !!tokenLink, templateType });
+    confirmationToken = body.confirmation_token ?? "";
+    log("✓ Request received:", { userId, hasUserId: !!userId, hasTokenLink: !!tokenLink, hasConfirmationToken: !!confirmationToken, templateType });
   } catch (e) {
     log("✗ JSON parsing failed:", e);
     return respond(400, { error: "Invalid JSON" });
@@ -77,6 +79,12 @@ serve(async (req) => {
       if (!currentEmail) {
         log("✗ User missing email");
         return respond(400, { error: "User does not have a valid email" });
+      }
+      
+      // Use confirmation token if provided, otherwise use the tokenLink
+      if (confirmationToken) {
+        emailOtp = confirmationToken; // Use confirmation token as OTP for template
+        log("✓ Using confirmation token for email verification");
       }
       
       log("✓ User email confirmed for direct token:", currentEmail);
