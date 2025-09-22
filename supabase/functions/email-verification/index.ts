@@ -45,7 +45,7 @@ serve(async (req) => {
     return respond(400, { error: "user_id is required" });
   }
 
-  const url = Deno.env.get("SUPABASE_URL");
+  const url = Deno.env.get("VITE_SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const smtpEndpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
 
