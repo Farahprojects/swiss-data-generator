@@ -93,7 +93,13 @@ export function useSettingsData() {
 
       setData({
         profile: profileResult.data,
-        paymentMethod: paymentResult.data,
+        paymentMethod: paymentResult.data ? {
+          ...paymentResult.data,
+          id: String(paymentResult.data.id), // Convert number to string
+          invoice_history: Array.isArray(paymentResult.data.invoice_history) ? 
+            paymentResult.data.invoice_history as PaymentMethod['invoice_history'] : 
+            []
+        } : null,
         credits: null, // No longer using user credits
         loading: false,
         error: null

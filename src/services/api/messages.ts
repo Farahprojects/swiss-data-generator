@@ -24,14 +24,14 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
   return {
     id: data.id,
     chat_id: data.chat_id,
-    role: data.role,
+    role: data.role as Message['role'],
     text: data.text,
     // audioUrl removed
     // timings removed
     createdAt: data.created_at,
-    meta: data.meta,
+    meta: (data.meta as Record<string, any>) || {},
     client_msg_id: data.client_msg_id,
-    status: data.status
+    status: (data.status as Message['status']) || 'complete'
   } as Message;
 };
 
@@ -44,7 +44,17 @@ export const updateMessage = async (id: string, updates: Partial<Message>): Prom
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Message;
+  
+  return {
+    id: data.id,
+    chat_id: data.chat_id,
+    role: data.role as Message['role'],
+    text: data.text,
+    createdAt: data.created_at,
+    meta: (data.meta as Record<string, any>) || {},
+    client_msg_id: data.client_msg_id,
+    status: (data.status as Message['status']) || 'complete'
+  } as Message;
 };
 
 export const getMessagesForConversation = async (chat_id: string): Promise<Message[]> => {
@@ -62,13 +72,13 @@ export const getMessagesForConversation = async (chat_id: string): Promise<Messa
     .map(msg => ({
       id: msg.id,
       chat_id: msg.chat_id,
-      role: msg.role,
+      role: msg.role as Message['role'],
       text: msg.text,
       // audioUrl removed
       // timings removed
       createdAt: msg.created_at,
-      meta: msg.meta,
+      meta: (msg.meta as Record<string, any>) || {},
       client_msg_id: msg.client_msg_id,
-      status: msg.status
+      status: (msg.status as Message['status']) || 'complete'
     }));
 };

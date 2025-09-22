@@ -57,7 +57,8 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
           }
 
           // If mode exists in meta, use it; otherwise default to 'chat'
-          const savedMode = data?.meta?.mode;
+          const metaData = data?.meta as { mode?: ChatMode } | null;
+          const savedMode = metaData?.mode;
           if (savedMode && (savedMode === 'chat' || savedMode === 'astro')) {
             setMode(savedMode);
             console.log(`[ModeContext] Loaded mode '${savedMode}' from conversations.meta`);
@@ -111,7 +112,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .eq('id', chat_id)
             .single();
 
-          const existingMeta = existingData?.meta || {};
+          const existingMeta = (existingData?.meta as { mode?: ChatMode } | null) || {};
           
           // Update meta with new mode
           const { error } = await supabase

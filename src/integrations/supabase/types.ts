@@ -709,6 +709,33 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_reports: {
+        Row: {
+          created_at: string
+          email: string
+          has_report_log: boolean | null
+          id: string
+          report_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          has_report_log?: boolean | null
+          id?: string
+          report_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          has_report_log?: boolean | null
+          id?: string
+          report_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       insight_entries: {
         Row: {
           client_id: string
