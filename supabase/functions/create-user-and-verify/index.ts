@@ -82,6 +82,18 @@ serve(async (req) => {
 
     console.log(`[create-user-and-verify] User created successfully: ${signUpData.user.id}`);
 
+    // Log the complete Supabase response for debugging
+    console.log(`[create-user-and-verify] 🔍 SUPABASE RESPONSE AFTER USER CREATION:`);
+    console.log(`[create-user-and-verify] ============================================`);
+    console.log(`[create-user-and-verify] Full response data:`, JSON.stringify(signUpData, null, 2));
+    console.log(`[create-user-and-verify] User object:`, JSON.stringify(signUpData.user, null, 2));
+    console.log(`[create-user-and-verify] User identities:`, JSON.stringify(signUpData.user.identities, null, 2));
+    if (signUpData.user.identities?.[0]) {
+      console.log(`[create-user-and-verify] First identity:`, JSON.stringify(signUpData.user.identities[0], null, 2));
+      console.log(`[create-user-and-verify] Confirmation token:`, signUpData.user.identities[0].confirmation_token);
+    }
+    console.log(`[create-user-and-verify] ============================================`);
+
     // Step 2: Extract confirmation token from the response
     const confirmationToken = signUpData.user.identities?.[0]?.confirmation_token;
     if (!confirmationToken) {
