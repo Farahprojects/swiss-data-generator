@@ -35,8 +35,6 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[create-user-and-verify] Starting signup process for email: ${email}`);
-
     // Step 1: Create user using admin API with email_confirm: false to get the confirmation token
     const { data: signUpData, error: signUpError } = await supabaseClient.auth.admin.createUser({
       email,
@@ -80,17 +78,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[create-user-and-verify] User created successfully: ${signUpData.user.id}`);
-
-    // Log the complete Supabase response for debugging
-    console.log(`[create-user-and-verify] 🔍 SUPABASE RESPONSE AFTER USER CREATION:`);
-    console.log(`[create-user-and-verify] ============================================`);
-    console.log(`[create-user-and-verify] Full response data:`, JSON.stringify(signUpData, null, 2));
-    console.log(`[create-user-and-verify] User object:`, JSON.stringify(signUpData.user, null, 2));
-    console.log(`[create-user-and-verify] ============================================`);
-
     // Step 2: Generate verification link using generateLink (this creates the actual token)
-    console.log(`[create-user-and-verify] Generating verification link with generateLink...`);
     const { data: linkData, error: linkError } = await supabaseClient.auth.admin.generateLink({
       type: "signup",
       email: email,
@@ -126,13 +114,6 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[create-user-and-verify] 🔗 GENERATED LINK DATA:`);
-    console.log(`[create-user-and-verify] ============================================`);
-    console.log(`[create-user-and-verify] Link data:`, JSON.stringify(linkData, null, 2));
-    console.log(`[create-user-and-verify] Action link:`, linkData?.action_link);
-    console.log(`[create-user-and-verify] Properties:`, JSON.stringify(linkData?.properties, null, 2));
-    console.log(`[create-user-and-verify] ============================================`);
-
     const tokenLink = linkData?.properties?.action_link || "";
     const emailOtp = linkData?.properties?.email_otp || "";
     
@@ -147,10 +128,6 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[create-user-and-verify] Verification link generated successfully`);
-    console.log(`[create-user-and-verify] Token link: ${tokenLink}`);
-    console.log(`[create-user-and-verify] Email OTP: ${emailOtp}`);
-
     // Step 3: Call email-verification Edge Function with the generated link and template type
     const emailPayload = {
       user_id: signUpData.user.id,
@@ -159,13 +136,10 @@ serve(async (req) => {
       template_type: "email_verification"
     };
 
-    console.log(`[create-user-and-verify] 📧 EMAIL PAYLOAD TO SEND:`);
-    console.log(`[create-user-and-verify] ============================================`);
-    console.log(`[create-user-and-verify] user_id: ${emailPayload.user_id}`);
-    console.log(`[create-user-and-verify] token_link: ${emailPayload.token_link}`);
-    console.log(`[create-user-and-verify] email_otp: ${emailPayload.email_otp}`);
-    console.log(`[create-user-and-verify] template_type: ${emailPayload.template_type}`);
-    console.log(`[create-user-and-verify] ============================================`);
+    // Extract token from Supabase URL for logging
+    const token = tokenLink.split('token=')[1]?.split('&')[0];
+    console.log(`[create-user-and-verify] Token extracted: ${token}`);
+    console.log(`[create-user-and-verify] Final payload:`, JSON.stringify(emailPayload, null, 2));
 
     const { error: emailError } = await supabaseClient.functions.invoke('email-verification', {
       body: emailPayload
@@ -182,7 +156,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[create-user-and-verify] Email verification sent successfully`);
+    console.log(`[create-user-and-verify] ✅ Email verification sent successfully`);
 
     // Success case - verification email sent
     return new Response(JSON.stringify({ 
