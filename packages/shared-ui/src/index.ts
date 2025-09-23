@@ -12,4 +12,4 @@ export { Logo } from './components/Logo';
 export { cn } from './utils/cn';
 
 // Styles
-export './styles/globals.css';
+import './styles/globals.css';
