@@ -171,9 +171,8 @@ serve(async (req) => {
 
     // Step 4: Call email-verification Edge Function with the custom link
     const emailPayload = {
-      user_id: signUpData.user.id,
-      token_link: customVerificationLink, // Use custom URL, not Supabase URL
-      email_otp: emailOtp,
+      email: email,
+      url: customVerificationLink,
       template_type: "email_verification"
     };
 

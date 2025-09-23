@@ -18,76 +18,42 @@ serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  let userId = "";
-  let tokenLink = "";
-  let emailOtp = "";
+  let email = "";
+  let url = "";
   let templateType = "email_verification";
   
   try {
     const body = await req.json();
-    userId = body.user_id ?? "";
-    tokenLink = body.token_link ?? "";
-    emailOtp = body.email_otp ?? "";
+    email = body.email ?? "";
+    url = body.url ?? "";
     templateType = body.template_type ?? "email_verification";
-      log("✓ Request received:", { userId, templateType });
+    log("✓ Request received:", { email, templateType });
   } catch (e) {
     log("✗ JSON parsing failed:", e);
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!userId) {
-    log("✗ Missing user_id parameter");
-    return respond(400, { error: "user_id is required" });
+  if (!email) {
+    log("✗ Missing email parameter");
+    return respond(400, { error: "email is required" });
   }
 
-  if (!tokenLink) {
-    log("✗ Missing token_link parameter");
-    return respond(400, { error: "token_link is required" });
+  if (!url) {
+    log("✗ Missing url parameter");
+    return respond(400, { error: "url is required" });
   }
 
-  // Validation: Fail if Supabase URL is passed (should be handled by create-user-and-verify)
-  if (tokenLink.includes('api.therai.co/auth/v1/verify')) {
-    log("✗ Supabase URL detected in payload - this should be handled by create-user-and-verify");
-    return respond(400, { 
-      error: "Invalid token_link format. Supabase URLs should be processed by create-user-and-verify function.",
-      code: "INVALID_TOKEN_LINK_FORMAT"
-    });
-  }
 
-  const url = Deno.env.get("VITE_SUPABASE_URL");
+  const supabaseUrl = Deno.env.get("VITE_SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const smtpEndpoint = Deno.env.get("OUTBOUND_SMTP_ENDPOINT");
 
-  if (!url || !key || !smtpEndpoint) {
-    log("✗ Missing environment variables:", { hasUrl: !!url, hasKey: !!key, hasSmtp: !!smtpEndpoint });
+  if (!supabaseUrl || !key || !smtpEndpoint) {
+    log("✗ Missing environment variables:", { hasUrl: !!supabaseUrl, hasKey: !!key, hasSmtp: !!smtpEndpoint });
     return respond(500, { error: "Missing environment variables" });
   }
 
-  const supabase = createClient(url, key);
-  let currentEmail = "";
-
-  // Get user email for sending
-  try {
-    log("→ Fetching user email");
-    const { data: userData, error: fetchErr } = await supabase.auth.admin.getUserById(userId);
-    
-    if (fetchErr || !userData?.user) {
-      log("✗ User fetch failed:", fetchErr?.message);
-      return respond(500, { error: "Failed to fetch user", details: fetchErr?.message });
-    }
-    
-    currentEmail = userData.user.email;
-    
-    if (!currentEmail) {
-      log("✗ User missing email");
-      return respond(400, { error: "User does not have a valid email" });
-    }
-    
-    log("✓ User email confirmed:", currentEmail);
-  } catch (e: any) {
-    log("✗ Exception during user fetch:", e.message);
-    return respond(500, { error: "Error fetching user data", details: e.message });
-  }
+  const supabase = createClient(supabaseUrl, key);
 
   // Template fetching and processing
   let templateData;
@@ -114,37 +80,25 @@ serve(async (req) => {
     return respond(500, { error: "Template processing failed", details: err.message });
   }
 
-  // Template variable substitution
+  // Template variable substitution - simple and universal
   log("→ Processing template variables");
   const originalHtml = templateData.body_html;
   let html = templateData.body_html;
   
-  // For email_verification template, use {{verification_link}} and {{.OTP}}
-  if (templateType === "email_verification") {
-    // tokenLink is already processed by create-user-and-verify, use it directly
-    log("✓ Using pre-processed verification URL from create-user-and-verify:", {
-      url: tokenLink,
-      isCustomUrl: tokenLink.includes('auth.therai.co/email')
-    });
-    
-    html = html
-      .replace(/\{\{verification_link\}\}/g, tokenLink)
-      .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
-    
-    const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;
-    const otpReplacements = (originalHtml.match(/\{\{\s*\.OTP\s*\}\}/g) || []).length;
-    
-        log("✓ Template processing complete:", { linkReplacements, otpReplacements });
-  }
+  // Simple replacement: insert the URL into {{verification_link}}
+  html = html.replace(/\{\{verification_link\}\}/g, url);
+  
+  const linkReplacements = (originalHtml.match(/\{\{verification_link\}\}/g) || []).length;
+  log("✓ Template processing complete:", { linkReplacements, url });
 
   // Build VPS-compatible payload
   const payload = {
     slug: "noreply",                    // Hardcoded for verification pipeline
     domain: "therai.co",               // Hardcoded for verification pipeline
-    to_email: currentEmail,            // Dynamic: user's email
+    to_email: email,                   // Dynamic: email from payload
     subject: templateData.subject,     // Dynamic: from template
     body: html,                        // Dynamic: processed HTML template
-    request_id: userId,                // Use auth user ID for correlation
+    request_id: email,                 // Use email for correlation
     timestamp: new Date().toISOString() // Dynamic: current timestamp
   };
 
@@ -176,6 +130,6 @@ serve(async (req) => {
     return respond(500, { error: "Email delivery failed", details: err.message });
   }
 
-  log(`✅ EMAIL VERIFICATION COMPLETE: ${currentEmail}`);
+  log(`✅ EMAIL VERIFICATION COMPLETE: ${email}`);
   return respond(200, { status: "sent", template_type: templateType });
 });

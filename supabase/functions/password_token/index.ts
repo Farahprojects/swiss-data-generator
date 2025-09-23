@@ -93,27 +93,12 @@ serve(async (req) => {
     return respond(500, { error: "Link generation failed", details: err.message });
   }
 
-  const { data: templateData, error: templateErr } = await supabase
-    .from("token_emails")
-    .select("subject, body_html")
-    .eq("template_type", "password_reset")
-    .single();
-
-  if (templateErr || !templateData) {
-    return respond(500, { error: "Template fetch failed", details: templateErr?.message });
-  }
-
-  const html = templateData.body_html
-    .replace(/\{\{\s*\.Link\s*\}\}/g, customPasswordLink)
-    .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
-
-  // Use the verification-emailer function instead of direct SMTP call
-  const { error: emailError } = await supabase.functions.invoke('verification-emailer', {
+  // Use the standardized email-verification function with password_reset template
+  const { error: emailError } = await supabase.functions.invoke('email-verification', {
     body: {
-      to: email,
-      subject: templateData.subject,
-      html,
-      from: "Therai <no-reply@therai.co>",
+      email: email,
+      url: customPasswordLink,
+      template_type: "password_reset"
     }
   });
 

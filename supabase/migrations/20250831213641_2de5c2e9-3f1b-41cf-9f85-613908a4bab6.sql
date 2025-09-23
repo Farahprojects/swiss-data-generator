@@ -6,48 +6,75 @@ INSERT INTO public.email_notification_templates (
   body_text
 ) VALUES (
   'email_verification',
-  'Please verify your Therai Astro account',
-  '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e8e8e8; border-radius: 8px; background-color: #ffffff;">
+  'Please verify your Therai account',
+  '<div style="font-family: ''GT Sectra'', serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e8e8e8; border-radius: 8px; background-color: #ffffff;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <img src="https://auth.theraiastro.com/storage/v1/object/public/therai-assets/therai-logo.png" alt="Therai Astro" style="width: 200px; height: auto;" />
+    <h1 style="color: #000; margin: 0; font-size: 32px; font-weight: 400; font-family: ''GT Sectra'', serif;">Therai</h1>
   </div>
-  <div style="padding: 20px; margin-bottom: 30px;">
-    <h1 style="color: #333; margin-top: 0; font-size: 24px;">Welcome to Therai Astro!</h1>
-    <p style="color: #555; line-height: 1.6; font-size: 16px;">Thank you for signing up. Please verify your email address to complete your registration and unlock your personalized astrological insights.</p>
+  <div style="margin-bottom: 30px;">
+    <h2 style="color: #333; margin-top: 0; font-size: 24px; font-family: Arial, sans-serif;">Verify Your Email</h2>
+    <p style="color: #555; line-height: 1.6; font-size: 16px; font-family: Arial, sans-serif;">Thank you for signing up. Please verify your email address to complete your registration.</p>
   </div>
-  <div style="text-align: center; margin: 30px 0;">
-    <a href="{{verification_link}}" style="background-color: #7B61FF; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-      Verify Email Address
-    </a>
+  <div style="text-align: center; margin: 40px 0;">
+    <a href="{{verification_link}}" style="background-color: #ffffff; color: #000; padding: 15px 30px; text-decoration: none; border: 2px solid #000; border-radius: 25px; font-weight: 500; display: inline-block; font-family: Arial, sans-serif; font-size: 16px;">Verify Email</a>
   </div>
-  <div style="color: #555; line-height: 1.6; font-size: 14px; margin-top: 30px;">
-    <p>If the button above doesn''t work, you can copy and paste this link into your browser:</p>
-    <p style="word-break: break-all; color: #666; background-color: #f9f9f9; padding: 10px; border-radius: 4px;">{{verification_link}}</p>
-    <p><strong>Important:</strong> This verification link will expire in 24 hours for security purposes.</p>
+  <div style="color: #555; line-height: 1.6; font-size: 14px; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; border-radius: 4px;">
+    <p><strong>Security Note:</strong> This link will expire in 24 hours for your security.</p>
+    <p><strong>Didn''t sign up?</strong> You can safely ignore this email.</p>
   </div>
-  <div style="margin-top: 40px; background-color: #f9f9f9; padding: 20px; border-radius: 4px; text-align: center;">
-    <p style="margin-bottom: 0; color: #666; font-size: 15px;">Didn''t sign up for Therai Astro? You can safely ignore this email.</p>
-  </div>
-  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e8e8e8; color: #999; font-size: 13px; text-align: center;">
-    <p>This is an automated message. Please do not reply directly to this email.</p>
-    <p>&copy; 2025 Therai Astro. All rights reserved.</p>
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e8e8e8; color: #999; font-size: 13px; text-align: center; font-family: Arial, sans-serif;">
+    <p>This is an automated verification request. Please do not reply directly to this email.</p>
+    <p>&copy; 2025 Therai. All rights reserved.</p>
   </div>
 </div>',
-  'Welcome to Therai Astro!
+  'Welcome to Therai!
 
 Thank you for signing up. Please verify your email address to complete your registration.
 
 Click this link to verify: {{verification_link}}
 
-Or copy and paste this link into your browser:
-{{verification_link}}
-
 This verification link will expire in 24 hours.
 
-If you didn''t sign up for Therai Astro, you can safely ignore this email.
+If you didn''t sign up for Therai, you can safely ignore this email.
 
 Thank you,
-The Therai Astro Team'
+The Therai Team'
+),
+(
+  'password_reset',
+  'Reset your Therai password',
+  '<div style="font-family: ''GT Sectra'', serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e8e8e8; border-radius: 8px; background-color: #ffffff;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #000; margin: 0; font-size: 32px; font-weight: 400; font-family: ''GT Sectra'', serif;">Therai</h1>
+  </div>
+  <div style="margin-bottom: 30px;">
+    <h2 style="color: #333; margin-top: 0; font-size: 24px; font-family: Arial, sans-serif;">Reset Your Password</h2>
+    <p style="color: #555; line-height: 1.6; font-size: 16px; font-family: Arial, sans-serif;">We received a request to reset your password. Click the button below to create a new password.</p>
+  </div>
+  <div style="text-align: center; margin: 40px 0;">
+    <a href="{{verification_link}}" style="background-color: #ffffff; color: #000; padding: 15px 30px; text-decoration: none; border: 2px solid #000; border-radius: 25px; font-weight: 500; display: inline-block; font-family: Arial, sans-serif; font-size: 16px;">Reset Password</a>
+  </div>
+  <div style="color: #555; line-height: 1.6; font-size: 14px; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; border-radius: 4px;">
+    <p><strong>Security Note:</strong> This link will expire in 24 hours for your security.</p>
+    <p><strong>Didn''t request this?</strong> You can safely ignore this email. Your password won''t be changed.</p>
+  </div>
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e8e8e8; color: #999; font-size: 13px; text-align: center; font-family: Arial, sans-serif;">
+    <p>This is an automated password reset request. Please do not reply directly to this email.</p>
+    <p>&copy; 2025 Therai. All rights reserved.</p>
+  </div>
+</div>',
+  'Reset your Therai password
+
+We received a request to reset your password. Click the link below to create a new password.
+
+Reset your password: {{verification_link}}
+
+This link will expire in 24 hours for your security.
+
+If you didn''t request this password reset, you can safely ignore this email. Your password won''t be changed.
+
+Thank you,
+The Therai Team'
 )
 ON CONFLICT (template_type) DO UPDATE SET
   subject = EXCLUDED.subject,
