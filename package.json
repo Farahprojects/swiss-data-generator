@@ -12,6 +12,7 @@
     "keep-warm": "node scripts/keep-warm.js",
     "build:shared-ui": "cd packages/shared-ui && npm install && npm run build",
     "build:auth": "cd auth-app && npm install && npm run build",
+    "build:auth-full": "npm run build:shared-ui && npm run build:auth",
     "build:main": "npm run build",
     "build:all": "npm run build:shared-ui && npm run build:auth && npm run build:main"
   },
