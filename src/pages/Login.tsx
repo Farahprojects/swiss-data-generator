@@ -112,12 +112,12 @@ const Login = () => {
     setLoading(false);
   };
 
-  /** Resend verification email (edge function) */
+  /** Resend verification email using resend-verification edge function */
   const handleResendVerification = async (email: string): Promise<{ error: Error | null }> => {
     try {
-      // Use Supabase edge function via the client
-      const { data, error } = await supabase.functions.invoke('email-verification', {
-        body: { user_id: user?.id ?? '' }
+      // Use the same resend verification function as signup flow
+      const { data, error } = await supabase.functions.invoke('resend-verification', {
+        body: { email }
       });
 
       if (error) {
