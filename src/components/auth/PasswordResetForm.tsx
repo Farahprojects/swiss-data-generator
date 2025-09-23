@@ -97,7 +97,7 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-8">
+    <div className="max-w-md mx-auto space-y-8 pt-8">
       <div className="text-center space-y-4">
         <h3 className="text-2xl font-light text-gray-900">Set your new <em>password</em></h3>
         <p className="text-gray-600 font-light leading-relaxed">
@@ -133,7 +133,7 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
         <div className="space-y-4">
           <Button
             type="submit"
-            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg"
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-full text-lg"
             disabled={!passwordValid || !passwordsMatch || isUpdating || showSuccess}
           >
             {isUpdating ? (
