@@ -288,9 +288,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * ─────────────────────────────────*/
   const signIn = async (email: string, password: string) => {
     try {
+      // Note: 400 errors in console are expected for invalid credentials - handled gracefully below
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
+        // Return error without logging - UI will show "Invalid email or password"
         return { error, data: null };
       }
       
