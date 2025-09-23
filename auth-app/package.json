@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@therai/shared-ui": "file:../packages/shared-ui",
     "@supabase/supabase-js": "^2.50.3",
     "framer-motion": "^11.15.0",
     "lucide-react": "^0.468.0",

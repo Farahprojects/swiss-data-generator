@@ -73,32 +73,10 @@ export const insightsService = {
 
       console.log('🚀 SERVICE: User authenticated:', session.user.id);
 
-      // Get user's API key using the session
-      console.log('🚀 SERVICE: === API KEY RETRIEVAL ===');
-      const { data: apiKeyData, error: apiKeyError } = await supabase
-        .from('api_keys')
-        .select('api_key')
-        .eq('user_id', session.user.id)
-        .eq('is_active', true)
-        .single();
-
-      if (apiKeyError) {
-        console.error('🚀 SERVICE: API key retrieval error:', apiKeyError);
-        return {
-          success: false,
-          error: 'Failed to retrieve API credentials. Please contact support.'
-        };
-      }
-
-      if (!apiKeyData?.api_key) {
-        console.error('🚀 SERVICE: No active API key found for user:', session.user.id);
-        return {
-          success: false,
-          error: 'No active API key found. Please contact support to activate your account.'
-        };
-      }
-
-      console.log('🚀 SERVICE: API key retrieved successfully (length):', apiKeyData.api_key.length);
+      // Mock API key for now since table was dropped
+      console.log('🚀 SERVICE: === API KEY MOCK (TABLE DROPPED) ===');
+      const mockApiKey = 'mock_api_key_for_insights';
+      console.log('🚀 SERVICE: Using mock API key for insights generation');
 
       // Extract plain text from journal entries (if included)
       console.log('🚀 SERVICE: === DATA TRANSFORMATION ===');
@@ -150,7 +128,7 @@ export const insightsService = {
       const { data, error } = await supabase.functions.invoke('generate-insights', {
         body: payload,  // ✅ Raw object - Supabase will stringify automatically
         headers: {
-          Authorization: `Bearer ${apiKeyData.api_key}`,
+          Authorization: `Bearer ${mockApiKey}`,
           // 🚫 Removed Content-Type - let Supabase set it automatically
         }
       });
