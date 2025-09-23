@@ -56,6 +56,7 @@ const Login = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginAttempted, setLoginAttempted] = useState(false);
+  const [resendState, setResendState] = useState<'idle' | 'processing' | 'sent'>('idle');
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
@@ -116,6 +117,8 @@ const Login = () => {
 
   /** Resend verification email using resend-verification edge function */
   const handleResendVerification = async (email: string): Promise<{ error: Error | null }> => {
+    setResendState('processing');
+    
     try {
       // Use the same resend verification function as signup flow
       const { data, error } = await supabase.functions.invoke('resend-verification', {
@@ -126,13 +129,18 @@ const Login = () => {
         throw new Error(error.message || 'Failed to send verification email');
       }
 
+      setResendState('sent');
       toast({
         title: 'Verification email sent',
         description: 'Please check your inbox (and spam folder).',
       });
       
+      // Reset to idle after 3 seconds
+      setTimeout(() => setResendState('idle'), 3000);
+      
       return { error: null };
     } catch (error: any) {
+      setResendState('idle');
       toast({
         title: 'Error',
         description: error.message ?? 'Unable to resend email',
@@ -263,9 +271,19 @@ const Login = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleResendVerification(email)}
-                        className="text-xs border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-800"
+                        disabled={resendState === 'processing' || resendState === 'sent'}
+                        className="text-xs border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Resend verification email
+                        {resendState === 'processing' ? (
+                          <>
+                            <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
+                            Processing...
+                          </>
+                        ) : resendState === 'sent' ? (
+                          'Email sent!'
+                        ) : (
+                          'Resend verification email'
+                        )}
                       </Button>
                     ) : null}
                   </div>

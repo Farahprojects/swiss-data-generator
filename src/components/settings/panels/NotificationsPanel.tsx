@@ -7,7 +7,7 @@ import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 
 // Define the specific notification toggle keys type
-type NotificationToggleKey = 'password_change_notifications' | 'email_change_notifications' | 'security_alert_notifications';
+type NotificationToggleKey = 'password_change_notifications' | 'security_alert_notifications';
 
 export const NotificationsPanel = () => {
   const {
@@ -117,24 +117,7 @@ export const NotificationsPanel = () => {
                 />
               </div>
               
-              {/* Email Change Notifications */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">Email Address Changes</p>
-                  <p className="text-xs text-gray-500">
-                    Get notified when your email address is changed
-                  </p>
-                </div>
-                <Switch 
-                  id="email-change-notifications"
-                  checked={isNotificationEnabled('email_change_notifications')}
-                  onCheckedChange={(checked) => 
-                    handleNotificationToggleChange('email_change_notifications', checked)
-                  }
-                  disabled={saving || !preferences?.email_notifications_enabled}
-                  className="focus:ring-2 focus:ring-primary"
-                />
-              </div>
+              {/* Email Change Notifications - Removed - no longer needed */}
               
               {/* Security Alert Notifications */}
               <div className="flex items-center justify-between">

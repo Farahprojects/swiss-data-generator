@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export enum NotificationType {
   PASSWORD_CHANGE = 'password_change',
-  EMAIL_CHANGE = 'email_change',
+  // EMAIL_CHANGE = 'email_change', // Removed - no longer needed
   SECURITY_ALERT = 'security_alert'
 }
 
@@ -73,28 +73,7 @@ export const sendPasswordChangeNotification = async (
   return sendEmailNotification(NotificationType.PASSWORD_CHANGE, email, variables);
 };
 
-/**
- * Sends an email change notification to the previous email address
- * 
- * @param previousEmail The previous email address
- * @param newEmail The new email address (will be added to variables)
- * @param variables Additional variables for the template
- * @returns Promise resolving to a success status and optional error
- */
-export const sendEmailChangeNotification = async (
-  previousEmail: string,
-  newEmail: string,
-  variables: NotificationVariables = {}
-): Promise<{ success: boolean; error?: string }> => {
-  return sendEmailNotification(
-    NotificationType.EMAIL_CHANGE, 
-    previousEmail,
-    { 
-      ...variables,
-      newEmail 
-    }
-  );
-};
+// Removed sendEmailChangeNotification - no longer needed for signed user email changes
 
 /**
  * Sends a security alert notification email

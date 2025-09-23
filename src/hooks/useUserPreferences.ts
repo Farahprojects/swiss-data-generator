@@ -8,7 +8,7 @@ export interface UserPreferences {
   user_id: string;
   email_notifications_enabled: boolean;
   password_change_notifications: boolean;
-  email_change_notifications: boolean;
+  // email_change_notifications: boolean; // Removed - no longer needed
   security_alert_notifications: boolean;
   client_view_mode: 'grid' | 'list';
   created_at: string;
@@ -17,7 +17,7 @@ export interface UserPreferences {
 
 export type NotificationToggleType =
   | "password_change_notifications"
-  | "email_change_notifications"
+  // | "email_change_notifications" // Removed - no longer needed
   | "security_alert_notifications";
 
 interface UpdateOptions {
@@ -30,7 +30,7 @@ const getDefaultPreferences = (userId: string): UserPreferences => ({
   user_id: userId,
   email_notifications_enabled: true,
   password_change_notifications: true,
-  email_change_notifications: true,
+  // email_change_notifications: true, // Removed - no longer needed
   security_alert_notifications: true,
   client_view_mode: 'grid',
   created_at: new Date().toISOString(),
@@ -224,7 +224,7 @@ export function useUserPreferences() {
         user_id: userId,
         email_notifications_enabled: true,
         password_change_notifications: true,
-        email_change_notifications: true,
+        // email_change_notifications: true, // Removed - no longer needed
         security_alert_notifications: true,
         client_view_mode: 'grid',
       };
@@ -276,7 +276,7 @@ export function useUserPreferences() {
           email_notifications_enabled: enabled,
           password_change_notifications:
             preferences.password_change_notifications,
-          email_change_notifications: preferences.email_change_notifications,
+          // email_change_notifications: preferences.email_change_notifications, // Removed - no longer needed
           security_alert_notifications:
             preferences.security_alert_notifications,
           client_view_mode: preferences.client_view_mode,
@@ -370,10 +370,7 @@ export function useUserPreferences() {
             type === "password_change_notifications"
               ? enabled
               : preferences.password_change_notifications,
-          email_change_notifications:
-            type === "email_change_notifications"
-              ? enabled
-              : preferences.email_change_notifications,
+          // email_change_notifications: // Removed - no longer needed
           security_alert_notifications:
             type === "security_alert_notifications"
               ? enabled
@@ -464,7 +461,7 @@ export function useUserPreferences() {
           user_id: user.id,
           email_notifications_enabled: preferences.email_notifications_enabled,
           password_change_notifications: preferences.password_change_notifications,
-          email_change_notifications: preferences.email_change_notifications,
+          // email_change_notifications: preferences.email_change_notifications, // Removed - no longer needed
           security_alert_notifications: preferences.security_alert_notifications,
           client_view_mode: viewMode,
           updated_at: new Date().toISOString(),
@@ -534,8 +531,8 @@ export const formatNotificationTypeName = (type: NotificationToggleType): string
   switch (type) {
     case "password_change_notifications":
       return "Password change notifications";
-    case "email_change_notifications":
-      return "Email change notifications";
+    // case "email_change_notifications": // Removed - no longer needed
+    //   return "Email change notifications";
     case "security_alert_notifications":
       return "Security alert notifications";
     default:

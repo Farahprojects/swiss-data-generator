@@ -34,7 +34,7 @@ export const cleanupAuthState = async () => {
   });
   
   // Clear any other auth-related items
-  localStorage.removeItem('hasEmailChangeHistory');
+  // localStorage.removeItem('hasEmailChangeHistory'); // Removed - no longer needed
   
   console.log('✅ Auth state cleanup completed');
 };

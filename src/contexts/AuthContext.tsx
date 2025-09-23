@@ -49,26 +49,7 @@ export type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Edge function: /functions/v1/email-check
- *   Expects bearer SESSION token so it can check RLS against the current user.
- */
-const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
-  try {
-    // Use Supabase edge function via the client
-    const { data, error } = await supabase.functions.invoke('email-check', {
-      body: { email: userEmail }
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
-  } catch (err) {
-    return null;
-  }
-};
+// Removed checkForPendingEmailChange - no longer needed for signed user email changes
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -160,30 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (event === 'SIGNED_IN' && supaSession) {
-        // Only check for pending email change if we suspect there might be one
-        // Don't block the auth flow for every sign-in
-        const hasEmailChangeHistory = localStorage.getItem('hasEmailChangeHistory');
-        if (hasEmailChangeHistory === 'true') {
-          
-          // Defer the email check to avoid blocking the auth flow
-          setTimeout(async () => {
-            try {
-              const emailCheckData = await checkForPendingEmailChange(
-                supaSession.access_token, 
-                supaSession.user.email || ''
-              );
-              
-
-              if (emailCheckData?.status === 'pending') {
-              } else {
-              }
-            } catch (error) {
-            } finally {
-            }
-          }, 0);
-        } else {
-          // No email change history, skip the check entirely
-        }
+        // Removed email change check - no longer needed for signed user email changes
       }
 
       if (event === 'SIGNED_OUT') {

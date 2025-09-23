@@ -14,7 +14,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import PasswordInput from "@/components/auth/PasswordInput";
-import usePasswordManagement from "@/hooks/usePasswordManagement";
+// Removed usePasswordManagement import - now using edge functions
 import { cn } from "@/lib/utils";
 
 type PasswordFormValues = {
@@ -35,7 +35,7 @@ export const PasswordSettingsPanel = () => {
   const [invalidPasswordError, setInvalidPasswordError] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [showSuccessButton, setShowSuccessButton] = useState(false);
-  const { verifyCurrentPassword, updatePassword, resetPassword } = usePasswordManagement();
+  // Password management functions using edge functions
 
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -81,7 +81,16 @@ export const PasswordSettingsPanel = () => {
         return;
       }
       
-      const { success, error } = await verifyCurrentPassword(userEmail, currentPassword);
+      // Use password-manager edge function to verify current password
+      const { data, error } = await supabase.functions.invoke('password-manager', {
+        body: {
+          action: 'verify',
+          email: userEmail,
+          currentPassword: currentPassword
+        }
+      });
+
+      const success = data?.success;
       
       if (!success) {
         setInvalidPasswordError(true);
@@ -109,7 +118,25 @@ export const PasswordSettingsPanel = () => {
     setUpdateSuccess(false);
     
     try {
-      const { success, error } = await updatePassword(data.newPassword);
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      
+      if (!userId) {
+        setIsUpdatingPassword(false);
+        return;
+      }
+
+      // Use password-manager edge function to update password
+      const { data, error } = await supabase.functions.invoke('password-manager', {
+        body: {
+          action: 'update',
+          userId: userId,
+          newPassword: data.newPassword
+        }
+      });
+
+      const success = data?.success;
       
       if (!success) {
         setIsUpdatingPassword(false);
@@ -143,7 +170,15 @@ export const PasswordSettingsPanel = () => {
       
       setResetEmailSent(false);
       
-      const { success, error } = await resetPassword(userEmail);
+      // Use password-manager edge function to reset password
+      const { data, error } = await supabase.functions.invoke('password-manager', {
+        body: {
+          action: 'reset',
+          email: userEmail
+        }
+      });
+
+      const success = data?.success;
       
       if (!success) {
         return;

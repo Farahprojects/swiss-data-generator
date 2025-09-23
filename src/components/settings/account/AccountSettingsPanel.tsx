@@ -2,7 +2,7 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { EmailSettingsPanel } from "./EmailSettingsPanel";
+// import { EmailSettingsPanel } from "./EmailSettingsPanel"; // Removed - no longer needed
 import { PasswordSettingsPanel } from "./PasswordSettingsPanel";
 
 export const AccountSettingsPanel = () => {
@@ -33,9 +33,7 @@ export const AccountSettingsPanel = () => {
       
       {message && renderInlineMessage()}
       
-      <div className="mb-8">
-        <EmailSettingsPanel />
-      </div>
+      {/* Email Settings Panel - Removed - no longer needed for signed user email changes */}
       
       <div>
         <PasswordSettingsPanel />
