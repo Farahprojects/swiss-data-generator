@@ -1,6 +1,4 @@
 {
-  "buildCommand": "npm run build:auth-full",
-  "installCommand": "npm install",
   "rewrites": [
     {
       "source": "/(.*)",
