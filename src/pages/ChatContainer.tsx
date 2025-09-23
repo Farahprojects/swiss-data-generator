@@ -1,7 +1,6 @@
 import React from 'react';
 import { useSafeBottomPadding } from '@/hooks/useSafeBottomPadding';
 import { ChatBox } from '@/features/chat/ChatBox';
-import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { useChatInitialization } from '@/hooks/useChatInitialization';
@@ -23,14 +22,11 @@ const ChatContainerContent: React.FC = () => {
 
   return (
     <div className="flex min-h-screen pb-safe" style={{ contain: 'size', overscrollBehavior: 'contain' as any }}>
-      <PricingProvider>
-        <ReportModalProvider>
-          <MobileViewportLock active={false}>
-            <ChatBox />
-          </MobileViewportLock>
-        </ReportModalProvider>
-      </PricingProvider>
-      
+      <ReportModalProvider>
+        <MobileViewportLock active={false}>
+          <ChatBox />
+        </MobileViewportLock>
+      </ReportModalProvider>
     </div>
   );
 };

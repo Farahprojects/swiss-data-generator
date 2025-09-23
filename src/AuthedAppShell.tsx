@@ -43,8 +43,9 @@ const AuthedAppShell: React.FC = () => {
       <AuthProvider>
         <ModalStateProvider>
           <SettingsModalProvider>
-            <ModeProvider>
-            <Routes>
+            <PricingProvider>
+              <ModeProvider>
+                <Routes>
               {/* Public routes - redirect authenticated users to chat */}
               <Route path="/" element={<PublicOnlyGuard><ChatContainer /></PublicOnlyGuard>} />
               <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
@@ -79,8 +80,9 @@ const AuthedAppShell: React.FC = () => {
               
               {/* 404 - redirect authenticated users to chat */}
               <Route path="*" element={<PublicOnlyGuard><NotFound /></PublicOnlyGuard>} />
-            </Routes>
-            </ModeProvider>
+                </Routes>
+              </ModeProvider>
+            </PricingProvider>
           </SettingsModalProvider>
         </ModalStateProvider>
       </AuthProvider>
