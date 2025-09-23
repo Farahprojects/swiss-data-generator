@@ -254,7 +254,22 @@ const Login = () => {
                   />
                 </div>
 
-                {errorMsg && <div className="text-red-600 text-sm text-center font-light">{errorMsg}</div>}
+                {errorMsg && (
+                  <div className="text-center space-y-3">
+                    <div className="text-red-600 text-sm font-light">{errorMsg}</div>
+                    {errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('verification') || errorMsg.toLowerCase().includes('verify') ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendVerification(email)}
+                        className="text-xs border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-800"
+                      >
+                        Resend verification email
+                      </Button>
+                    ) : null}
+                  </div>
+                )}
 
                 <Button
                   type="submit"

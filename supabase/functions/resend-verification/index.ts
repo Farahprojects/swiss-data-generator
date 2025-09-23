@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +18,7 @@ serve(async (req) => {
   try {
     const { email }: ResendVerificationRequest = await req.json();
     
-    console.log('Resend verification request for email:', email);
+    console.log('[resend-verification] Request for email:', email);
 
     if (!email) {
       return new Response(
@@ -28,25 +28,20 @@ serve(async (req) => {
     }
 
     // Initialize Supabase admin client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    const supabase = createClient(
+      Deno.env.get('VITE_SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     // Check if user exists and verification status from profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('email_verified, verification_status')
+      .select('email_verified, verification_status, user_id')
       .eq('email', email)
       .single();
     
     if (profileError) {
-      console.error('Error fetching user profile:', profileError);
+      console.error('[resend-verification] Error fetching user profile:', profileError);
       return new Response(
         JSON.stringify({ error: 'No account found with this email address' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -54,7 +49,7 @@ serve(async (req) => {
     }
 
     if (profile.email_verified || profile.verification_status === 'verified') {
-      console.log('User already verified for email:', email);
+      console.log('[resend-verification] User already verified for email:', email);
       return new Response(
         JSON.stringify({ 
           success: false,
@@ -67,7 +62,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Generating new verification link for existing unverified user:', email);
+    console.log('[resend-verification] Generating new verification link for existing unverified user:', email);
 
     // Generate email verification link for existing unverified user
     const { data, error } = await supabase.auth.admin.generateLink({
@@ -79,11 +74,11 @@ serve(async (req) => {
     });
 
     if (error) {
-      console.error('Error generating verification link:', error);
+      console.error('[resend-verification] Error generating verification link:', error);
       
       // Handle specific error cases gracefully
       if (error.message?.includes('already been registered') || error.code === 'email_exists') {
-        console.log('User already registered, suggesting login instead');
+        console.log('[resend-verification] User already registered, suggesting login instead');
         return new Response(
           JSON.stringify({ 
             success: false,
@@ -103,38 +98,26 @@ serve(async (req) => {
     }
 
     if (!data.properties?.action_link) {
-      console.error('No action link in response:', data);
+      console.error('[resend-verification] No action link in response:', data);
       return new Response(
         JSON.stringify({ error: 'Failed to generate verification link' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Generated verification link successfully');
-
-    // Get email template from database
-    const { data: templateData, error: templateError } = await supabase
-      .from('email_notification_templates')
-      .select('subject, body_html, body_text')
-      .eq('template_type', 'email_verification')
-      .single();
-
-    if (templateError || !templateData) {
-      console.error('Error fetching email template:', templateError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch email template' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const tokenLink = data.properties.action_link;
+    const emailOtp = data.properties.email_otp || "";
+    
+    console.log('[resend-verification] Generated verification link successfully');
 
     // Extract token and build custom verification URL (same logic as create-user-and-verify)
-    let customVerificationLink = data.properties.action_link;
+    let customVerificationLink = tokenLink;
     let extractedToken = "";
     let extractedType = "";
     let extractedEmail = "";
     
     try {
-      const url = new URL(data.properties.action_link);
+      const url = new URL(tokenLink);
       extractedToken = url.searchParams.get('token') || "";
       extractedType = url.searchParams.get('type') || "";
       extractedEmail = url.searchParams.get('email') || email; // Fallback to original email
@@ -142,15 +125,15 @@ serve(async (req) => {
       if (extractedToken && extractedType && extractedEmail) {
         // Build custom URL pointing to your confirmation page
         customVerificationLink = `https://auth.therai.co/email?token=${extractedToken}&type=${extractedType}&email=${encodeURIComponent(extractedEmail)}`;
-        console.log('✓ Custom verification URL created for resend:', { 
-          originalUrl: data.properties.action_link,
+        console.log('[resend-verification] ✓ Custom verification URL created:', { 
+          originalUrl: tokenLink,
           customUrl: customVerificationLink,
           token: extractedToken.substring(0, 10) + "...",
           type: extractedType,
           email: extractedEmail
         });
       } else {
-        console.error('✗ Failed to extract token parameters for resend:', {
+        console.error('[resend-verification] ✗ Failed to extract token parameters:', {
           hasToken: !!extractedToken,
           hasType: !!extractedType,
           hasEmail: !!extractedEmail
@@ -158,38 +141,37 @@ serve(async (req) => {
         throw new Error('Failed to extract token parameters from Supabase URL');
       }
     } catch (error) {
-      console.error('✗ Error parsing token URL for resend:', error);
+      console.error('[resend-verification] ✗ Error parsing token URL:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to process verification token for resend' }),
+        JSON.stringify({ error: 'Failed to process verification token' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Replace template variables
-    const htmlContent = templateData.body_html.replace(/\{\{verification_link\}\}/g, customVerificationLink);
-    const textContent = templateData.body_text.replace(/\{\{verification_link\}\}/g, customVerificationLink);
+    // Call email-verification Edge Function with the custom link (same as create-user-and-verify)
+    const emailPayload = {
+      user_id: profile.user_id,
+      token_link: customVerificationLink, // Use custom URL, not Supabase URL
+      email_otp: emailOtp,
+      template_type: "email_verification"
+    };
 
-    console.log('Sending verification email via verification-emailer');
+    console.log('[resend-verification] Token extracted:', extractedToken);
+    console.log('[resend-verification] Final payload:', JSON.stringify(emailPayload, null, 2));
 
-    // Send verification email using existing verification-emailer function
-    const { error: emailError } = await supabase.functions.invoke('verification-emailer', {
-      body: {
-        to: email,
-        subject: templateData.subject,
-        html: htmlContent,
-        text: textContent
-      }
+    const { error: emailError } = await supabase.functions.invoke('email-verification', {
+      body: emailPayload
     });
 
     if (emailError) {
-      console.error('Error sending verification email:', emailError);
+      console.error('[resend-verification] Email sending error:', emailError);
       return new Response(
         JSON.stringify({ error: 'Failed to send verification email' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Verification email sent successfully');
+    console.log('[resend-verification] ✅ Email verification sent successfully');
 
     return new Response(
       JSON.stringify({ 
@@ -200,7 +182,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in resend-verification function:', error);
+    console.error('[resend-verification] Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

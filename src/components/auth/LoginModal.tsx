@@ -8,6 +8,7 @@ import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LoginModalProps {
   onSuccess?: () => void;
@@ -115,15 +116,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   // ————————————————————————————————————————————————
   const handleResendVerification = async () => {
     try {
-      await clearPendingEmail();
+      // Use the same resend verification function as signup flow
+      const { data, error } = await supabase.functions.invoke('resend-verification', {
+        body: { email }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to send verification email');
+      }
+
       toast({
         title: 'Verification email sent',
-        description: 'Please check your inbox and click the verification link.',
+        description: 'Please check your inbox (and spam folder).',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to resend verification email. Please try again.',
+        description: error.message ?? 'Failed to resend verification email. Please try again.',
         variant: 'destructive'
       });
     }
@@ -175,7 +184,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
           />
         </div>
 
-        {errorMsg && <div className="text-red-600 text-sm text-center font-light">{errorMsg}</div>}
+        {errorMsg && (
+          <div className="text-center space-y-3">
+            <div className="text-red-600 text-sm font-light">{errorMsg}</div>
+            {errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('verification') || errorMsg.toLowerCase().includes('verify') ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleResendVerification()}
+                className="text-xs border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-800"
+              >
+                Resend verification email
+              </Button>
+            ) : null}
+          </div>
+        )}
 
         <Button
           type="submit"
