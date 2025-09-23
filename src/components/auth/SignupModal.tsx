@@ -145,7 +145,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
           <Button
             onClick={handleResendVerification}
             disabled={loading}
-            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light"
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light rounded-full"
           >
             {loading ? 'Sending...' : 'Resend verification email'}
           </Button>
@@ -158,7 +158,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
               setPassword('');
               setConfirmPassword('');
             }}
-            className="w-full font-light"
+            className="w-full font-light rounded-full"
           >
             Try a different email
           </Button>
@@ -222,7 +222,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
         <Button 
           type="submit"
           size="lg"
-          className="w-full py-3 text-base font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-lg"
+          className="w-full py-3 text-base font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full"
           disabled={!emailValid || !passwordValid || !passwordsMatch || loading}
         >
           {loading ? 'Creating account...' : 'Create account'}

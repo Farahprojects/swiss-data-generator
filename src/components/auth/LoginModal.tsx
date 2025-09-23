@@ -222,7 +222,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
         <Button
           type="submit"
           size="lg"
-          className="w-full py-3 text-base font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-lg"
+          className="w-full py-3 text-base font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full"
           disabled={!emailValid || !passwordValid || loading}
         >
           {loading ? 'Signing in…' : 'Sign in'}

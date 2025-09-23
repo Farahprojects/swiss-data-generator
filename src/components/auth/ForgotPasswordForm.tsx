@@ -78,7 +78,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
           <div className="space-y-4">
             <Button 
               onClick={() => setEmailSent(false)}
-              className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg"
+              className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-full text-lg"
             >
               Try again
             </Button>
@@ -86,7 +86,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
             <Button 
               variant="outline" 
               onClick={onCancel}
-              className="w-full border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-xl text-lg"
+              className="w-full border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-full text-lg"
             >
               Back to login
             </Button>
@@ -117,7 +117,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
         <div className="space-y-4">
           <Button 
             type="submit" 
-            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg" 
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-full text-lg" 
             disabled={loading || !emailValid}
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
@@ -134,7 +134,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
             type="button" 
             variant="outline"
             onClick={onCancel}
-            className="w-full flex items-center justify-center gap-3 border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-xl text-lg"
+            className="w-full flex items-center justify-center gap-3 border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-full text-lg"
           >
             <ArrowLeft size={18} /> Back to Login
           </Button>
