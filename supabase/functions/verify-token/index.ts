@@ -6,80 +6,85 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface VerifyTokenRequest {
-  token: string;
-  type: string;
-  email?: string;
-}
+const respond = (body: any, status = 200) => {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+};
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { token, type, email }: VerifyTokenRequest = await req.json();
-    
-    console.log('[verify-token] Request:', { type, email: !!email, tokenLength: token?.length });
+    const { token, email, type } = await req.json();
 
-    if (!token || !type) {
-      return new Response(
-        JSON.stringify({ error: 'Token and type are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!token || !email || !type) {
+      return respond({ 
+        success: false, 
+        error: 'Missing required parameters: token, email, type' 
+      }, 400);
     }
 
-    // Initialize Supabase admin client
     const supabase = createClient(
       Deno.env.get('VITE_SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    try {
-      // Verify the token using Supabase's verifyOtp method
-      const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: token,
-        type: type as any,
-        email: email
-      });
+    console.log(`[verify-token] Verifying ${type} token for ${email}`);
 
-      if (error) {
-        console.error('[verify-token] Verification failed:', error);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: error.message || 'Token verification failed' 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // Verify the OTP token
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: token,
+      type: type as any, // 'signup' | 'recovery' | 'email_change'
+      email: email,
+    });
 
-      console.log('[verify-token] Verification successful');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          user: data.user,
-          session: data.session 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-
-    } catch (verifyError: any) {
-      console.error('[verify-token] Verification error:', verifyError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: verifyError.message || 'Token verification failed' 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (error) {
+      console.error(`[verify-token] OTP verification failed:`, error);
+      return respond({ 
+        success: false, 
+        error: error.message || 'Token verification failed' 
+      }, 400);
     }
+
+    if (!data.user) {
+      console.error(`[verify-token] No user returned from verification`);
+      return respond({ 
+        success: false, 
+        error: 'User not found' 
+      }, 404);
+    }
+
+    console.log(`[verify-token] ✓ Token verified successfully for user: ${data.user.id}`);
+
+    // For recovery type, we need to establish a session
+    if (type === 'recovery') {
+      // The verifyOtp should have already established a session
+      // Return the session data for the frontend to use
+      return respond({
+        success: true,
+        message: 'Token verified successfully',
+        session: data.session,
+        user: data.user
+      });
+    }
+
+    // For other types (signup, email_change), just return success
+    return respond({
+      success: true,
+      message: 'Token verified successfully',
+      user: data.user
+    });
 
   } catch (error) {
     console.error('[verify-token] Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return respond({ 
+      success: false, 
+      error: 'Internal server error' 
+    }, 500);
   }
 });

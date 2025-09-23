@@ -45,16 +45,15 @@ serve(async (req) => {
   }
 
   const supabase = createClient(url, key);
-  const redirectTo = "https://auth.therai.co/auth/password";
 
-  let tokenLink = "";
   let emailOtp = "";
+  let customPasswordLink = "";
 
   try {
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo },
+      options: { redirectTo: "https://auth.therai.co/auth/password" },
     });
 
     if (tokenErr) {
@@ -62,19 +61,34 @@ serve(async (req) => {
       return respond(500, { error: "Token generation failed", details: tokenErr.message });
     }
 
-    tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
+    // Extract token and OTP from the generated link
+    const actionLink = linkData?.action_link || linkData?.properties?.action_link || "";
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
-    if (!tokenLink) {
+    if (!actionLink) {
       return respond(500, {
         error: "Missing action_link in token generation",
         details: linkData,
       });
     }
 
-    tokenLink += `&email=${encodeURIComponent(email)}`;
-    log("Final tokenLink:", tokenLink);
+    // Parse the Supabase URL to extract the token
+    const urlObj = new URL(actionLink);
+    const token = urlObj.searchParams.get('token');
+    const type = urlObj.searchParams.get('type');
+
+    if (!token || !type) {
+      return respond(500, {
+        error: "Missing token or type in generated link",
+        details: { actionLink, token, type },
+      });
+    }
+
+    // Build custom password reset link
+    customPasswordLink = `https://auth.therai.co/auth/password?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}&email=${encodeURIComponent(email)}`;
+    
+    log("Custom password link built:", customPasswordLink);
   } catch (err: any) {
     return respond(500, { error: "Link generation failed", details: err.message });
   }
@@ -90,7 +104,7 @@ serve(async (req) => {
   }
 
   const html = templateData.body_html
-    .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
+    .replace(/\{\{\s*\.Link\s*\}\}/g, customPasswordLink)
     .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
 
   // Use the verification-emailer function instead of direct SMTP call

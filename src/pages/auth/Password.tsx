@@ -1,7 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
@@ -10,43 +18,67 @@ import PasswordResetForm from '@/components/auth/PasswordResetForm';
 
 const ResetPassword: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update-password'>('loading');
-  const [message, setMessage] = useState('Resetting your password…');
+  const [message, setMessage] = useState('Verifying your password reset link…');
 
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const processedRef = useRef(false);
 
-  useEffect(() => {
-    const verify = async () => {
-      if (processedRef.current) return;
-      processedRef.current = true;
+  const finishSuccess = async (token: string, email: string) => {
+    console.log(`[PASSWORD-VERIFY] ✓ SUCCESS: password reset verification completed`);
 
-      try {
-        const hash = new URLSearchParams(location.hash.slice(1));
+    setMessage('Setting up password reset...');
 
-        const accessToken = hash.get('access_token');
-        const refreshToken = hash.get('refresh_token');
+    try {
+      // Call secure edge function to verify token and get session
+      console.log('[PASSWORD-VERIFY] Calling verify-token edge function...');
 
-        if (!accessToken || !refreshToken) throw new Error('Missing access credentials');
+      const { data, error } = await supabase.functions.invoke('verify-token', {
+        body: {
+          token,
+          email,
+          type: 'recovery'
+        }
+      });
 
-        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (error) throw error;
-
-        // Instead of redirecting, show the password update form
-        setStatus('update-password');
-        setMessage('Please set your new password');
-
-        window.history.replaceState({}, '', '/auth/password');
-      } catch (err: any) {
-        setStatus('error');
-        const msg = err?.message ?? 'Password reset failed – link may have expired.';
-        setMessage(msg);
-        toast({ variant: 'destructive', title: 'Password reset failed', description: msg });
+      if (error) {
+        console.error('[PASSWORD-VERIFY] Edge function error:', error);
+        throw new Error(error.message || 'Token verification failed');
       }
-    };
-    verify();
-  }, [location.hash, location.search, toast]);
+
+      if (!data?.success) {
+        console.error('[PASSWORD-VERIFY] Verification failed:', data?.error);
+        throw new Error(data?.error || 'Token verification failed');
+      }
+
+      console.log('[PASSWORD-VERIFY] ✓ Token verification successful:', data.message);
+
+      // Set session if provided
+      if (data.session) {
+        const { error: sessionError } = await supabase.auth.setSession(data.session);
+        if (sessionError) {
+          console.error('[PASSWORD-VERIFY] Session error:', sessionError);
+          throw new Error('Failed to establish session');
+        }
+      }
+
+    } catch (error) {
+      console.error('[PASSWORD-VERIFY] Critical verification error:', error);
+      setStatus('error');
+      setMessage('Failed to verify your password reset link. Please try again or contact support.');
+      toast({
+        variant: 'destructive',
+        title: 'Verification Error',
+        description: error instanceof Error ? error.message : 'Unable to complete password reset verification. Please try again.'
+      });
+      return;
+    }
+
+    // Show password update form
+    setStatus('update-password');
+    setMessage('Please set your new password');
+  };
 
   const handlePasswordUpdateSuccess = () => {
     setStatus('success');
@@ -63,6 +95,75 @@ const ResetPassword: React.FC = () => {
       navigate('/login');
     }, 1500);
   };
+
+  useEffect(() => {
+    const verify = async () => {
+      if (processedRef.current) return;
+      processedRef.current = true;
+
+      // Entry point logging
+      const requestId = crypto.randomUUID().substring(0, 8);
+      console.log(`[PASSWORD-VERIFY:${requestId}] Starting verification process`);
+      console.log(`[PASSWORD-VERIFY:${requestId}] Full URL:`, window.location.href);
+      console.log(`[PASSWORD-VERIFY:${requestId}] Hash:`, location.hash);
+      console.log(`[PASSWORD-VERIFY:${requestId}] Search:`, location.search);
+
+      try {
+        const hash = new URLSearchParams(location.hash.slice(1));
+        const search = new URLSearchParams(location.search);
+
+        // Parameter extraction logging
+        const extractedParams = {
+          token: hash.get('token') || search.get('token'),
+          tokenType: hash.get('type') || search.get('type'),
+          email: hash.get('email') || search.get('email'),
+        };
+
+        console.log(`[PASSWORD-VERIFY:${requestId}] Extracted parameters:`, extractedParams);
+
+        const token = hash.get('token') || search.get('token');
+        const tokenType = hash.get('type') || search.get('type');
+        const email = hash.get('email') || search.get('email');
+
+        console.log(`[PASSWORD-VERIFY:${requestId}] → Flow: OTP method`);
+        console.log(`[PASSWORD-VERIFY:${requestId}] OTP params - token: ${!!token}, type: ${tokenType}, email: ${email}`);
+
+        if (!token || !tokenType || !email) {
+          const missingParams = [];
+          if (!token) missingParams.push('token');
+          if (!tokenType) missingParams.push('type');
+          if (!email) missingParams.push('email');
+          
+          console.error(`[PASSWORD-VERIFY:${requestId}] Missing OTP parameters:`, missingParams);
+          throw new Error(`Invalid link – missing: ${missingParams.join(', ')}`);
+        }
+
+        // Pre-verification logging
+        console.log(`[PASSWORD-VERIFY:${requestId}] Starting verification with edge function:`, {
+          tokenLength: token.length,
+          type: tokenType,
+          email: email,
+        });
+
+        // Call edge function to verify token
+        finishSuccess(token, email);
+
+      } catch (err: any) {
+        console.error(`[PASSWORD-VERIFY:${requestId}] ✗ VERIFICATION FAILED:`, {
+          message: err?.message,
+          status: err?.status,
+          code: err?.code,
+          details: err,
+        });
+        
+        setStatus('error');
+        const msg = err?.message ?? 'Verification failed – link may have expired.';
+        setMessage(msg);
+        toast({ variant: 'destructive', title: 'Verification failed', description: msg });
+      }
+    };
+    verify();
+  }, [location.hash, location.search]);
 
   const heading =
     status === 'loading' ? 'Password Reset' : 
@@ -86,31 +187,31 @@ const ResetPassword: React.FC = () => {
 
   const bgColor =
     status === 'loading'
-      ? 'bg-blue-100 text-blue-600'
+      ? 'bg-gray-100 text-gray-700'
       : status === 'success'
-      ? 'bg-green-100 text-green-600'
-      : 'bg-red-100 text-red-600';
+      ? 'bg-gray-900 text-white'
+      : 'bg-red-50 text-red-600';
 
   // Show password update form when status is 'update-password'
   if (status === 'update-password') {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-        <header className="w-full py-8 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
+      <div className="min-h-screen flex flex-col bg-white">
+        <header className="w-full py-8 flex justify-center border-b border-gray-100">
           <Logo size="md" />
         </header>
 
-        <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="w-full max-w-md sm:max-w-lg md:max-w-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="w-full max-w-md"
           >
             <PasswordResetForm onSuccess={handlePasswordUpdateSuccess} />
           </motion.div>
         </main>
 
-        <footer className="py-8 text-center text-xs text-gray-500 font-light">
+        <footer className="py-8 text-center text-sm text-gray-500 font-light">
           © {new Date().getFullYear()} therai. All rights reserved.
         </footer>
       </div>
@@ -118,70 +219,79 @@ const ResetPassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-      <header className="w-full py-8 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
+    <div className="min-h-screen flex flex-col bg-white">
+      <header className="w-full py-8 flex justify-center border-b border-gray-100">
         <Logo size="md" />
       </header>
 
-      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="w-full max-w-md sm:max-w-lg md:max-w-xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="w-full max-w-md"
         >
-          <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-8 space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-light text-gray-900">
+          <Card className="border-0 shadow-none bg-transparent">
+            <CardHeader className="text-center pb-8 px-0">
+              <CardTitle className="text-4xl font-light text-gray-900 mb-3">
                 {heading}
-              </h2>
-              <p className="text-gray-600 font-light leading-relaxed">
+              </CardTitle>
+              <CardDescription className="text-gray-600 font-light text-lg">
                 {status === 'loading'
-                  ? 'Verifying reset link…'
+                  ? 'Verifying your password reset link'
                   : status === 'success'
-                  ? 'You can now sign in with your new password.'
-                  : 'We encountered a problem.'}
-              </p>
-            </div>
+                  ? 'Your password has been reset'
+                  : 'Password reset failed'}
+              </CardDescription>
+            </CardHeader>
 
-            <div className="flex flex-col items-center space-y-6">
+            <CardContent className="flex flex-col items-center gap-8 px-0">
               <motion.div
-                className={`flex items-center justify-center h-20 w-20 rounded-full ${bgColor}`}
+                className={`flex items-center justify-center h-16 w-16 rounded-full ${bgColor}`}
                 animate={status}
                 variants={iconVariants}
               >
-                <Icon className="h-10 w-10" />
+                <Icon className="h-8 w-8" />
               </motion.div>
-              
-              <p className="text-center text-gray-700 font-light leading-relaxed max-w-sm">
+              <p className="text-center text-gray-600 font-light leading-relaxed max-w-sm">
                 {message}
               </p>
-            </div>
+            </CardContent>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <CardFooter className="flex flex-col gap-4 justify-center px-0 pt-8">
               {status === 'success' ? (
                 <Button
                   onClick={() => navigate('/login')}
-                  className="w-full sm:w-auto bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg"
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
                 >
-                  Go to Login
+                  Sign In to Continue
                 </Button>
               ) : (
-                <Button 
-                  onClick={() => navigate('/login')} 
-                  className="w-full sm:w-auto border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-xl text-lg" 
-                  variant="outline"
-                >
-                  Return to Login
-                </Button>
+                <div className="flex flex-col gap-3 w-full">
+                  <Button 
+                    onClick={() => navigate('/login')} 
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
+                  >
+                    Return to Login
+                  </Button>
+                  {status === 'error' && (
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-light py-4 rounded-xl"
+                    >
+                      <Link to="/signup">Create New Account</Link>
+                    </Button>
+                  )}
+                </div>
               )}
-            </div>
-          </div>
+            </CardFooter>
+          </Card>
         </motion.div>
       </main>
 
-      <footer className="py-8 text-center text-xs text-gray-500 font-light">
-        © {new Date().getFullYear()} Theraiapi. All rights reserved.
+      <footer className="py-8 text-center text-sm text-gray-500 font-light">
+        © {new Date().getFullYear()} therai. All rights reserved.
       </footer>
     </div>
   );
