@@ -43,6 +43,7 @@ export type AuthContextType = {
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
+  setPendingEmailAddress?: (email: string) => void;
   clearPendingEmail?: () => void;
 };
 
@@ -75,8 +76,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   // Email verification state removed - handled by custom system
   const [isValidating, setIsValidating] = useState(false);
+  const [pendingEmailAddress, setPendingEmailAddressState] = useState<string | undefined>(undefined);
+  const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
   const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
+
+  // Functions to manage pending email state
+  const setPendingEmailAddress = (email: string) => {
+    setPendingEmailAddressState(email);
+    setIsPendingEmailCheck(false);
+  };
+
+  const clearPendingEmail = () => {
+    setPendingEmailAddressState(undefined);
+    setIsPendingEmailCheck(false);
+  };
 
   /* ─────────────────────────────────────────────────────────────
    * Register Supabase auth listener and get initial session
@@ -519,7 +533,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         loading,
         isValidating,
-        // Email verification state removed - handled by custom system
+        pendingEmailAddress,
+        isPendingEmailCheck,
         signIn,
         signUp,
         signInWithGoogle,
@@ -527,7 +542,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         resendVerificationEmail,
         resetPasswordForEmail,
-        // clearPendingEmail removed
+        setPendingEmailAddress,
+        clearPendingEmail,
       }}
     >
       {children}

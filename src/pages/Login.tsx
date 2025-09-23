@@ -110,6 +110,8 @@ const Login = () => {
   const openVerificationModal = () => {
     setShowVerificationModal(true);
     setLoading(false);
+    // Set the email that needs verification for the modal
+    setPendingEmailAddress(email);
   };
 
   /** Resend verification email using resend-verification edge function */
