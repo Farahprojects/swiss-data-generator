@@ -128,7 +128,7 @@ export const PasswordSettingsPanel = () => {
       }
 
       // Use password-manager edge function to update password
-      const { data, error } = await supabase.functions.invoke('password-manager', {
+      const { data: response, error } = await supabase.functions.invoke('password-manager', {
         body: {
           action: 'update',
           userId: userId,
@@ -136,7 +136,7 @@ export const PasswordSettingsPanel = () => {
         }
       });
 
-      const success = data?.success;
+      const success = response?.success;
       
       if (!success) {
         setIsUpdatingPassword(false);

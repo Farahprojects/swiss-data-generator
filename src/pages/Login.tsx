@@ -44,6 +44,7 @@ const Login = () => {
     pendingEmailAddress,
     isPendingEmailCheck,
     clearPendingEmail,
+    setPendingEmailAddress,
   } = useAuth();
 
   // ————————————————————————————————————————————————
