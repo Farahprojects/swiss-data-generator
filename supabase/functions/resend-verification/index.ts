@@ -69,7 +69,7 @@ serve(async (req) => {
       type: 'signup',
       email,
       options: {
-        redirectTo: 'https://auth.therai.co/auth/email'
+        redirectTo: 'https://auth.therai.co/auth'
       }
     });
 
@@ -124,7 +124,7 @@ serve(async (req) => {
       
       if (extractedToken && extractedType && extractedEmail) {
         // Build custom URL pointing to your confirmation page
-        customVerificationLink = `https://auth.therai.co/email?token=${extractedToken}&type=${extractedType}&email=${encodeURIComponent(extractedEmail)}`;
+        customVerificationLink = `https://auth.therai.co/auth?token=${extractedToken}&type=${extractedType}&email=${encodeURIComponent(extractedEmail)}`;
         console.log('[resend-verification] ✓ Custom verification URL created:', { 
           originalUrl: tokenLink,
           customUrl: customVerificationLink,

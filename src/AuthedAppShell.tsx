@@ -8,8 +8,7 @@ import { PricingProvider } from '@/contexts/PricingContext';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import ResetPassword from './pages/auth/Password';
-import ConfirmEmail from './pages/auth/ConfirmEmail';
+import Auth from './pages/auth/Auth';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
 import Contact from './pages/Contact';
@@ -57,8 +56,9 @@ const AuthedAppShell: React.FC = () => {
               {/* Auth routes - redirect authenticated users to chat */}
               <Route path="/login" element={<PublicOnlyGuard><Login /></PublicOnlyGuard>} />
               <Route path="/signup" element={<PublicOnlyGuard><Signup /></PublicOnlyGuard>} />
-              <Route path="/auth/password" element={<PublicOnlyGuard><ResetPassword /></PublicOnlyGuard>} />
-              <Route path="/auth/email" element={<PublicOnlyGuard><ConfirmEmail /></PublicOnlyGuard>} />
+              <Route path="/auth" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
+              <Route path="/auth/password" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
+              <Route path="/auth/email" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
               
               {/* Payment/subscription routes - redirect authenticated users to chat */}
               <Route path="/subscription" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />

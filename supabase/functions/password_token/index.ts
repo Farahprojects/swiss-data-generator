@@ -53,7 +53,7 @@ serve(async (req) => {
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: "https://auth.therai.co/auth/password" },
+      options: { redirectTo: "https://auth.therai.co/auth" },
     });
 
     if (tokenErr) {
@@ -86,7 +86,7 @@ serve(async (req) => {
     }
 
     // Build custom password reset link
-    customPasswordLink = `https://auth.therai.co/auth/password?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}&email=${encodeURIComponent(email)}`;
+    customPasswordLink = `https://auth.therai.co/auth?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}&email=${encodeURIComponent(email)}`;
     
     log("Custom password link built:", customPasswordLink);
   } catch (err: any) {
