@@ -161,16 +161,16 @@ serve(async (req) => {
       `
     };
     
-    logMessage("Forwarding to send-email function", "info", { 
+    logMessage("Forwarding to outbound-messenger function", "info", { 
       to: emailPayload.to,
       from: emailPayload.from,
       subject: emailPayload.subject
     });
     
-    // 3. Send the support email - this is our primary task
+    // 3. Send the support email via outbound-messenger - this is our primary task
     const supportEmailPromise = Promise.race([
       fetch(
-        `${supabaseUrl}/functions/v1/send-email`,
+        `${supabaseUrl}/functions/v1/outbound-messenger`,
         {
           method: "POST",
           headers: {
@@ -191,7 +191,7 @@ serve(async (req) => {
     
     if (!response.ok) {
       const errorData = await response.text();
-      logMessage("Error from send-email function", "error", { 
+      logMessage("Error from outbound-messenger function", "error", { 
         status: response.status,
         errorData
       });
@@ -207,10 +207,10 @@ serve(async (req) => {
       try {
         logMessage("Starting auto-reply email sending process", "info");
         
-        // Send the auto-reply email using the send-notification-email function
+        // Send the auto-reply email using the email-verification function
         // which will properly handle template fetching from the database
         const autoReplyResponse = await fetch(
-          `${supabaseUrl}/functions/v1/send-notification-email`,
+          `${supabaseUrl}/functions/v1/email-verification`,
           {
             method: "POST",
             headers: {
@@ -219,24 +219,22 @@ serve(async (req) => {
               "apikey": supabaseAnonKey
             },
             body: JSON.stringify({
-              templateType: "support_email",
-              recipientEmail: payload.email,
-              variables: {
-                name: payload.name
-              }
+              email: payload.email,
+              url: "https://therai.co", // Generic URL for support auto-reply
+              template_type: "support_email"
             }),
           }
         );
 
         if (!autoReplyResponse.ok) {
           const errorData = await autoReplyResponse.text();
-          logMessage("Error sending auto-reply via send-notification-email", "error", { 
+          logMessage("Error sending auto-reply via email-verification", "error", { 
             status: autoReplyResponse.status,
             errorData,
             recipientEmail: payload.email
           });
         } else {
-          logMessage("Auto-reply email sent successfully via send-notification-email", "info", {
+          logMessage("Auto-reply email sent successfully via email-verification", "info", {
             recipientEmail: payload.email
           });
         }

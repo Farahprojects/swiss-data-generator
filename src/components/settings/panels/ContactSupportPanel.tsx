@@ -18,6 +18,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { createClient } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SupportFile = {
   file: File;
@@ -36,6 +38,8 @@ export const ContactSupportPanel = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const supabase = createClient();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
@@ -110,11 +114,30 @@ export const ContactSupportPanel = () => {
       return;
     }
     
+    if (!user?.email) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // Simulate API call with a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { error } = await supabase.functions.invoke('contact-form-handler', {
+        body: {
+          name: user.user_metadata?.full_name || user.email.split('@')[0],
+          email: user.email,
+          subject: subject,
+          message: message.trim()
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
       
       // Success
       toast({
@@ -135,6 +158,7 @@ export const ContactSupportPanel = () => {
         return [];
       });
     } catch (error) {
+      console.error('Contact form error:', error);
       toast({
         title: "Failed to send message",
         description: "Please try again later.",

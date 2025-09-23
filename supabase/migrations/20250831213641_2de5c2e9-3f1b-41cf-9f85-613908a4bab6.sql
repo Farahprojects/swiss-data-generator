@@ -75,6 +75,40 @@ If you didn''t request this password reset, you can safely ignore this email. Yo
 
 Thank you,
 The Therai Team'
+),
+(
+  'support_email',
+  'Thank you for contacting Therai support',
+  '<div style="font-family: ''GT Sectra'', serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e8e8e8; border-radius: 8px; background-color: #ffffff;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #000; margin: 0; font-size: 32px; font-weight: 400; font-family: ''GT Sectra'', serif;">Therai</h1>
+  </div>
+  <div style="margin-bottom: 30px;">
+    <h2 style="color: #333; margin-top: 0; font-size: 24px; font-family: Arial, sans-serif;">Thank You for Contacting Us</h2>
+    <p style="color: #555; line-height: 1.6; font-size: 16px; font-family: Arial, sans-serif;">We have received your message and will get back to you as soon as possible.</p>
+  </div>
+  <div style="color: #555; line-height: 1.6; font-size: 14px; font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; border-radius: 4px;">
+    <p><strong>What happens next?</strong></p>
+    <p>• Our support team will review your message</p>
+    <p>• We typically respond within 24 hours</p>
+    <p>• You''ll receive a direct reply to this email</p>
+  </div>
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e8e8e8; color: #999; font-size: 13px; text-align: center; font-family: Arial, sans-serif;">
+    <p>This is an automated confirmation. Please do not reply directly to this email.</p>
+    <p>&copy; 2025 Therai. All rights reserved.</p>
+  </div>
+</div>',
+  'Thank You for Contacting Therai Support
+
+We have received your message and will get back to you as soon as possible.
+
+What happens next?
+• Our support team will review your message
+• We typically respond within 24 hours  
+• You''ll receive a direct reply to this email
+
+Thank you,
+The Therai Team'
 )
 ON CONFLICT (template_type) DO UPDATE SET
   subject = EXCLUDED.subject,
