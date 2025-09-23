@@ -33,22 +33,22 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if user exists and verification status from profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('email_verified, verification_status, user_id')
-      .eq('email', email)
-      .single();
-    
-    if (profileError) {
-      console.error('[resend-verification] Error fetching user profile:', profileError);
+    // Find unconfirmed user by email using auth admin API
+    const { data: users, error: listError } = await supabase.auth.admin.listUsers({
+      email: email
+    });
+
+    if (listError || !users?.users?.length) {
+      console.error('[resend-verification] Error fetching users or no users found:', listError);
       return new Response(
         JSON.stringify({ error: 'No account found with this email address' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (profile.email_verified || profile.verification_status === 'verified') {
+    const user = users.users.find(u => u.email === email && !u.email_confirmed_at);
+    
+    if (!user) {
       console.log('[resend-verification] User already verified for email:', email);
       return new Response(
         JSON.stringify({ 
@@ -150,7 +150,7 @@ serve(async (req) => {
 
     // Call email-verification Edge Function with the custom link (same as create-user-and-verify)
     const emailPayload = {
-      user_id: profile.user_id,
+      user_id: user.id,
       token_link: customVerificationLink, // Use custom URL, not Supabase URL
       email_otp: emailOtp,
       template_type: "email_verification"
