@@ -143,8 +143,8 @@ const ConfirmEmail: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <header className="w-full py-8 flex justify-center border-b border-gray-100">
-        <Logo size="md" />
+      <header className="w-full py-4 flex justify-center border-b border-gray-100">
+        <Logo size="sm" className="max-h-8" />
       </header>
 
       <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
