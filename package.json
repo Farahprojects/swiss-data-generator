@@ -9,7 +9,11 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "keep-warm": "node scripts/keep-warm.js"
+    "keep-warm": "node scripts/keep-warm.js",
+    "build:shared-ui": "cd packages/shared-ui && npm install && npm run build",
+    "build:auth": "cd auth-app && npm install && npm run build",
+    "build:main": "npm run build",
+    "build:all": "npm run build:shared-ui && npm run build:auth && npm run build:main"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
