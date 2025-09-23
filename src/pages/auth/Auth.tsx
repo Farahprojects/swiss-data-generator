@@ -88,7 +88,7 @@ const Auth: React.FC = () => {
         body: {
           token,
           email,
-          type: 'recovery'
+          type: 'recovery' // Keep as 'recovery' for Supabase auth compatibility
         }
       });
 
@@ -186,14 +186,14 @@ const Auth: React.FC = () => {
         }
 
         // Determine auth type based on token type
-        if (tokenType === 'recovery') {
+        if (tokenType === 'password') {
           setAuthType('password');
           console.log(`[AUTH-VERIFY:${requestId}] → Flow: Password reset`);
           finishPasswordSuccess(token, email);
-        } else if (tokenType.startsWith('sign') || tokenType === 'email_change') {
+        } else if (tokenType === 'email') {
           setAuthType('email');
           console.log(`[AUTH-VERIFY:${requestId}] → Flow: Email verification`);
-          finishEmailSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token, email);
+          finishEmailSuccess('signup', token, email);
         } else {
           console.error(`[AUTH-VERIFY:${requestId}] Unknown token type:`, tokenType);
           throw new Error(`Unknown verification type: ${tokenType}`);

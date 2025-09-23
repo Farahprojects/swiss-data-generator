@@ -56,6 +56,7 @@ const AuthedAppShell: React.FC = () => {
               {/* Auth routes - redirect authenticated users to chat */}
               <Route path="/login" element={<PublicOnlyGuard><Login /></PublicOnlyGuard>} />
               <Route path="/signup" element={<PublicOnlyGuard><Signup /></PublicOnlyGuard>} />
+              <Route path="/" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
               <Route path="/auth" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
               <Route path="/auth/password" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
               <Route path="/auth/email" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />

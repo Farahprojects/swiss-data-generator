@@ -37,7 +37,7 @@ serve(async (req) => {
   }
 
   const supabase = createClient(url, key);
-  const redirectTo = "https://auth.therai.co/auth";
+  const redirectTo = "https://auth.therai.co";
   let tokenLink = "";
   let emailOtp = "";
   let userEmail = "";
@@ -98,7 +98,7 @@ serve(async (req) => {
     });
 
     // Build custom verification URL to auth.therai.co
-    const customRedirectUrl = "https://auth.therai.co/auth";
+    const customRedirectUrl = "https://auth.therai.co";
     tokenLink = `${customRedirectUrl}?token=${encodeURIComponent(verificationToken)}&type=signup&email=${encodeURIComponent(userEmail)}`;
 
     log("✓ Custom URL construction complete:", {
