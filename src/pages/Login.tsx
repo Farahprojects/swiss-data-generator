@@ -1,347 +1,39 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import LoginModal from '@/components/auth/LoginModal';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
-import EmailInput from '@/components/auth/EmailInput';
-import PasswordInput from '@/components/auth/PasswordInput';
-import SocialLogin from '@/components/auth/SocialLogin';
-import { validateEmail } from '@/utils/authValidation';
-import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
-import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
-import { supabase } from '@/integrations/supabase/client';
-
-/**
- * Use the centralized Supabase client instead of hardcoded constants
- */
-
-/**
- * Login page component
- * Handles email/password auth, password reset, and unverified‑email flows.
- */
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
 
   // Auto-scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // ————————————————————————————————————————————————
-  // Auth context
-  // ————————————————————————————————————————————————
-  const {
-    signIn,
-    signInWithGoogle,
-    signInWithApple,
-    user,
-    loading: authLoading,
-    pendingEmailAddress,
-    isPendingEmailCheck,
-    clearPendingEmail,
-    setPendingEmailAddress,
-  } = useAuth();
-
-  // ————————————————————————————————————————————————
-  // Local UI state
-  // ————————————————————————————————————————————————
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [loginAttempted, setLoginAttempted] = useState(false);
-  const [resendState, setResendState] = useState<'idle' | 'processing' | 'sent'>('idle');
-
-  const emailValid = validateEmail(email);
-  const passwordValid = password.length >= 6;
-
-  // ————————————————————————————————————————————————
-  // Redirect to calendar once fully authenticated
-  // ————————————————————————————————————————————————
-  useEffect(() => {
-    if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
-      const from = (location.state as any)?.from?.pathname || '/chat';
-      navigate(from, { replace: true });
-    }
-  }, [authLoading, user, showVerificationModal, isPendingEmailCheck, navigate, location.state]);
-
-  // ————————————————————————————————————————————————
-  // Show verification modal automatically when flagged by AuthContext
-  // ————————————————————————————————————————————————
-  useEffect(() => {
-    if (pendingEmailAddress && !isPendingEmailCheck) {
-      setShowVerificationModal(true);
-    }
-  }, [pendingEmailAddress, isPendingEmailCheck]);
-
-  // ————————————————————————————————————————————————
-  // Show verification modal when redirected from a protected route
-  // ————————————————————————————————————————————————
-  useEffect(() => {
-    const state = location.state as any;
-    if (state?.showVerification && state?.pendingEmail) {
-      setShowVerificationModal(true);
-    }
-  }, [location.state]);
-
-  // ————————————————————————————————————————————————
-  // If the user manually navigates to /login while already signed‑in, bounce them.
-  // ————————————————————————————————————————————————
-  if (
-    user &&
-    !loginAttempted &&
-    !showVerificationModal &&
-    !pendingEmailAddress &&
-    !isPendingEmailCheck &&
-    (typeof window === 'undefined' || !window.location.pathname.includes('/auth/password'))
-  ) {
+  // Redirect if already authenticated
+  if (user && !authLoading) {
     const from = (location.state as any)?.from?.pathname || '/chat';
-    return <Navigate to={from} replace />;
+    navigate(from, { replace: true });
+    return null;
   }
 
-  // ————————————————————————————————————————————————
-  // Helpers
-  // ————————————————————————————————————————————————
-  const openVerificationModal = () => {
-    setShowVerificationModal(true);
-    setLoading(false);
-    // Set the email that needs verification for the modal
-    setPendingEmailAddress(email);
-  };
-
-  /** Resend verification email using resend-verification edge function */
-  const handleResendVerification = async (email: string): Promise<{ error: Error | null }> => {
-    setResendState('processing');
-    
-    try {
-      // Use the same resend verification function as signup flow
-      const { data, error } = await supabase.functions.invoke('resend-verification', {
-        body: { email }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to send verification email');
-      }
-
-      setResendState('sent');
-      toast({
-        title: 'Verification email sent',
-        description: 'Please check your inbox (and spam folder).',
-      });
-      
-      // Reset to idle after 3 seconds
-      setTimeout(() => setResendState('idle'), 3000);
-      
-      return { error: null };
-    } catch (error: any) {
-      setResendState('idle');
-      toast({
-        title: 'Error',
-        description: error.message ?? 'Unable to resend email',
-        variant: 'destructive',
-      });
-      
-      return { error: error instanceof Error ? error : new Error(error.message ?? 'Unable to resend email') };
-    }
-  };
-
-  // ————————————————————————————————————————————————
-  // Form submit
-  // ————————————————————————————————————————————————
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailValid || !passwordValid || loading) return;
-
-    setLoginAttempted(true);
-    setLoading(true);
-    setErrorMsg('');
-
-    try {
-      // Step 1: try sign‑in
-      const { data, error } = await signIn(email, password);
-
-      if (error) {
-        const msg = error.message.toLowerCase();
-        if (msg.includes('confirm') || msg.includes('verification') || msg.includes('verify')) {
-          openVerificationModal();
-        } else {
-          setErrorMsg('Invalid email or password');
-        }
-        return;
-      }
-
-      // Step 2: check email confirmed
-      if (data?.user && !data.user.email_confirmed_at) {
-        return openVerificationModal();
-      }
-
-      // Step 3: success — redirect to /therai (clean auth page)
-      const from = (location.state as any)?.from?.pathname;
-      
-      if (from && from.startsWith('/c/')) {
-        // If they were trying to access a specific thread, go there
-        navigate(from, { replace: true });
-      } else {
-        // Otherwise, go to clean /therai page
-        navigate('/therai', { replace: true });
-      }
-      
-    } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.message ?? 'Failed to sign in',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-      setLoginAttempted(false);
-    }
-  };
-
-  // ————————————————————————————————————————————————
-  // OAuth helpers (disabled for now)
-  // ————————————————————————————————————————————————
-  const handleGoogleSignIn = async () => signInWithGoogle();
-  const handleAppleSignIn = async () => signInWithApple();
-
-  // ————————————————————————————————————————————————
-  // Verification modal callbacks
-  // ————————————————————————————————————————————————
-  const handleVerificationFinished = () => {
-    setShowVerificationModal(false);
-    clearPendingEmail();
-    toast({ title: 'Email verified', description: 'Redirecting…' });
+  const handleSuccess = () => {
     const from = (location.state as any)?.from?.pathname || '/chat';
     navigate(from, { replace: true });
   };
 
-  const handleVerificationCancelled = () => {
-    setShowVerificationModal(false);
-    clearPendingEmail();
-  };
-
-  // ————————————————————————————————————————————————
-  // Render
-  // ————————————————————————————————————————————————
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <UnifiedNavigation />
-
-      <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md mx-auto space-y-12">
-          {showForgotPassword ? (
-            <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
-          ) : (
-            <>
-              {/* ——————————————————— Hero ——————————————————— */}
-              <header className="text-center space-y-4 pt-8">
-                <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
-                  Welcome
-                  <br />
-                  <span className="italic font-medium">back</span>
-                </h1>
-                <p className="text-lg text-gray-600 font-light">Sign in to continue your journey</p>
-              </header>
-
-              {/* ——————————————————— Form ——————————————————— */}
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="space-y-6">
-                  <EmailInput email={email} isValid={emailValid} onChange={setEmail} onFocus={() => setErrorMsg('')} />
-                  <PasswordInput
-                    password={password}
-                    isValid={passwordValid}
-                    showRequirements={false}
-                    onChange={setPassword}
-                    onFocus={() => setErrorMsg('')}
-                  />
-                </div>
-
-                {errorMsg && (
-                  <div className="text-center space-y-3">
-                    <div className="text-red-600 text-sm font-light">{errorMsg}</div>
-                    {errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('verification') || errorMsg.toLowerCase().includes('verify') ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleResendVerification(email)}
-                        disabled={resendState === 'processing' || resendState === 'sent'}
-                        className="text-xs border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {resendState === 'processing' ? (
-                          <>
-                            <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
-                            Processing...
-                          </>
-                        ) : resendState === 'sent' ? (
-                          'Email sent!'
-                        ) : (
-                          'Resend verification email'
-                        )}
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full"
-                  disabled={!emailValid || !passwordValid || loading}
-                >
-                  {loading ? 'Signing in…' : 'Sign in'}
-                </Button>
-              </form>
-
-              {/* ——————————————————— Extras ——————————————————— */}
-              <div className="text-center space-y-6">
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-gray-600 hover:text-gray-900 transition-colors font-light border-b border-gray-300 hover:border-gray-600 pb-1"
-                >
-                  Forgot your password?
-                </button>
-
-                <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
-
-                <p className="text-sm text-gray-600 font-light">
-                  Don't have an account?{' '}
-                  <Link
-                    to="/signup"
-                    className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1"
-                  >
-                    Sign up
-                  </Link>
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      </main>
-
-      <Footer hideMobileAstroToggle />
-
-      {showVerificationModal && (
-        <LoginVerificationModal
-          isOpen={showVerificationModal}
-          email={pendingEmailAddress || email}
-          currentEmail={user?.email || ''}
-          pendingEmail={pendingEmailAddress}
-          resendVerificationEmail={handleResendVerification}
-          onVerified={handleVerificationFinished}
-          onCancel={handleVerificationCancelled}
-        />
-      )}
+      <div className="pt-24">
+        <LoginModal onSuccess={handleSuccess} showAsPage={true} />
+      </div>
+      <Footer />
     </div>
   );
-};
-
-export default Login;
+}

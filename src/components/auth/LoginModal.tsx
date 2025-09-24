@@ -6,15 +6,15 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LoginModalProps {
   onSuccess?: () => void;
+  showAsPage?: boolean;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }) => {
   const { toast } = useToast();
 
   // ————————————————————————————————————————————————
@@ -38,7 +38,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resendState, setResendState] = useState<'idle' | 'processing' | 'sent'>('idle');
 
@@ -52,7 +51,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
     if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
       onSuccess?.();
     }
-  }, [authLoading, user, showVerificationModal, isPendingEmailCheck, onSuccess]);
+  }, [authLoading, user, isPendingEmailCheck, onSuccess]);
 
   // ————————————————————————————————————————————————
   // Show verification modal automatically when flagged by AuthContext
@@ -168,7 +167,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={showAsPage ? "min-h-screen flex items-center justify-center" : "space-y-6"}>
+      <div className={showAsPage ? "w-full max-w-md" : "space-y-6"}>
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-light text-gray-900">Welcome back</h1>
         <p className="text-sm text-gray-600">Sign in to your account</p>
@@ -241,22 +241,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
 
         <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
       </div>
-
-      {/* Verification Modal */}
-      {showVerificationModal && (
-        <LoginVerificationModal
-          isOpen={showVerificationModal}
-          email={pendingEmailAddress || email}
-          currentEmail={user?.email || ''}
-          pendingEmail={pendingEmailAddress}
-          resendVerificationEmail={async (email: string) => {
-            await handleResendVerification();
-            return { error: new Error('') };
-          }}
-          onVerified={handleVerificationFinished}
-          onCancel={handleVerificationCancelled}
-        />
-      )}
+      </div>
     </div>
   );
 };
