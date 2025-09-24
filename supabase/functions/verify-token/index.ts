@@ -20,12 +20,12 @@ serve(async (req) => {
   }
 
   try {
-    const { token, email, type } = await req.json();
+    const { token } = await req.json();
 
-    if (!token || !type) {
+    if (!token) {
       return respond({ 
         success: false, 
-        error: 'Missing required parameters: token, type' 
+        error: 'Missing required parameter: token' 
       }, 400);
     }
 
@@ -34,58 +34,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log(`[verify-token] Verifying ${type} token${email ? ` for ${email}` : ''}`);
+    console.log(`[verify-token] Verifying token: ${token}`);
 
-    // For recovery type, we can verify without email since the token contains the user info
-    if (type === 'recovery') {
-      // Verify the OTP token without email - Supabase will look up the user from the token
-      const { data, error } = await supabase.auth.verifyOtp({
-        token: token,
-        type: 'recovery'
-      });
-
-      if (error) {
-        console.error(`[verify-token] OTP verification failed:`, error);
-        return respond({ 
-          success: false, 
-          error: error.message || 'Token verification failed' 
-        }, 400);
-      }
-
-      if (!data.user) {
-        console.error(`[verify-token] No user returned from verification`);
-        return respond({ 
-          success: false, 
-          error: 'User not found' 
-        }, 404);
-      }
-
-      console.log(`[verify-token] ✓ Token verified successfully for user: ${data.user.id}`);
-
-      // The verifyOtp should have already established a session
-      // Return the session data for the frontend to use
-      return respond({
-        success: true,
-        message: 'Token verified successfully',
-        session: data.session,
-        user: data.user
-      });
-    }
-
-    // For other types (signup, email_change), email is still required
-    if (!email) {
-      return respond({ 
-        success: false, 
-        error: 'Email is required for this verification type' 
-      }, 400);
-    }
-
-    // Verify the OTP token with email for other types
-    const { data, error } = await supabase.auth.verifyOtp({
+    // Try recovery first (most common for password reset)
+    let { data, error } = await supabase.auth.verifyOtp({
       token: token,
-      type: type as any, // 'signup' | 'email_change'
-      email: email,
+      type: 'recovery'
     });
+
+    // If recovery fails, try other types
+    if (error && error.message.includes('Invalid token')) {
+      console.log(`[verify-token] Recovery failed, trying email verification`);
+      const emailResult = await supabase.auth.verifyOtp({
+        token: token,
+        type: 'email'
+      });
+      
+      if (!emailResult.error) {
+        data = emailResult.data;
+        error = emailResult.error;
+      }
+    }
 
     if (error) {
       console.error(`[verify-token] OTP verification failed:`, error);
@@ -105,10 +74,11 @@ serve(async (req) => {
 
     console.log(`[verify-token] ✓ Token verified successfully for user: ${data.user.id}`);
 
-    // For other types, just return success
+    // Return the session data for the frontend to use
     return respond({
       success: true,
       message: 'Token verified successfully',
+      session: data.session,
       user: data.user
     });
 
