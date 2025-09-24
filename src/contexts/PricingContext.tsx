@@ -11,6 +11,7 @@ interface PricingContextType {
   getPriceById: (id: string) => any | null;
   getPriceByReportType: (reportType: string) => any | null;
   getAllPrices: () => any[];
+  formatPrice: (price: number) => string;
   refresh: () => Promise<any[]>;
 }
 
@@ -31,6 +32,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
     getPriceById: pricingData.getPriceById,
     getPriceByReportType: pricingData.getPriceByReportType,
     getAllPrices: pricingData.getAllPrices,
+    formatPrice: pricingData.formatPrice,
     refresh: pricingData.refresh,
   };
 

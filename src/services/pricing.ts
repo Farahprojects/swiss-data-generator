@@ -153,6 +153,18 @@ class PricingService {
   }
 
   /**
+   * Format price for display
+   */
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(price);
+  }
+
+  /**
    * Get loading state
    */
   getLoadingState(): boolean {
@@ -207,6 +219,7 @@ export const usePricing = () => {
     getPriceById: (id: string) => pricingService.getPriceById(id),
     getPriceByReportType: (reportType: string) => pricingService.getPriceByReportType(reportType),
     getAllPrices: () => pricingService.getAllPrices(),
+    formatPrice: (price: number) => pricingService.formatPrice(price),
     refresh: () => {
       pricingService.clearCache();
       return pricingService.fetchPrices();

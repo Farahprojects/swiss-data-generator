@@ -14,6 +14,7 @@ import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
 import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
+import Pricing from './pages/Pricing';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsNativeApp } from '@/hooks/use-native-app';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
@@ -50,6 +51,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
               <Route path="/contact" element={<PublicOnlyGuard><Contact /></PublicOnlyGuard>} />
               <Route path="/legal" element={<PublicOnlyGuard><Legal /></PublicOnlyGuard>} />
+              <Route path="/pricing" element={<PublicOnlyGuard><Pricing /></PublicOnlyGuard>} />
               <Route path="/blog" element={<PublicOnlyGuard><Blog /></PublicOnlyGuard>} />
               <Route path="/blog/:slug" element={<PublicOnlyGuard><BlogPost /></PublicOnlyGuard>} />
               
