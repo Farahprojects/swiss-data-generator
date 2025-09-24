@@ -93,12 +93,20 @@ const Auth: React.FC = () => {
 
       if (error) {
         console.error('[PASSWORD-VERIFY] Edge function error:', error);
-        throw new Error(error.message || 'Token verification failed');
+        
+        // Handle different types of edge function errors
+        if (error.message?.includes('non-2xx status code')) {
+          throw new Error('Token verification failed. Please try again or request a new reset link.');
+        } else if (error.message?.includes('FunctionsHttpError')) {
+          throw new Error('Unable to verify token. Please try again or request a new reset link.');
+        } else {
+          throw new Error(error.message || 'Token verification failed. Please try again.');
+        }
       }
 
       if (!data?.success) {
         console.error('[PASSWORD-VERIFY] Verification failed:', data?.error);
-        throw new Error(data?.error || 'Token verification failed');
+        throw new Error(data?.error || 'Token verification failed. Please try again.');
       }
 
       console.log('[PASSWORD-VERIFY] ✓ Token verification successful:', data.message);
