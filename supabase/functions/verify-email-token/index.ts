@@ -94,6 +94,7 @@ serve(async (req) => {
 
       // Use the verifyOtp method to verify the token
       const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        email: email,
         token: token,
         type: type as any
       });
