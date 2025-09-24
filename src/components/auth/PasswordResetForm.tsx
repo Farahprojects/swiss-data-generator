@@ -53,22 +53,15 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
         throw new Error('User not authenticated');
       }
 
-      // Use password-manager edge function to update password
-      const { data, error } = await supabase.functions.invoke('password-manager', {
-        body: {
-          action: 'update',
-          userId: user.id,
-          newPassword: newPassword
-        }
+      // Update password using Supabase auth
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
 
       if (error) {
         throw new Error(error.message || 'Failed to update password');
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to update password');
-      }
 
       // Sign out the user after password update to ensure clean state
       await supabase.auth.signOut();

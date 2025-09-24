@@ -81,18 +81,13 @@ export const PasswordSettingsPanel = () => {
         return;
       }
       
-      // Use password-manager edge function to verify current password
-      const { data, error } = await supabase.functions.invoke('password-manager', {
-        body: {
-          action: 'verify',
-          email: userEmail,
-          currentPassword: currentPassword
-        }
+      // Verify current password using Supabase auth
+      const { error } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: currentPassword
       });
 
-      const success = data?.success;
-      
-      if (!success) {
+      if (error) {
         setInvalidPasswordError(true);
         setIsUpdatingPassword(false);
         return;
@@ -127,18 +122,12 @@ export const PasswordSettingsPanel = () => {
         return;
       }
 
-      // Use password-manager edge function to update password
-      const { data: response, error } = await supabase.functions.invoke('password-manager', {
-        body: {
-          action: 'update',
-          userId: userId,
-          newPassword: data.newPassword
-        }
+      // Update password using Supabase auth
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
       });
 
-      const success = response?.success;
-      
-      if (!success) {
+      if (error) {
         setIsUpdatingPassword(false);
         return;
       }
@@ -170,10 +159,9 @@ export const PasswordSettingsPanel = () => {
       
       setResetEmailSent(false);
       
-      // Use password-manager edge function to reset password
-      const { data, error } = await supabase.functions.invoke('password-manager', {
+      // Use password_token edge function to reset password
+      const { data, error } = await supabase.functions.invoke('password_token', {
         body: {
-          action: 'reset',
           email: userEmail
         }
       });
