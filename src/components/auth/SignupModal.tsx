@@ -7,6 +7,7 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { Mail } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface SignupModalProps {
   onSuccess?: () => void;
@@ -15,6 +16,7 @@ interface SignupModalProps {
 const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
   const { toast } = useToast();
   const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,13 +64,18 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
         setErrorMsg(result.error.message || 'Sign up failed');
       } else {
         // Pre-auth flow doesn't return a user until email verification
-        console.log('[SignupModal] Pre-auth signup successful, verification email sent');
-        setSignupSuccess(true);
-        setVerificationEmail(email);
+        console.log('[SignupModal] Pre-auth signup successful, redirecting to paywall');
+        
+        // Store email for later verification after payment
+        localStorage.setItem('pendingVerificationEmail', email);
+        
         toast({
           title: 'Account created!',
-          description: 'Please check your email to verify your account.',
+          description: 'Please choose your plan to continue.',
         });
+        
+        // Redirect to paywall instead of showing verification screen
+        navigate('/subscription-paywall');
       }
     } catch (error: any) {
       console.log('[SignupModal] Signup exception:', error);
@@ -80,7 +87,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      const result = await signInWithGoogle();
+      if (!result.error) {
+        // Social login successful, redirect to paywall
+        navigate('/subscription-paywall');
+      }
     } catch (error) {
       toast({
         title: 'Sign up failed',
@@ -92,7 +103,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
 
   const handleAppleSignIn = async () => {
     try {
-      await signInWithApple();
+      const result = await signInWithApple();
+      if (!result.error) {
+        // Social login successful, redirect to paywall
+        navigate('/subscription-paywall');
+      }
     } catch (error) {
       toast({
         title: 'Sign up failed',
