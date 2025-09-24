@@ -159,12 +159,16 @@ const ConfirmEmail: React.FC = () => {
         if (tokenType === 'recovery') {
           console.log(`[AUTH-APP-CONFIRMEMAIL] Recovery token detected, calling password reset flow`);
           finishPasswordSuccess(token);
-        } else {
+        } else if (tokenType) {
           // For other types, still require email
           if (!email) {
             throw new Error('Email is required for this verification type');
           }
           finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token, email);
+        } else {
+          // No token type specified, try to determine from token itself
+          console.log(`[AUTH-APP-CONFIRMEMAIL] No token type specified, attempting token verification`);
+          finishPasswordSuccess(token);
         }
 
       } catch (err: any) {
