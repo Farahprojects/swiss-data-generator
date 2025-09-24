@@ -42,7 +42,6 @@ export type AuthContextType = {
   signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
-  resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
   setPendingEmailAddress?: (email: string) => void;
   clearPendingEmail?: () => void;
 };
@@ -464,24 +463,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  /**
-   * Trigger a password reset email for the given email address
-   */
-  const resetPasswordForEmail = async (email: string) => {
-    try {
-      // Use the utility function for consistent absolute URL formatting
-      const redirectUrl = getAbsoluteUrl('auth/password');
-      
-      console.log(`AuthContext: Sending password reset email with redirectTo: ${redirectUrl}`);
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
-      });
-      return { error };
-    } catch (err: unknown) {
-      return { error: err instanceof Error ? err : new Error('Could not send password reset email') };
-    }
-  };
 
   /* ────────────────────────────────────────────────────────────────*/
   return (
@@ -499,7 +480,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithApple,
         signOut,
         resendVerificationEmail,
-        resetPasswordForEmail,
         setPendingEmailAddress,
         clearPendingEmail,
       }}
