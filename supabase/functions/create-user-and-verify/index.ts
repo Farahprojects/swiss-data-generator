@@ -79,10 +79,13 @@ serve(async (req) => {
     }
 
     // Step 2: Generate verification link using generateLink (this creates the actual token)
+    // CRITICAL: For signup verification, we only pass email (not password) to generateLink
+    // This generates a proper signup verification token, not a user creation token
+    // The user was already created in Step 1 with email_confirm: false
     const { data: linkData, error: linkError } = await supabaseClient.auth.admin.generateLink({
       type: "signup",
       email: email,
-      password: password,
+      // NOTE: Do NOT include password here - this is for existing unconfirmed users only
       options: { 
         redirectTo: "https://auth.therai.co"
       }
