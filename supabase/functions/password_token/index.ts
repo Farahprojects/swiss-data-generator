@@ -86,7 +86,7 @@ serve(async (req) => {
     }
 
     // Extract OTP from generateLink response (not magic link token)
-    const emailOtp = linkData?.properties?.email_otp || "";
+    emailOtp = linkData?.properties?.email_otp || "";
     
     if (!emailOtp) {
       log("No email_otp in generateLink response");
