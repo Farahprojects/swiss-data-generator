@@ -96,6 +96,21 @@ serve(async (req) => {
       });
     }
 
+    // Store token_hash -> email mapping for later lookup
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    const { error: storeError } = await supabase
+      .from('password_reset_tokens')
+      .insert({
+        token_hash: emailOtp,
+        email: email,
+        expires_at: expiresAt.toISOString()
+      });
+
+    if (storeError) {
+      log("Failed to store token mapping:", storeError.message);
+      return respond(500, { error: "Failed to store token mapping", details: storeError.message });
+    }
+
     // Build custom password reset link using OTP (not magic link token)
     customPasswordLink = `https://auth.therai.co?token=${emailOtp}&type=recovery`;
     

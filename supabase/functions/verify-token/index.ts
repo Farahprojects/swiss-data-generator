@@ -36,23 +36,36 @@ serve(async (req) => {
 
     console.log(`[verify-token] Verifying token: ${token}`);
 
-    // First, get the user from the token to derive the email
-    console.log(`[verify-token] Getting user from token...`);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !userData.user) {
-      console.error(`[verify-token] Failed to get user from token:`, userError);
+    // Look up email from token_hash mapping (stored when link was generated)
+    console.log(`[verify-token] Looking up email for token_hash...`);
+    const { data: mappingData, error: mappingError } = await supabase
+      .from('password_reset_tokens')
+      .select('email, expires_at')
+      .eq('token_hash', token)
+      .single();
+
+    if (mappingError || !mappingData) {
+      console.error(`[verify-token] Token not found in mapping:`, mappingError);
       return respond({ 
         success: false, 
         error: 'Invalid or expired token' 
       }, 400);
     }
 
-    const email = userData.user.email;
-    console.log(`[verify-token] Found user email: ${email}`);
+    // Check if token has expired
+    if (new Date() > new Date(mappingData.expires_at)) {
+      console.error(`[verify-token] Token has expired`);
+      return respond({ 
+        success: false, 
+        error: 'Token has expired' 
+      }, 400);
+    }
 
-    // Now verify the OTP with the email
-    console.log(`[verify-token] Verifying OTP with email and token...`);
+    const email = mappingData.email;
+    console.log(`[verify-token] Found email for token: ${email}`);
+
+    // Now verify the OTP with the email and token_hash
+    console.log(`[verify-token] Verifying OTP with email and token_hash...`);
     const { data, error } = await supabase.auth.verifyOtp({
       email: email,
       token: token,
