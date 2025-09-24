@@ -150,7 +150,7 @@ serve(async (req) => {
       template_type: "email_verification"
     };
 
-    console.log(`[create-user-and-verify] Token extracted: ${extractedToken}`);
+    console.log(`[create-user-and-verify] OTP generated: ${emailOtp}`);
     console.log(`[create-user-and-verify] Final payload:`, JSON.stringify(emailPayload, null, 2));
 
     const { error: emailError } = await supabaseClient.functions.invoke('email-verification', {
