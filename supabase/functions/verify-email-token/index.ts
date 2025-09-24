@@ -102,6 +102,12 @@ serve(async (req) => {
       });
       
       // Use the verifyOtp method to verify the token
+      log("🔐 Calling verifyOtp with:", {
+        email: email,
+        token: token.substring(0, 10) + "...",
+        type: supabaseVerifyType
+      });
+
       const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         email: email,
         token: token,
@@ -117,11 +123,12 @@ serve(async (req) => {
           userId: verifyData.user?.id,
           userEmail: verifyData.user?.email,
           emailConfirmed: verifyData.user?.email_confirmed_at
-        } : null,
+        },
         error: verifyError ? {
           message: verifyError.message,
           status: verifyError.status,
-          code: verifyError.code
+          code: verifyError.code,
+          details: verifyError.details
         } : null
       });
 
@@ -130,7 +137,8 @@ serve(async (req) => {
           message: verifyError.message,
           status: verifyError.status,
           code: verifyError.code,
-          details: verifyError
+          details: verifyError.details,
+          fullError: verifyError
         });
         return new Response(JSON.stringify({
           success: false,
