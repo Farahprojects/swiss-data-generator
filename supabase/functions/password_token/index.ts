@@ -85,8 +85,19 @@ serve(async (req) => {
       });
     }
 
-    // Build custom password reset link
-    customPasswordLink = `https://auth.therai.co?token=${encodeURIComponent(token)}&type=password&email=${encodeURIComponent(email)}`;
+    // Extract OTP from generateLink response (not magic link token)
+    const emailOtp = linkData?.properties?.email_otp || "";
+    
+    if (!emailOtp) {
+      log("No email_otp in generateLink response");
+      return respond(500, {
+        error: "Failed to generate password reset OTP",
+        code: "OTP_GENERATION_FAILED"
+      });
+    }
+
+    // Build custom password reset link using OTP (not magic link token)
+    customPasswordLink = `https://auth.therai.co?token=${emailOtp}&type=recovery&email=${encodeURIComponent(email)}`;
     
     log("Custom password link built:", customPasswordLink);
   } catch (err: any) {
