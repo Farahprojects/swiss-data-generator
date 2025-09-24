@@ -1,34 +1,58 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from "@/components/ui/button";
+import { Loader, CheckCircle } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-import PasswordInput from '@/components/auth/PasswordInput';
+import PasswordInput from './PasswordInput';
 import { passwordRequirements } from '@/utils/authValidation';
-import { CheckCircle } from 'lucide-react';
 
 interface PasswordResetFormProps {
   onSuccess: () => void;
 }
 
 const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
-  const { toast } = useToast();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { toast } = useToast();
 
-  const isPasswordValid = passwordRequirements.every(requirement => 
-    requirement.test(newPassword)
-  );
+  // Check if password meets requirements
+  const passwordValid = passwordRequirements.every(req => req.validate(newPassword));
+  
+  // Check if passwords match
   const passwordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
-  const canSubmit = isPasswordValid && passwordsMatch && !isUpdating;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    
+    if (!passwordValid) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Password',
+        description: 'Please ensure your password meets all requirements.'
+      });
+      return;
+    }
+
+    if (!passwordsMatch) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Mismatch',
+        description: 'Passwords do not match.'
+      });
+      return;
+    }
 
     setIsUpdating(true);
+
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       // Update password using Supabase auth
       const { error } = await supabase.auth.updateUser({
         password: newPassword
@@ -38,88 +62,93 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
         throw new Error(error.message || 'Failed to update password');
       }
 
+
       // Sign out the user after password update to ensure clean state
       await supabase.auth.signOut();
 
       setShowSuccess(true);
       toast({
-        title: 'Password Updated',
-        description: 'Your password has been successfully updated. Please sign in with your new password.',
-        variant: 'default'
+        variant: 'success',
+        title: 'Password Updated Successfully!',
+        description: 'Please sign in with your new password.'
       });
 
-      // Call success callback after a short delay
+      // Show success for a moment, then call onSuccess
       setTimeout(() => {
         onSuccess();
       }, 2000);
 
     } catch (error: any) {
-      console.error('Password update error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update password. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error.message || 'Failed to update password. Please try again.'
       });
     } finally {
       setIsUpdating(false);
     }
   };
 
-  if (showSuccess) {
-    return (
-      <div className="max-w-md mx-auto space-y-8 text-center">
-        <div className="space-y-4">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <h3 className="text-2xl font-light text-gray-900">Password <em>Updated</em></h3>
-            <p className="text-gray-600 font-light leading-relaxed">
-              Your password has been successfully updated. You can now sign in with your new password.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-md mx-auto space-y-8">
+    <div className="max-w-md mx-auto space-y-8 pt-8">
       <div className="text-center space-y-4">
         <h3 className="text-2xl font-light text-gray-900">Set your new <em>password</em></h3>
         <p className="text-gray-600 font-light leading-relaxed">
-          Choose a strong password for your account
+          Please create a new password for your account
         </p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-6">
-          <PasswordInput 
-            password={newPassword} 
-            isValid={isPasswordValid} 
+          <PasswordInput
+            password={newPassword}
+            isValid={passwordValid}
             onChange={setNewPassword}
-            placeholder="Enter new password"
+            label="New Password"
+            placeholder="Enter your new password"
+            id="newPassword"
           />
-          
-          <PasswordInput 
-            password={confirmPassword} 
-            isValid={passwordsMatch} 
-            onChange={setConfirmPassword}
-            placeholder="Confirm new password"
-          />
+
+          {passwordValid && (
+            <PasswordInput
+              password={confirmPassword}
+              isValid={passwordsMatch}
+              onChange={setConfirmPassword}
+              label="Confirm New Password"
+              placeholder="Confirm your new password"
+              id="confirmPassword"
+              showRequirements={false}
+              showMatchError={confirmPassword.length > 0 && !passwordsMatch}
+            />
+          )}
         </div>
 
         <div className="space-y-4">
-          <Button 
-            type="submit" 
-            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-full text-lg" 
-            disabled={!canSubmit}
+          <Button
+            type="submit"
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-full text-lg"
+            disabled={!passwordValid || !passwordsMatch || isUpdating || showSuccess}
           >
-            {isUpdating ? 'Updating...' : 'Update Password'}
+            {isUpdating ? (
+              <>
+                <Loader className="h-5 w-5 mr-3 animate-spin" />
+                Updating Password...
+              </>
+            ) : showSuccess ? (
+              <>
+                <CheckCircle className="h-5 w-5 mr-3" />
+                Password Updated Successfully!
+              </>
+            ) : (
+              'Update Password'
+            )}
           </Button>
+
+          {showSuccess && (
+            <div className="text-center text-sm text-green-600 mt-4 font-light">
+              Success! Redirecting to login...
+            </div>
+          )}
         </div>
       </form>
     </div>

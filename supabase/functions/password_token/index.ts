@@ -46,23 +46,79 @@ serve(async (req) => {
 
   const supabase = createClient(url, key);
 
+  let emailOtp = "";
+  let customPasswordLink = "";
 
   try {
-    // Use Supabase's built-in password reset flow
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://auth.therai.co?type=password"
+    const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: "https://auth.therai.co" },
     });
 
-    if (resetError) {
-      log("Password reset email failed:", resetError.message);
-      return respond(500, { error: "Password reset email failed", details: resetError.message });
+    if (tokenErr) {
+      log("Token generation failed:", tokenErr.message);
+      return respond(500, { error: "Token generation failed", details: tokenErr.message });
     }
 
-    log(`✔ Password reset email sent to ${email}`);
-    return respond(200, { status: "sent", message: "Password reset email sent" });
+    // Extract token and OTP from the generated link
+    const actionLink = linkData?.action_link || linkData?.properties?.action_link || "";
+    const props = (linkData as any)?.properties ?? {};
+    emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
+
+    if (!actionLink) {
+      return respond(500, {
+        error: "Missing action_link in token generation",
+        details: linkData,
+      });
+    }
+
+    // Parse the Supabase URL to extract the token
+    const urlObj = new URL(actionLink);
+    const token = urlObj.searchParams.get('token');
+    const type = urlObj.searchParams.get('type');
+
+    if (!token || !type) {
+      return respond(500, {
+        error: "Missing token or type in generated link",
+        details: { actionLink, token, type },
+      });
+    }
+
+    // Extract OTP from generateLink response (not magic link token)
+    emailOtp = linkData?.properties?.email_otp || "";
+    
+    if (!emailOtp) {
+      log("No email_otp in generateLink response");
+      return respond(500, {
+        error: "Failed to generate password reset OTP",
+        code: "OTP_GENERATION_FAILED"
+      });
+    }
+
+    // Build custom password reset link using OTP (not magic link token)
+    customPasswordLink = `https://auth.therai.co?token=${emailOtp}&type=recovery&email=${encodeURIComponent(email)}`;
+    
+    log("Custom password link built:", customPasswordLink);
   } catch (err: any) {
-    return respond(500, { error: "Password reset failed", details: err.message });
+    return respond(500, { error: "Link generation failed", details: err.message });
   }
 
+  // Use the standardized email-verification function with password_reset template
+  const { error: emailError } = await supabase.functions.invoke('email-verification', {
+    body: {
+      email: email,
+      url: customPasswordLink,
+      template_type: "password_change"
+    }
+  });
+
+  if (emailError) {
+    log("Email sending failed:", emailError.message);
+    return respond(500, { error: "Email sending failed", details: emailError.message });
+  }
+
+  log(`✔ Sent password reset to ${email}`);
+  return respond(200, { status: "sent", template_type: "password_change" });
 });
 
