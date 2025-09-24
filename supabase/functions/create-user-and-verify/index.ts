@@ -120,57 +120,28 @@ serve(async (req) => {
     const tokenLink = linkData?.properties?.action_link || "";
     const emailOtp = linkData?.properties?.email_otp || "";
     
-    if (!tokenLink) {
-      console.error(`[create-user-and-verify] No action_link in generateLink response`);
+    if (!emailOtp) {
+      console.error(`[create-user-and-verify] No email_otp in generateLink response`);
       return new Response(JSON.stringify({ 
-        error: 'Failed to generate verification link',
-        code: 'LINK_GENERATION_FAILED'
+        error: 'Failed to generate verification OTP',
+        code: 'OTP_GENERATION_FAILED'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    // Step 3: Extract token and build custom verification URL
-    let customVerificationLink = tokenLink;
-    let extractedToken = "";
-    let extractedType = "";
-    let extractedEmail = "";
+    // Step 3: Build custom verification URL using OTP (not magic link token)
+    // Use the 6-digit OTP code instead of the long magic link token
+    const customVerificationLink = `https://auth.therai.co?token=${emailOtp}&type=signup&email=${encodeURIComponent(email)}`;
     
-    try {
-      const url = new URL(tokenLink);
-      extractedToken = url.searchParams.get('token') || "";
-      extractedType = url.searchParams.get('type') || "";
-      extractedEmail = url.searchParams.get('email') || email; // Fallback to original email
-      
-      if (extractedToken && extractedType && extractedEmail) {
-        // Build custom URL pointing to your confirmation page
-        customVerificationLink = `https://auth.therai.co?token=${extractedToken}&type=${extractedType}&email=${encodeURIComponent(extractedEmail)}`;
-        console.log(`[create-user-and-verify] ✓ Custom verification URL created:`, {
-          originalUrl: tokenLink,
-          customUrl: customVerificationLink,
-          token: extractedToken.substring(0, 10) + "...",
-          type: extractedType,
-          email: extractedEmail
-        });
-      } else {
-        console.error(`[create-user-and-verify] ✗ Failed to extract token parameters:`, {
-          hasToken: !!extractedToken,
-          hasType: !!extractedType,
-          hasEmail: !!extractedEmail
-        });
-        throw new Error('Failed to extract token parameters from Supabase URL');
-      }
-    } catch (error) {
-      console.error(`[create-user-and-verify] ✗ Error parsing token URL:`, error);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to process verification token',
-        code: 'TOKEN_PROCESSING_FAILED'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
+    console.log(`[create-user-and-verify] ✓ Custom verification URL created:`, {
+      originalUrl: tokenLink,
+      customUrl: customVerificationLink,
+      otp: emailOtp,
+      type: "signup",
+      email: email
+    });
 
     // Step 4: Call email-verification Edge Function with the custom link
     const emailPayload = {
