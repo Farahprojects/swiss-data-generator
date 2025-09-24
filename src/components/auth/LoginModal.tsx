@@ -40,6 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }
   const [errorMsg, setErrorMsg] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resendState, setResendState] = useState<'idle' | 'processing' | 'sent'>('idle');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
