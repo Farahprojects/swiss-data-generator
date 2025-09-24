@@ -81,6 +81,60 @@ const ConfirmEmail: React.FC = () => {
     }, 3000);
   };
 
+  const finishPasswordSuccess = async (token: string) => {
+    console.log(`[AUTH-APP-CONFIRMEMAIL] Password reset verification started`);
+
+    setMessage('Setting up password reset...');
+
+    try {
+      // Call secure edge function to verify token and get session
+      console.log('[AUTH-APP-CONFIRMEMAIL] Calling verify-token edge function...');
+
+      const { data, error } = await supabase.functions.invoke('verify-token', {
+        body: {
+          token
+          // Let the edge function determine the type from the token itself
+        }
+      });
+
+      if (error) {
+        console.error('[AUTH-APP-CONFIRMEMAIL] Edge function error:', error);
+        throw new Error(error.message || 'Token verification failed');
+      }
+
+      if (!data?.success) {
+        console.error('[AUTH-APP-CONFIRMEMAIL] Verification failed:', data?.error);
+        throw new Error(data?.error || 'Token verification failed');
+      }
+
+      console.log('[AUTH-APP-CONFIRMEMAIL] ✓ Token verification successful:', data.message);
+
+      // Set session if provided
+      if (data.session) {
+        const { error: sessionError } = await supabase.auth.setSession(data.session);
+        if (sessionError) {
+          console.error('[AUTH-APP-CONFIRMEMAIL] Session error:', sessionError);
+          throw new Error('Failed to establish session');
+        }
+      }
+
+    } catch (error) {
+      console.error('[AUTH-APP-CONFIRMEMAIL] Critical verification error:', error);
+      setStatus('error');
+      setMessage('Failed to verify your password reset link. Please try again or contact support.');
+      return;
+    }
+
+    // Show success and redirect to password reset
+    setStatus('success');
+    setMessage('Password reset link verified! Redirecting to password reset...');
+    
+    // Redirect to main app password reset page
+    setTimeout(() => {
+      window.location.href = 'https://therai.co/auth/password?token=' + token + '&type=recovery';
+    }, 2000);
+  };
+
   useEffect(() => {
     const verify = async () => {
       if (processedRef.current) return;
@@ -97,17 +151,21 @@ const ConfirmEmail: React.FC = () => {
         const tokenType = hash.get('type') || search.get('type');
         const email = hash.get('email') || search.get('email');
 
-        if (!token || !tokenType || !email) {
-          const missingParams = [];
-          if (!token) missingParams.push('token');
-          if (!tokenType) missingParams.push('type');
-          if (!email) missingParams.push('email');
-          
-          throw new Error(`Invalid link – missing: ${missingParams.join(', ')}`);
+        if (!token) {
+          throw new Error('Invalid link – missing token');
         }
 
-        // Call edge function to verify token and update profile
-        finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token, email);
+        // For recovery type, just pass token to edge function
+        if (tokenType === 'recovery') {
+          console.log(`[AUTH-APP-CONFIRMEMAIL] Recovery token detected, calling password reset flow`);
+          finishPasswordSuccess(token);
+        } else {
+          // For other types, still require email
+          if (!email) {
+            throw new Error('Email is required for this verification type');
+          }
+          finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token, email);
+        }
 
       } catch (err: any) {
         setStatus('error');
