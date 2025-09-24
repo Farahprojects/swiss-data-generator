@@ -38,7 +38,7 @@ serve(async (req) => {
 
     // Verify the OTP token
     const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: token,
+      token: token,
       type: type as any, // 'signup' | 'recovery' | 'email_change'
       email: email,
     });
