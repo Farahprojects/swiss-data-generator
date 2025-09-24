@@ -96,6 +96,11 @@ serve(async (req) => {
       // generateLink({ type: "signup" }) creates tokens that need verifyOtp({ type: "email" })
       const supabaseVerifyType = type === 'signup' ? 'email' : type;
       
+      log("🔄 Type mapping:", {
+        originalType: type,
+        mappedType: supabaseVerifyType
+      });
+      
       // Use the verifyOtp method to verify the token
       const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         email: email,
