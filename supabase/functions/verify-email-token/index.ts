@@ -123,7 +123,7 @@ serve(async (req) => {
           userId: verifyData.user?.id,
           userEmail: verifyData.user?.email,
           emailConfirmed: verifyData.user?.email_confirmed_at
-        } : null
+        } : null,
         error: verifyError ? {
           message: verifyError.message,
           status: verifyError.status,
