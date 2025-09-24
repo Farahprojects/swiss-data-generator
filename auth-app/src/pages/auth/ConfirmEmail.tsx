@@ -86,6 +86,8 @@ const ConfirmEmail: React.FC = () => {
       if (processedRef.current) return;
       processedRef.current = true;
 
+      console.log(`[AUTH-APP-CONFIRMEMAIL] 🚨 AUTH-APP CONFIRMEMAIL - Starting verification process`);
+
       try {
         const hash = new URLSearchParams(location.hash.slice(1));
         const search = new URLSearchParams(location.search);

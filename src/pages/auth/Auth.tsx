@@ -152,7 +152,7 @@ const Auth: React.FC = () => {
 
       // Entry point logging
       const requestId = crypto.randomUUID().substring(0, 8);
-      console.log(`[AUTH-VERIFY:${requestId}] Starting verification process`);
+      console.log(`[AUTH-VERIFY:${requestId}] 🔥 AUTH COMPONENT - Starting verification process`);
       console.log(`[AUTH-VERIFY:${requestId}] Full URL:`, window.location.href);
       console.log(`[AUTH-VERIFY:${requestId}] Hash:`, location.hash);
       console.log(`[AUTH-VERIFY:${requestId}] Search:`, location.search);

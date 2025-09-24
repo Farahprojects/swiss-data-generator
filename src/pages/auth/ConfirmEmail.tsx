@@ -82,7 +82,7 @@ const ConfirmEmail: React.FC = () => {
 
       // Entry point logging
       const requestId = crypto.randomUUID().substring(0, 8);
-      console.log(`[EMAIL-VERIFY:${requestId}] Starting verification process`);
+      console.log(`[EMAIL-VERIFY:${requestId}] ⚠️ CONFIRMEMAIL COMPONENT - Starting verification process`);
       console.log(`[EMAIL-VERIFY:${requestId}] Full URL:`, window.location.href);
       console.log(`[EMAIL-VERIFY:${requestId}] Hash:`, location.hash);
       console.log(`[EMAIL-VERIFY:${requestId}] Search:`, location.search);

@@ -102,7 +102,7 @@ const ResetPassword: React.FC = () => {
 
       // Entry point logging
       const requestId = crypto.randomUUID().substring(0, 8);
-      console.log(`[PASSWORD-VERIFY:${requestId}] Starting verification process`);
+      console.log(`[PASSWORD-VERIFY:${requestId}] 🚀 PASSWORD COMPONENT - Starting verification process`);
       console.log(`[PASSWORD-VERIFY:${requestId}] Full URL:`, window.location.href);
       console.log(`[PASSWORD-VERIFY:${requestId}] Hash:`, location.hash);
       console.log(`[PASSWORD-VERIFY:${requestId}] Search:`, location.search);
