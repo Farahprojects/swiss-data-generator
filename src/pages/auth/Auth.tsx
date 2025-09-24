@@ -75,7 +75,7 @@ const Auth: React.FC = () => {
     toast({ variant: 'success', title: 'Success', description: msg });
   };
 
-  const finishPasswordSuccess = async (token: string, email: string) => {
+  const finishPasswordSuccess = async (token: string, email?: string) => {
     console.log(`[PASSWORD-VERIFY] ✓ SUCCESS: password reset verification completed`);
 
     setMessage('Setting up password reset...');
@@ -87,8 +87,7 @@ const Auth: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('verify-token', {
         body: {
           token,
-          email,
-          type: 'recovery' // Keep as 'recovery' for Supabase auth compatibility
+          type: 'recovery' // Email is no longer required - token lookup will find the user
         }
       });
 
@@ -175,24 +174,26 @@ const Auth: React.FC = () => {
         const tokenType = hash.get('type') || search.get('type');
         const email = hash.get('email') || search.get('email');
 
-        if (!token || !tokenType || !email) {
+        if (!token || !tokenType) {
           const missingParams = [];
           if (!token) missingParams.push('token');
           if (!tokenType) missingParams.push('type');
-          if (!email) missingParams.push('email');
           
           console.error(`[AUTH-VERIFY:${requestId}] Missing parameters:`, missingParams);
           throw new Error(`Invalid link – missing: ${missingParams.join(', ')}`);
         }
 
         // Determine auth type based on token type
-        if (tokenType === 'password') {
+        if (tokenType === 'recovery') {
           setAuthType('password');
           console.log(`[AUTH-VERIFY:${requestId}] → Flow: Password reset`);
-          finishPasswordSuccess(token, email);
+          finishPasswordSuccess(token, email || ''); // Email is optional now
         } else if (tokenType === 'email' || tokenType === 'signup') {
           setAuthType('email');
           console.log(`[AUTH-VERIFY:${requestId}] → Flow: Email verification`);
+          if (!email) {
+            throw new Error('Email is required for email verification');
+          }
           finishEmailSuccess('signup', token, email);
         } else {
           console.error(`[AUTH-VERIFY:${requestId}] Unknown token type:`, tokenType);

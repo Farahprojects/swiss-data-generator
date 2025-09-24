@@ -97,7 +97,7 @@ serve(async (req) => {
     }
 
     // Build custom password reset link using OTP (not magic link token)
-    customPasswordLink = `https://auth.therai.co?token=${emailOtp}&type=recovery&email=${encodeURIComponent(email)}`;
+    customPasswordLink = `https://auth.therai.co?token=${emailOtp}&type=recovery`;
     
     log("Custom password link built:", customPasswordLink);
   } catch (err: any) {
