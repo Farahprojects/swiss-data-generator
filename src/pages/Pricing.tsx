@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import Footer from '@/components/Footer';
+import UnifiedNavigation from '@/components/UnifiedNavigation';
 
 interface PricingData {
   id: string;
@@ -79,7 +80,8 @@ const Pricing: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <UnifiedNavigation />
       {/* Header Section */}
       <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
