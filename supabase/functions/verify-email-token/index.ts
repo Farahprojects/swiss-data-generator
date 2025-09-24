@@ -92,9 +92,9 @@ serve(async (req) => {
         email: email
       });
 
-      // Map frontend type to Supabase API type
-      // generateLink({ type: "signup" }) creates tokens that need verifyOtp({ type: "email" })
-      const supabaseVerifyType = type === 'signup' ? 'email' : type;
+      // Use the same type for verification as was used for generation
+      // generateLink({ type: "signup" }) creates tokens that need verifyOtp({ type: "signup" })
+      const supabaseVerifyType = type;
       
       log("🔄 Type mapping:", {
         originalType: type,
