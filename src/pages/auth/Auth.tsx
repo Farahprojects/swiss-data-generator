@@ -190,7 +190,7 @@ const Auth: React.FC = () => {
           setAuthType('password');
           console.log(`[AUTH-VERIFY:${requestId}] → Flow: Password reset`);
           finishPasswordSuccess(token, email);
-        } else if (tokenType === 'email') {
+        } else if (tokenType === 'email' || tokenType === 'signup') {
           setAuthType('email');
           console.log(`[AUTH-VERIFY:${requestId}] → Flow: Email verification`);
           finishEmailSuccess('signup', token, email);
