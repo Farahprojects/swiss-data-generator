@@ -109,7 +109,7 @@ serve(async (req) => {
     body: {
       email: email,
       url: customPasswordLink,
-      template_type: "password_reset"
+      template_type: "password_change"
     }
   });
 
@@ -119,6 +119,6 @@ serve(async (req) => {
   }
 
   log(`✔ Sent password reset to ${email}`);
-  return respond(200, { status: "sent", template_type: "password_reset" });
+  return respond(200, { status: "sent", template_type: "password_change" });
 });
 
