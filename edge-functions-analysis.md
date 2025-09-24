@@ -6,7 +6,6 @@ Based on frontend code search, these functions are actively used:
 ### Authentication & User Management
 - `password_token` - Password reset token generation
 - `resend-verification` - Resend email verification
-- `password-manager` - Password verification and updates
 - `create-user-and-verify` - User creation with verification
 - `email-verification` - Email verification
 - `verify-email-token` - Email token verification
@@ -72,8 +71,6 @@ These functions are NOT referenced in the frontend code and can be removed:
 
 ### Communication (unused)
 - `inboundMessenger`
-- `send-email`
-- `send-notification-email`
 - `verification-emailer`
 
 ### Audio/Speech (unused)
@@ -92,7 +89,6 @@ These functions are NOT referenced in the frontend code and can be removed:
 - `email-check`
 - `error-handler-diagnostic`
 - `keep-warm`
-- `start-signup`
 - `threads-manager`
 
 ### Directories
