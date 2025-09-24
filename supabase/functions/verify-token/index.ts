@@ -36,25 +36,28 @@ serve(async (req) => {
 
     console.log(`[verify-token] Verifying token: ${token}`);
 
-    // Try recovery first (most common for password reset)
-    let { data, error } = await supabase.auth.verifyOtp({
+    // First, get the user from the token to derive the email
+    console.log(`[verify-token] Getting user from token...`);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      console.error(`[verify-token] Failed to get user from token:`, userError);
+      return respond({ 
+        success: false, 
+        error: 'Invalid or expired token' 
+      }, 400);
+    }
+
+    const email = userData.user.email;
+    console.log(`[verify-token] Found user email: ${email}`);
+
+    // Now verify the OTP with the email
+    console.log(`[verify-token] Verifying OTP with email and token...`);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email,
       token: token,
       type: 'recovery'
     });
-
-    // If recovery fails, try other types
-    if (error && error.message.includes('Invalid token')) {
-      console.log(`[verify-token] Recovery failed, trying email verification`);
-      const emailResult = await supabase.auth.verifyOtp({
-        token: token,
-        type: 'email'
-      });
-      
-      if (!emailResult.error) {
-        data = emailResult.data;
-        error = emailResult.error;
-      }
-    }
 
     if (error) {
       console.error(`[verify-token] OTP verification failed:`, error);
