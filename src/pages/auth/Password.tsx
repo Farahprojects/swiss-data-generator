@@ -25,7 +25,7 @@ const ResetPassword: React.FC = () => {
   const { toast } = useToast();
   const processedRef = useRef(false);
 
-  const finishSuccess = async (token: string, email: string) => {
+  const finishSuccess = async (token: string, email?: string) => {
     console.log(`[PASSWORD-VERIFY] ✓ SUCCESS: password reset verification completed`);
 
     setMessage('Setting up password reset...');
@@ -37,8 +37,7 @@ const ResetPassword: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('verify-token', {
         body: {
           token,
-          email,
-          type: 'recovery'
+          type: 'recovery' // Email is no longer required - token lookup will find the user
         }
       });
 
@@ -128,11 +127,10 @@ const ResetPassword: React.FC = () => {
         console.log(`[PASSWORD-VERIFY:${requestId}] → Flow: OTP method`);
         console.log(`[PASSWORD-VERIFY:${requestId}] OTP params - token: ${!!token}, type: ${tokenType}, email: ${email}`);
 
-        if (!token || !tokenType || !email) {
+        if (!token || !tokenType) {
           const missingParams = [];
           if (!token) missingParams.push('token');
           if (!tokenType) missingParams.push('type');
-          if (!email) missingParams.push('email');
           
           console.error(`[PASSWORD-VERIFY:${requestId}] Missing OTP parameters:`, missingParams);
           throw new Error(`Invalid link – missing: ${missingParams.join(', ')}`);
@@ -146,7 +144,7 @@ const ResetPassword: React.FC = () => {
         });
 
         // Call edge function to verify token
-        finishSuccess(token, email);
+        finishSuccess(token, email || undefined);
 
       } catch (err: any) {
         console.error(`[PASSWORD-VERIFY:${requestId}] ✗ VERIFICATION FAILED:`, {
