@@ -57,6 +57,16 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     return features[planName as keyof typeof features] || [];
   };
 
+  const getButtonText = (planId: string) => {
+    if (planId === 'subscription_onetime' || planId === 'one_shot') {
+      return 'Try Now';
+    } else if (planId === 'subscription_professional' || planId === '25_monthly') {
+      return 'Subscribe';
+    } else {
+      return 'Get Started';
+    }
+  };
+
   const isPopular = plan.id === 'subscription_professional' || plan.name.toLowerCase().includes('professional');
 
   return (
@@ -132,7 +142,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
                   : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300'
               }`}
             >
-              {loading ? 'Processing...' : 'Get Started'}
+              {loading ? 'Processing...' : getButtonText(plan.id)}
             </Button>
           </motion.div>
 
