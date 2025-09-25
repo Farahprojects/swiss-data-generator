@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Sparkles, Check, Zap } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import SubscriptionCard from './SubscriptionCard';
 
 interface PricingData {
   id: string;
@@ -90,37 +90,6 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
-
-  const getPlanFeatures = (planName: string) => {
-    const features = {
-      '10_monthly': [
-        '10 threads per month',
-        'Unlimited messages per thread',
-        'Priority support',
-        'Advanced features'
-      ],
-      '25_monthly': [
-        '25 threads per month',
-        'Unlimited messages per thread',
-        'Priority support',
-        'Advanced features',
-        'Early access to new features'
-      ],
-      'one_shot': [
-        'One-time payment',
-        '10 threads total',
-        'Unlimited messages per thread',
-        'Lifetime access'
-      ]
-    };
-    return features[planName as keyof typeof features] || [];
-  };
 
   if (!isOpen) return null;
 
@@ -142,21 +111,23 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
         >
           <div className="p-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-2 bg-gray-900 rounded-lg">
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Choose Your Plan</h2>
-                  <p className="text-gray-600">Unlock unlimited conversations and advanced features</p>
-                </div>
               </div>
+              <h2 className="text-3xl font-light text-gray-900 tracking-tight mb-4">
+                Choose Your Plan
+              </h2>
+              <p className="text-lg text-gray-600 font-light max-w-2xl mx-auto">
+                Select the perfect plan for your journey
+              </p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -164,58 +135,32 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
 
             {/* Pricing Plans */}
             {pricingLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+              <div className="flex justify-center">
+                <div className="animate-pulse">
+                  <div className="h-64 bg-gray-200 rounded-xl w-80"></div>
+                </div>
               </div>
             ) : (
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
-                {pricingPlans.map((plan) => (
-                  <Card
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                {pricingPlans.map((plan, index) => (
+                  <SubscriptionCard
                     key={plan.id}
-                    className={`cursor-pointer transition-all duration-200 ${
-                      selectedPlan === plan.id
-                        ? 'ring-2 ring-purple-500 shadow-lg'
-                        : 'hover:shadow-md'
-                    }`}
-                    onClick={() => handlePlanSelect(plan.id)}
-                  >
-                    <CardContent className="p-6">
-                      <div className="text-center">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          {plan.name}
-                        </h3>
-                        <div className="text-3xl font-bold text-gray-900 mb-4">
-                          {formatPrice(plan.unit_price_usd)}
-                          {plan.product_code === 'subscription' && (
-                            <span className="text-sm font-normal text-gray-500">/month</span>
-                          )}
-                        </div>
-                        <p className="text-gray-600 text-sm mb-6">
-                          {plan.description}
-                        </p>
-                        
-                        {/* Features */}
-                        <ul className="space-y-2 text-left">
-                          {getPlanFeatures(plan.name).map((feature, index) => (
-                            <li key={index} className="flex items-center text-sm text-gray-600">
-                              <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    plan={plan}
+                    index={index}
+                    isSelected={selectedPlan === plan.id}
+                    onSelect={handlePlanSelect}
+                    loading={loading}
+                  />
                 ))}
               </div>
             )}
 
             {/* Subscribe Button */}
-            <div className="flex justify-center">
+            <div className="flex justify-center mt-8">
               <Button
                 onClick={handleSubscribe}
                 disabled={!selectedPlan || loading}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-light text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
               >
                 {loading ? (
                   <div className="flex items-center space-x-2">
@@ -223,10 +168,7 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
                     <span>Processing...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-2">
-                    <Zap className="h-4 w-4" />
-                    <span>Subscribe Now</span>
-                  </div>
+                  'Subscribe Now'
                 )}
               </Button>
             </div>
