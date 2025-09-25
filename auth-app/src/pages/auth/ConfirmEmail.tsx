@@ -165,22 +165,17 @@ const ConfirmEmail: React.FC = () => {
         throw new Error('Token not found');
       }
 
-      // Get email from the token mapping (we need to look this up)
-      const { data: mappingData } = await supabase
-        .from('password_reset_tokens')
-        .select('email')
-        .eq('token_hash', token)
-        .single();
-
-      if (!mappingData) {
-        throw new Error('Token not found');
+      // Get email from the verify-token response (stored when token was verified)
+      const userEmail = data?.email;
+      if (!userEmail) {
+        throw new Error('Email not found in token verification');
       }
 
       // Call update-password edge function
-      const { data, error } = await supabase.functions.invoke('update-password', {
+      const { data: updateData, error } = await supabase.functions.invoke('update-password', {
         body: {
           token_hash: token,
-          email: mappingData.email,
+          email: userEmail,
           newPassword: newPassword
         }
       });
@@ -189,8 +184,8 @@ const ConfirmEmail: React.FC = () => {
         throw new Error(error.message || 'Failed to update password');
       }
 
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to update password');
+      if (!updateData?.success) {
+        throw new Error(updateData?.error || 'Failed to update password');
       }
 
       // Success

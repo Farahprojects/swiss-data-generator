@@ -64,38 +64,13 @@ serve(async (req) => {
     const email = mappingData.email;
     console.log(`[verify-token] Found email for token: ${email}`);
 
-    // Now verify the OTP with the email and token_hash
-    console.log(`[verify-token] Verifying OTP with email and token_hash...`);
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email,
-      token: token,
-      type: 'recovery'
-    });
+    // Just return success - we'll verify the OTP later when user submits the form
+    console.log(`[verify-token] ✓ Token lookup successful, ready for password form`);
 
-    if (error) {
-      console.error(`[verify-token] OTP verification failed:`, error);
-      return respond({ 
-        success: false, 
-        error: error.message || 'Token verification failed' 
-      }, 400);
-    }
-
-    if (!data.user) {
-      console.error(`[verify-token] No user returned from verification`);
-      return respond({ 
-        success: false, 
-        error: 'User not found' 
-      }, 404);
-    }
-
-    console.log(`[verify-token] ✓ Token verified successfully for user: ${data.user.id}`);
-
-    // Return the session data for the frontend to use
     return respond({
       success: true,
       message: 'Token verified successfully',
-      session: data.session,
-      user: data.user
+      email: email
     });
 
   } catch (error) {

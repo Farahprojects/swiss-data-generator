@@ -36,8 +36,8 @@ serve(async (req) => {
 
     console.log(`[update-password] Updating password for email: ${email}`);
 
-    // Step 1: Verify the token
-    console.log(`[update-password] Verifying token...`);
+    // Step 1: Verify the token with Supabase
+    console.log(`[update-password] Verifying token with Supabase...`);
     const { data, error } = await supabase.auth.verifyOtp({
       email: email,
       token: token_hash,
