@@ -88,6 +88,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') (window as any).__authTrace.providerMounts++;
     log('debug', 'Initializing AuthContext with enhanced session management', null, 'auth');
 
+    // Handle OAuth callback if present in URL
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      
+      if (code || error) {
+        log('debug', 'OAuth callback detected', { code: !!code, error }, 'auth');
+        
+        if (error) {
+          console.error('OAuth error:', error);
+          // Clean up URL parameters
+          const url = new URL(window.location.href);
+          url.searchParams.delete('code');
+          url.searchParams.delete('error');
+          url.searchParams.delete('state');
+          window.history.replaceState({}, '', url.toString());
+          return;
+        }
+        
+        if (code) {
+          try {
+            // Exchange code for session
+            const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.error('OAuth code exchange error:', exchangeError);
+            } else {
+              log('debug', 'OAuth code exchanged successfully', null, 'auth');
+            }
+          } catch (err) {
+            console.error('OAuth code exchange exception:', err);
+          }
+        }
+        
+        // Clean up URL parameters after processing
+        const url = new URL(window.location.href);
+        url.searchParams.delete('code');
+        url.searchParams.delete('error');
+        url.searchParams.delete('state');
+        window.history.replaceState({}, '', url.toString());
+      }
+    };
+
+    // Process OAuth callback if present
+    handleOAuthCallback();
+
     // Set up auth state listener
     const {
       data: { subscription },
@@ -328,78 +374,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
     try {
-      const { SUPABASE_URL } = await import('@/integrations/supabase/config');
-      // Create popup window
-      const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
-        'googleSignIn',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      
+      // Use Supabase's built-in OAuth method with proper popup handling
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${baseUrl}/chat`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
 
-      if (!popup) {
-        return { error: new Error('Popup blocked. Please allow popups for this site.') };
+      if (error) {
+        console.error('Google OAuth error:', error);
+        return { error: new Error(error.message || 'Google sign-in failed') };
       }
 
-      // Wait for popup to close or redirect
-      return new Promise<{ error: Error | null }>((resolve) => {
-        const checkClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkClosed);
-            // Check if user was authenticated by checking current session
-            supabase.auth.getSession().then(({ data: { session } }) => {
-              if (session) {
-                resolve({ error: null });
-              } else {
-                resolve({ error: new Error('Authentication was cancelled or failed') });
-              }
-            });
-          }
-        }, 1000);
-      });
+      // OAuth flow initiated successfully
+      return { error: null };
     } catch (err: unknown) {
+      console.error('Google sign-in exception:', err);
       return { error: err instanceof Error ? err : new Error('Unexpected Google sign-in error') };
     }
   };
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
     try {
-      const { SUPABASE_URL } = await import('@/integrations/supabase/config');
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
-      // Create popup window
-      const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
-        'appleSignIn',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
+      // Use Supabase's built-in OAuth method with proper Apple configuration
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${baseUrl}/chat`,
+          queryParams: {
+            response_mode: 'form_post',
+          }
+        }
+      });
 
-      if (!popup) {
-        return { error: new Error('Popup blocked. Please allow popups for this site.') };
+      if (error) {
+        console.error('Apple OAuth error:', error);
+        return { error: new Error(error.message || 'Apple sign-in failed') };
       }
 
-      // Wait for popup to close or redirect
-      return new Promise<{ error: Error | null }>((resolve) => {
-        const checkClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkClosed);
-            // Check if user was authenticated by checking current session
-            supabase.auth.getSession().then(({ data: { session } }) => {
-              if (session) {
-                resolve({ error: null });
-              } else {
-                resolve({ error: new Error('Authentication was cancelled or failed') });
-              }
-            });
-          }
-        }, 1000);
-      });
+      // OAuth flow initiated successfully
+      return { error: null };
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error('Unexpected Apple sign-in error');
-      return { error };
+      console.error('Apple sign-in exception:', err);
+      return { error: err instanceof Error ? err : new Error('Unexpected Apple sign-in error') };
     }
   };
 
