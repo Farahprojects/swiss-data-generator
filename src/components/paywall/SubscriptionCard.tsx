@@ -64,7 +64,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   };
 
   const getButtonText = (planId: string) => {
-    if (planId === 'subscription_onetime' || planId === 'one_shot') {
+    if (planId === 'starter-plan') {
       return 'Try Now';
     } else if (planId === 'subscription_professional' || planId === '25_monthly') {
       return 'Subscribe';
@@ -78,7 +78,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       return <span className="text-xl font-bold text-gray-900">Business</span>;
     } else if (planId === '25_monthly' || planName.toLowerCase().includes('personal growth')) {
       return <span className="text-xl font-bold text-gray-900">Premium</span>;
-    } else if (planId === 'subscription_onetime' || planId === 'one_shot' || planName.toLowerCase().includes('single')) {
+    } else if (planId === 'starter-plan') {
       return <span className="text-xl font-bold text-gray-900">Starter</span>;
     }
     return null;
@@ -90,7 +90,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     setIsProcessing(true);
     try {
       // Check if it's a one-shot plan
-      const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
+      const isOneShot = plan.id === 'starter-plan';
       
       if (isOneShot) {
         // One-shot payment - use create-checkout with planId + userId
