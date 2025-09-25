@@ -67,6 +67,17 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     }
   };
 
+  const getPlanTypeLabel = (planId: string, planName: string) => {
+    if (planId === 'subscription_professional' || planName.toLowerCase().includes('professional')) {
+      return <span className="text-sm font-bold text-gray-900">Business</span>;
+    } else if (planId === '25_monthly' || planName.toLowerCase().includes('personal growth')) {
+      return <span className="text-sm font-bold text-gray-900">Premium</span>;
+    } else if (planId === 'subscription_onetime' || planId === 'one_shot' || planName.toLowerCase().includes('single')) {
+      return <span className="text-sm font-bold text-gray-900">Starter</span>;
+    }
+    return null;
+  };
+
   const isPopular = plan.id === 'subscription_professional' || plan.id === '25_monthly' || plan.name.toLowerCase().includes('professional') || plan.name.toLowerCase().includes('personal growth');
 
   return (
@@ -83,18 +94,13 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
         onClick={() => onSelect(plan.id)}
       >
         <CardContent className="p-8 text-center space-y-6 h-full flex flex-col">
-          {/* Icon */}
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-            className="flex items-center justify-center h-12 w-12 mx-auto rounded-full bg-gray-900"
-          >
-            <Sparkles className="h-6 w-6 text-white" />
-          </motion.div>
 
           {/* Header */}
           <div className="space-y-2">
+            {/* Plan Type Label */}
+            <div className="text-left">
+              {getPlanTypeLabel(plan.id, plan.name)}
+            </div>
             <h3 className="text-xl font-light text-gray-900 leading-tight">
               {plan.name}
             </h3>
