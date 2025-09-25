@@ -72,7 +72,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               
               {/* Payment routes - accessible for authenticated users */}
-              <Route path="/stripe" element={<EmbeddedCheckout />} />
+              <Route path="/stripe" element={<AuthGuard><EmbeddedCheckout /></AuthGuard>} />
               
               {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
               <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />

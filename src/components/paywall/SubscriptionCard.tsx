@@ -106,7 +106,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
 
         if (data?.client_secret) {
           // Redirect to embedded checkout page with payment intent
-          const checkoutUrl = `/embedded-checkout?client_secret=${data.client_secret}&amount=${plan.unit_price_usd}&description=${encodeURIComponent(plan.name)}`;
+          const checkoutUrl = `/stripe?client_secret=${data.client_secret}&amount=${plan.unit_price_usd}&description=${encodeURIComponent(plan.name)}`;
           window.location.href = checkoutUrl;
         } else {
           throw new Error('No client secret returned');
