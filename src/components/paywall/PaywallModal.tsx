@@ -30,6 +30,7 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
         const { data, error } = await supabase
           .from('price_list')
           .select('id, name, description, unit_price_usd, product_code')
+          .eq('endpoint', 'subscription')
           .order('unit_price_usd', { ascending: true });
 
         if (error) {
