@@ -21,15 +21,18 @@ function CheckoutForm() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    // Extract chat_id from URL for authenticated user redirect
+    // Extract parameters from URL
     const url = new URL(window.location.href);
     const chat_id = url.searchParams.get('chat_id');
+    const plan_id = url.searchParams.get('plan_id');
 
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: chat_id 
           ? `${window.location.origin}/c/${chat_id}?payment_status=success`
+          : plan_id
+          ? `${window.location.origin}/chat?payment_status=success&plan_id=${plan_id}`
           : `${window.location.origin}/therai?payment_status=success`,
       },
       redirect: 'if_required',
@@ -40,6 +43,8 @@ function CheckoutForm() {
       // For failures, redirect with cancelled status
       if (chat_id) {
         window.location.replace(`/c/${chat_id}?payment_status=cancelled`);
+      } else if (plan_id) {
+        window.location.replace(`/chat?payment_status=cancelled&plan_id=${plan_id}`);
       } else {
         window.location.replace('/therai?payment_status=cancelled');
       }
@@ -47,6 +52,8 @@ function CheckoutForm() {
       // Success - redirect with success parameters
       if (chat_id) {
         window.location.replace(`/c/${chat_id}?payment_status=success`);
+      } else if (plan_id) {
+        window.location.replace(`/chat?payment_status=success&plan_id=${plan_id}`);
       } else {
         window.location.replace('/therai?payment_status=success');
       }
@@ -72,17 +79,26 @@ const EmbeddedCheckout: React.FC = () => {
   useEffect(() => {
     (async () => {
       const url = new URL(window.location.href);
-      const amount = Number(url.searchParams.get('amount') || '0');
       const guest_id = url.searchParams.get('guest_id') || undefined;
       const chat_id = url.searchParams.get('chat_id') || undefined;
       const report = url.searchParams.get('report') || undefined;
+      const plan_id = url.searchParams.get('plan_id') || undefined;
 
+      // Determine if this is a paywall payment or conversation payment
+      const isPaywallPayment = plan_id && !guest_id && !chat_id;
+      
       const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-        body: { amount, currency: 'usd', guest_id, chat_id, description: 'Conversation payment' }
+        body: { 
+          currency: 'usd', 
+          guest_id, 
+          chat_id, 
+          plan_id: isPaywallPayment ? plan_id : undefined,
+          source: isPaywallPayment ? 'paywall' : 'conversation'
+        }
       });
       if (error) return;
       setClientSecret(data?.client_secret || null);
-      setSummary({ amount, report });
+      setSummary({ amount: data?.amount || 0, report: isPaywallPayment ? data?.description : report });
     })();
   }, []);
 

@@ -91,28 +91,12 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
       
       if (isOneShot) {
-        // One-shot payment - use create-checkout with amount
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: {
-            mode: 'payment',
-            amount: plan.unit_price_usd,
-            description: plan.name,
-            successUrl: `${window.location.origin}/chat?payment=success`,
-            cancelUrl: `${window.location.origin}/chat?payment=cancelled`,
-            isGuest: true,
-            email: 'user@example.com' // This will be replaced with actual user email
-          }
+        // One-shot payment - redirect to embedded checkout (only pass plan_id)
+        const params = new URLSearchParams({
+          plan_id: plan.id
         });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data?.url) {
-          window.location.href = data.url;
-        } else {
-          throw new Error('No checkout URL returned');
-        }
+        
+        window.location.href = `/stripe?${params.toString()}`;
       } else {
         // Subscription - use create-subscription-checkout
         const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
