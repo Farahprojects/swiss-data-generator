@@ -102,10 +102,7 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
         className="fixed inset-0 bg-white z-50 flex flex-col"
       >
         {/* Header */}
-        <header className="w-full py-8 flex justify-between items-center px-6 border-b border-gray-100">
-          <div className="text-2xl font-light text-gray-900">
-            Choose Your Plan
-          </div>
+        <header className="w-full py-4 flex justify-end items-center px-6">
           <Button
             variant="ghost"
             size="sm"
