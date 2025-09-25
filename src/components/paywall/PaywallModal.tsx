@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import SubscriptionCard from './SubscriptionCard';
 
 interface PricingData {
@@ -21,10 +20,8 @@ interface PaywallModalProps {
 }
 
 const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [loading, setLoading] = useState(false);
   const [pricingPlans, setPricingPlans] = useState<PricingData[]>([]);
   const [pricingLoading, setPricingLoading] = useState(true);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   // Fetch pricing plans
   useEffect(() => {
@@ -53,77 +50,7 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
     }
   }, [isOpen]);
 
-  const handlePlanSelect = (planId: string) => {
-    setSelectedPlan(planId);
-  };
 
-  const handleSubscribe = async () => {
-    if (!selectedPlan) {
-      toast.error('Please select a plan');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Find the selected plan details
-      const plan = pricingPlans.find(p => p.id === selectedPlan);
-      if (!plan) {
-        throw new Error('Plan not found');
-      }
-
-      // Check if it's a one-shot plan
-      const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
-      
-      if (isOneShot) {
-        // One-shot payment - use create-checkout with amount
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: {
-            mode: 'payment',
-            amount: plan.unit_price_usd,
-            description: plan.name,
-            successUrl: `${window.location.origin}/chat?payment=success`,
-            cancelUrl: `${window.location.origin}/chat?payment=cancelled`,
-            isGuest: true,
-            email: 'user@example.com' // This will be replaced with actual user email
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data?.url) {
-          window.location.href = data.url;
-        } else {
-          throw new Error('No checkout URL returned');
-        }
-      } else {
-        // Subscription - use create-subscription-checkout
-        const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
-          body: {
-            priceId: plan.stripe_price_id || plan.id, // Use stripe_price_id if available
-            successUrl: `${window.location.origin}/chat?subscription=success`,
-            cancelUrl: `${window.location.origin}/chat?subscription=cancelled`
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data?.url) {
-          window.location.href = data.url;
-        } else {
-          throw new Error('No checkout URL returned');
-        }
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast.error('Failed to start checkout process');
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   if (!isOpen) return null;
@@ -175,9 +102,9 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
                     key={plan.id}
                     plan={plan}
                     index={index}
-                    isSelected={selectedPlan === plan.id}
-                    onSelect={handlePlanSelect}
-                    loading={loading}
+                    isSelected={false}
+                    onSelect={() => {}}
+                    loading={false}
                   />
                 ))}
               </div>

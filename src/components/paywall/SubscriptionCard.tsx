@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface SubscriptionCardProps {
   plan: {
@@ -11,6 +13,7 @@ interface SubscriptionCardProps {
     description: string;
     unit_price_usd: number;
     product_code: string;
+    stripe_price_id?: string;
   };
   index: number;
   isSelected: boolean;
@@ -25,6 +28,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   onSelect,
   loading
 }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -79,6 +83,63 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   };
 
   const isPopular = plan.id === '25_monthly' || plan.name.toLowerCase().includes('personal growth');
+
+  const handleCheckout = async () => {
+    setIsProcessing(true);
+    try {
+      // Check if it's a one-shot plan
+      const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
+      
+      if (isOneShot) {
+        // One-shot payment - use create-checkout with amount
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: {
+            mode: 'payment',
+            amount: plan.unit_price_usd,
+            description: plan.name,
+            successUrl: `${window.location.origin}/chat?payment=success`,
+            cancelUrl: `${window.location.origin}/chat?payment=cancelled`,
+            isGuest: true,
+            email: 'user@example.com' // This will be replaced with actual user email
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
+      } else {
+        // Subscription - use create-subscription-checkout
+        const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+          body: {
+            priceId: plan.stripe_price_id || plan.id, // Use stripe_price_id if available
+            successUrl: `${window.location.origin}/chat?subscription=success`,
+            cancelUrl: `${window.location.origin}/chat?subscription=cancelled`
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to start checkout process');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <motion.div
@@ -139,16 +200,16 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                onSelect(plan.id);
+                handleCheckout();
               }}
-              disabled={loading}
+              disabled={loading || isProcessing}
               className={`w-full font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 ${
                 isPopular 
                   ? 'bg-gray-900 hover:bg-gray-800 text-white' 
                   : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300'
               }`}
             >
-              {loading ? 'Processing...' : getButtonText(plan.id)}
+              {isProcessing ? 'Processing...' : getButtonText(plan.id)}
             </Button>
           </motion.div>
 
