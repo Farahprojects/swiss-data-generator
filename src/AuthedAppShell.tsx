@@ -41,8 +41,8 @@ const AuthedAppShell: React.FC = () => {
 
   return (
     <NavigationStateProvider>
-      <SubscriptionProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <SubscriptionProvider>
         <ModalStateProvider>
           <SettingsModalProvider>
             <PricingProvider>
@@ -90,8 +90,8 @@ const AuthedAppShell: React.FC = () => {
             </PricingProvider>
           </SettingsModalProvider>
         </ModalStateProvider>
-        </AuthProvider>
-      </SubscriptionProvider>
+        </SubscriptionProvider>
+      </AuthProvider>
     </NavigationStateProvider>
   );
 };
