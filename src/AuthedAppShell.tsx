@@ -5,6 +5,7 @@ import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { ModeProvider } from '@/contexts/ModeContext';
 import { PricingProvider } from '@/contexts/PricingContext';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -40,7 +41,8 @@ const AuthedAppShell: React.FC = () => {
 
   return (
     <NavigationStateProvider>
-      <AuthProvider>
+      <SubscriptionProvider>
+        <AuthProvider>
         <ModalStateProvider>
           <SettingsModalProvider>
             <PricingProvider>
@@ -88,7 +90,8 @@ const AuthedAppShell: React.FC = () => {
             </PricingProvider>
           </SettingsModalProvider>
         </ModalStateProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </SubscriptionProvider>
     </NavigationStateProvider>
   );
 };
