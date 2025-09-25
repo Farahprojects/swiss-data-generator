@@ -67,7 +67,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     }
   };
 
-  const isPopular = plan.id === 'subscription_professional' || plan.name.toLowerCase().includes('professional');
+  const isPopular = plan.id === 'subscription_professional' || plan.id === '25_monthly' || plan.name.toLowerCase().includes('professional') || plan.name.toLowerCase().includes('personal growth');
 
   return (
     <motion.div
