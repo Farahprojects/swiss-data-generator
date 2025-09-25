@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { X, Sparkles } from 'lucide-react';
+import { X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import SubscriptionCard from './SubscriptionCard';
@@ -99,38 +99,34 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        onClick={onClose}
+        className="fixed inset-0 bg-white z-50 flex flex-col"
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-6">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center mb-4">
-                <div className="p-2 bg-gray-900 rounded-lg">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <h2 className="text-3xl font-light text-gray-900 tracking-tight mb-4">
+        {/* Header */}
+        <header className="w-full py-8 flex justify-between items-center px-6 border-b border-gray-100">
+          <div className="text-2xl font-light text-gray-900">
+            Choose Your Plan
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
+          <div className="w-full max-w-6xl">
+            {/* Header Text */}
+            <div className="text-center mb-12">
+              <h1 className="text-3xl font-light text-gray-900 tracking-tight mb-4">
                 Choose Your Plan
-              </h2>
+              </h1>
               <p className="text-lg text-gray-600 font-light max-w-2xl mx-auto">
                 Select the perfect plan for your journey
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </Button>
             </div>
 
             {/* Pricing Plans */}
@@ -173,7 +169,17 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
               </Button>
             </div>
           </div>
-        </motion.div>
+        </main>
+
+        {/* Footer with timing tool kit */}
+        <footer className="py-8 text-center text-sm text-gray-500 font-light border-t border-gray-100">
+          <div className="max-w-4xl mx-auto px-4">
+            <p className="mb-4">© {new Date().getFullYear()} therai. All rights reserved.</p>
+            <div className="text-xs text-gray-400">
+              <p>Secure payment processed by Stripe. Cancel anytime.</p>
+            </div>
+          </div>
+        </footer>
       </motion.div>
     </AnimatePresence>
   );
