@@ -25,6 +25,7 @@ import BlogPost from './pages/BlogPost';
 import ChatContainer from './pages/ChatContainer';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
+import EmbeddedCheckout from './pages/EmbeddedCheckout';
 
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
@@ -70,6 +71,8 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               
+              {/* Payment routes - accessible for authenticated users */}
+              <Route path="/stripe" element={<EmbeddedCheckout />} />
               
               {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
               <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />
