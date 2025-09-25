@@ -44,7 +44,31 @@ serve(async (req) => {
       return new Response('Missing priceId', { status: 400, headers: corsHeaders })
     }
 
-    console.log(`Creating subscription checkout for user: ${user.id}`)
+    console.log(`Creating subscription checkout for user: ${user.id}, plan: ${priceId}`)
+
+    // Get plan details from database
+    const { data: plan, error: planError } = await supabase
+      .from('price_list')
+      .select('id, name, description, unit_price_usd, product_code, stripe_price_id')
+      .eq('id', priceId)
+      .single();
+
+    if (planError || !plan) {
+      console.error('Plan lookup error:', planError);
+      return new Response(JSON.stringify({ error: "Plan not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Found plan: ${plan.name}, stripe_price_id: ${plan.stripe_price_id}`);
+
+    if (!plan.stripe_price_id) {
+      return new Response(JSON.stringify({ error: "Stripe price ID not found for this plan" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Get or create Stripe customer
     const { data: profile } = await supabase
@@ -82,7 +106,7 @@ serve(async (req) => {
       billing_address_collection: 'required', // Collect billing address
       line_items: [
         {
-          price: priceId,
+          price: plan.stripe_price_id,
           quantity: 1,
         },
       ],
@@ -90,16 +114,19 @@ serve(async (req) => {
       success_url: successUrl || `${req.headers.get("origin")}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${req.headers.get("origin")}/canceled`,
       metadata: {
-        user_id: user.id
+        user_id: user.id,
+        plan_id: priceId,
+        payment_type: 'subscription'
       },
       subscription_data: {
         metadata: {
-          user_id: user.id
+          user_id: user.id,
+          plan_id: priceId
         }
       }
     })
 
-    console.log(`Created checkout session: ${session.id} for user: ${user.id}`)
+    console.log(`Created checkout session: ${session.id} for user: ${user.id}, plan: ${plan.name}`)
 
     return new Response(JSON.stringify({ 
       url: session.url,
