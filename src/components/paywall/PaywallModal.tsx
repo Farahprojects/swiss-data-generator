@@ -148,30 +148,13 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
               </div>
             )}
 
-            {/* Subscribe Button */}
-            <div className="flex justify-center mt-8">
-              <Button
-                onClick={handleSubscribe}
-                disabled={!selectedPlan || loading}
-                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-light text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </div>
-                ) : (
-                  'Subscribe Now'
-                )}
-              </Button>
-            </div>
           </div>
         </main>
 
         {/* Footer with timing tool kit */}
         <footer className="py-8 text-center text-sm text-gray-500 font-light border-t border-gray-100">
           <div className="max-w-4xl mx-auto px-4">
-            <p className="mb-4">© {new Date().getFullYear()} therai. All rights reserved.</p>
+            <p className="mb-4">© {new Date().getFullYear()} Therai. All rights reserved.</p>
             <div className="text-xs text-gray-400">
               <p>Secure payment processed by Stripe. Cancel anytime.</p>
             </div>
