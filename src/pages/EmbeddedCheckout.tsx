@@ -87,6 +87,12 @@ const EmbeddedCheckout: React.FC = () => {
       // Determine if this is a paywall payment or conversation payment
       const isPaywallPayment = plan_id && !guest_id && !chat_id;
       
+      console.log('🔍 EmbeddedCheckout: Calling create-payment-intent with:', {
+        plan_id,
+        isPaywallPayment,
+        source: isPaywallPayment ? 'paywall' : 'conversation'
+      });
+
       const { data, error } = await supabase.functions.invoke('create-payment-intent', {
         body: { 
           currency: 'usd', 
@@ -96,7 +102,14 @@ const EmbeddedCheckout: React.FC = () => {
           source: isPaywallPayment ? 'paywall' : 'conversation'
         }
       });
-      if (error) return;
+
+      console.log('🔍 EmbeddedCheckout: Edge function response:', { data, error });
+
+      if (error) {
+        console.error('❌ EmbeddedCheckout: Edge function error:', error);
+        return;
+      }
+      
       setClientSecret(data?.client_secret || null);
       setSummary({ amount: data?.amount || 0, report: isPaywallPayment ? data?.description : report });
     })();

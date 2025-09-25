@@ -20,19 +20,25 @@ serve(async (req) => {
 
     // For paywall payments, validate plan_id and get amount from database
     if (source === 'paywall' && plan_id) {
+      console.log('🔍 create-payment-intent: Processing paywall payment for plan_id:', plan_id);
+      
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
       );
 
       // Look up the plan details from price_list table
+      console.log('🔍 create-payment-intent: Looking up plan in database...');
       const { data: planData, error: planError } = await supabase
         .from('price_list')
         .select('unit_price_usd, name, description')
         .eq('id', plan_id)
         .single();
 
+      console.log('🔍 create-payment-intent: Database lookup result:', { planData, planError });
+
       if (planError || !planData) {
+        console.error('❌ create-payment-intent: Invalid plan ID:', planError);
         return new Response(JSON.stringify({ error: "Invalid plan ID" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -42,6 +48,12 @@ serve(async (req) => {
       // Use server-side validated amount and description
       const validatedAmount = planData.unit_price_usd;
       const validatedDescription = planData.description || planData.name;
+
+      console.log('🔍 create-payment-intent: Creating Stripe PaymentIntent with:', {
+        amount: Math.round(validatedAmount * 100),
+        currency: currency || "usd",
+        description: validatedDescription
+      });
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(validatedAmount * 100),
@@ -54,6 +66,11 @@ serve(async (req) => {
           source: 'paywall'
         },
         automatic_payment_methods: { enabled: true },
+      });
+
+      console.log('✅ create-payment-intent: PaymentIntent created successfully:', {
+        id: paymentIntent.id,
+        client_secret: paymentIntent.client_secret ? 'present' : 'missing'
       });
 
       return new Response(
