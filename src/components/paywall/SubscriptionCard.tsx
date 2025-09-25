@@ -91,16 +91,12 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
       
       if (isOneShot) {
-        // One-shot payment - use create-checkout with amount
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
+        // One-shot payment - use create-payment-intent for embedded checkout
+        const { data, error } = await supabase.functions.invoke('create-payment-intent', {
           body: {
-            mode: 'payment',
             amount: plan.unit_price_usd,
             description: plan.name,
-            successUrl: `${window.location.origin}/chat?payment=success`,
-            cancelUrl: `${window.location.origin}/chat?payment=cancelled`,
-            isGuest: true,
-            email: 'user@example.com' // This will be replaced with actual user email
+            currency: 'usd'
           }
         });
 
@@ -108,10 +104,12 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
           throw error;
         }
 
-        if (data?.url) {
-          window.location.href = data.url;
+        if (data?.client_secret) {
+          // Redirect to embedded checkout page with payment intent
+          const checkoutUrl = `/embedded-checkout?client_secret=${data.client_secret}&amount=${plan.unit_price_usd}&description=${encodeURIComponent(plan.name)}`;
+          window.location.href = checkoutUrl;
         } else {
-          throw new Error('No checkout URL returned');
+          throw new Error('No client secret returned');
         }
       } else {
         // Subscription - use create-subscription-checkout

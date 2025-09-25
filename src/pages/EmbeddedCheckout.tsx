@@ -21,16 +21,10 @@ function CheckoutForm() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    // Extract chat_id from URL for authenticated user redirect
-    const url = new URL(window.location.href);
-    const chat_id = url.searchParams.get('chat_id');
-
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: chat_id 
-          ? `${window.location.origin}/c/${chat_id}?payment_status=success`
-          : `${window.location.origin}/therai?payment_status=success`,
+        return_url: `${window.location.origin}/chat?payment_status=success`,
       },
       redirect: 'if_required',
     });
@@ -38,18 +32,10 @@ function CheckoutForm() {
     if (error) {
       setErrorMessage(error.message || 'Payment failed.');
       // For failures, redirect with cancelled status
-      if (chat_id) {
-        window.location.replace(`/c/${chat_id}?payment_status=cancelled`);
-      } else {
-        window.location.replace('/therai?payment_status=cancelled');
-      }
+      window.location.replace('/chat?payment_status=cancelled');
     } else {
       // Success - redirect with success parameters
-      if (chat_id) {
-        window.location.replace(`/c/${chat_id}?payment_status=success`);
-      } else {
-        window.location.replace('/therai?payment_status=success');
-      }
+      window.location.replace('/chat?payment_status=success');
     }
     setIsSubmitting(false);
   };
@@ -72,63 +58,47 @@ const EmbeddedCheckout: React.FC = () => {
   useEffect(() => {
     (async () => {
       const url = new URL(window.location.href);
+      const client_secret = url.searchParams.get('client_secret');
       const amount = Number(url.searchParams.get('amount') || '0');
-      const guest_id = url.searchParams.get('guest_id') || undefined;
-      const chat_id = url.searchParams.get('chat_id') || undefined;
-      const report = url.searchParams.get('report') || undefined;
+      const description = url.searchParams.get('description') || 'One-time payment';
 
-      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-        body: { amount, currency: 'usd', guest_id, chat_id, description: 'Conversation payment' }
-      });
-      if (error) return;
-      setClientSecret(data?.client_secret || null);
-      setSummary({ amount, report });
+      if (client_secret) {
+        // Use provided client_secret from URL
+        setClientSecret(client_secret);
+        setSummary({ amount, report: description });
+      } else {
+        // Fallback: create new payment intent (shouldn't happen with new flow)
+        const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+          body: { amount, currency: 'usd', description }
+        });
+        if (error) return;
+        setClientSecret(data?.client_secret || null);
+        setSummary({ amount, report: description });
+      }
     })();
   }, []);
 
   const options = useMemo(() => ({ clientSecret }), [clientSecret]);
 
-  // Build a canonical cancel URL that always carries IDs back to the app
+  // Build a canonical cancel URL
   const cancelHref = useMemo(() => {
-    const url = new URL(window.location.href);
-    const guest_id = url.searchParams.get('guest_id');
-    const chat_id = url.searchParams.get('chat_id');
-    return guest_id && chat_id
-      ? `/c/g/${chat_id}?payment_status=cancelled&guest_id=${guest_id}`
-      : '/c?payment_status=cancelled';
+    return '/chat?payment_status=cancelled';
   }, []);
 
-  // Intercept browser back to guarantee cancel redirect with IDs
+  // Intercept browser back to guarantee cancel redirect
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const guest_id = url.searchParams.get('guest_id');
-    const chat_id = url.searchParams.get('chat_id');
-    const target = guest_id && chat_id
-      ? `/c/g/${chat_id}?payment_status=cancelled&guest_id=${guest_id}`
-      : '/c?payment_status=cancelled';
+    const target = '/chat?payment_status=cancelled';
 
     const onPopState = () => {
       window.location.replace(target);
     };
 
-    const onBeforeUnload = () => {
-      // Mark as cancelled when user leaves the page
-      if (guest_id && chat_id) {
-        // Update guest_reports to mark as cancelled
-        supabase.functions.invoke('mark-payment-cancelled', {
-          body: { guest_id, chat_id }
-        }).catch(() => {}); // Ignore errors
-      }
-    };
-
     window.addEventListener('popstate', onPopState);
-    window.addEventListener('beforeunload', onBeforeUnload);
     // Push a state so the next back triggers popstate here
     history.pushState(null, '', window.location.href);
     
     return () => {
       window.removeEventListener('popstate', onPopState);
-      window.removeEventListener('beforeunload', onBeforeUnload);
     };
   }, []);
 
