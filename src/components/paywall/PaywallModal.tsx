@@ -65,26 +65,61 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          price_id: selectedPlan,
-          success_url: `${window.location.origin}/chat`,
-          cancel_url: `${window.location.origin}/chat`
-        }
-      });
-
-      if (error) {
-        throw error;
+      // Find the selected plan details
+      const plan = pricingPlans.find(p => p.id === selectedPlan);
+      if (!plan) {
+        throw new Error('Plan not found');
       }
 
-      if (data?.url) {
-        window.location.href = data.url;
+      // Check if it's a one-shot plan
+      const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
+      
+      if (isOneShot) {
+        // One-shot payment - use create-checkout with amount
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: {
+            mode: 'payment',
+            amount: plan.unit_price_usd,
+            description: plan.name,
+            successUrl: `${window.location.origin}/chat?payment=success`,
+            cancelUrl: `${window.location.origin}/chat?payment=cancelled`,
+            isGuest: true,
+            email: 'user@example.com' // This will be replaced with actual user email
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
       } else {
-        throw new Error('No checkout URL returned');
+        // Subscription - use create-subscription-checkout
+        const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+          body: {
+            priceId: plan.stripe_price_id || plan.id, // Use stripe_price_id if available
+            successUrl: `${window.location.origin}/chat?subscription=success`,
+            cancelUrl: `${window.location.origin}/chat?subscription=cancelled`
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data?.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
       }
     } catch (error) {
-      console.error('Subscription error:', error);
-      toast.error('Failed to start subscription process');
+      console.error('Checkout error:', error);
+      toast.error('Failed to start checkout process');
     } finally {
       setLoading(false);
     }
