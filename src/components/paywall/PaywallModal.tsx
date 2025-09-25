@@ -114,8 +114,8 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
         </header>
 
         {/* Main Content */}
-        <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
-          <div className="w-full max-w-6xl">
+        <main className="flex-grow overflow-y-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="w-full max-w-6xl mx-auto">
             {/* Header Text */}
             <div className="text-center mb-12">
               <h1 className="text-3xl font-light text-gray-900 tracking-tight mb-4">
