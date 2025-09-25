@@ -1,0 +1,100 @@
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const respond = (body: any, status = 200) => {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { token_hash, email, newPassword } = await req.json();
+
+    if (!token_hash || !email || !newPassword) {
+      return respond({ 
+        success: false, 
+        error: 'Missing required parameters: token_hash, email, newPassword' 
+      }, 400);
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    console.log(`[update-password] Updating password for email: ${email}`);
+
+    // Step 1: Verify the token
+    console.log(`[update-password] Verifying token...`);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email,
+      token: token_hash,
+      type: 'recovery'
+    });
+
+    if (error) {
+      console.error(`[update-password] Token verification failed:`, error);
+      return respond({ 
+        success: false, 
+        error: 'Invalid or expired token' 
+      }, 400);
+    }
+
+    if (!data.user) {
+      console.error(`[update-password] No user found after verification`);
+      return respond({ 
+        success: false, 
+        error: 'User not found' 
+      }, 404);
+    }
+
+    console.log(`[update-password] Token verified for user: ${data.user.id}`);
+
+    // Step 2: Update the user's password
+    console.log(`[update-password] Updating password...`);
+    const { error: updateError } = await supabase.auth.admin.updateUserById(data.user.id, {
+      password: newPassword
+    });
+
+    if (updateError) {
+      console.error(`[update-password] Password update failed:`, updateError);
+      return respond({ 
+        success: false, 
+        error: 'Failed to update password' 
+      }, 500);
+    }
+
+    // Step 3: Clean up the token mapping (optional)
+    console.log(`[update-password] Cleaning up token mapping...`);
+    await supabase
+      .from('password_reset_tokens')
+      .delete()
+      .eq('token_hash', token_hash);
+
+    console.log(`[update-password] ✓ Password updated successfully`);
+
+    return respond({
+      success: true,
+      message: 'Password updated successfully'
+    });
+
+  } catch (error) {
+    console.error('[update-password] Unexpected error:', error);
+    return respond({ 
+      success: false, 
+      error: 'Internal server error' 
+    }, 500);
+  }
+});

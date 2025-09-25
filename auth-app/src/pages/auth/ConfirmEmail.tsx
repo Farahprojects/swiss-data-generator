@@ -15,8 +15,11 @@ import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '../../components/Logo';
 
 const ConfirmEmail: React.FC = () => {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update-password'>('loading');
   const [message, setMessage] = useState('Verifying your email…');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const location = useLocation();
   const processedRef = useRef(false);
@@ -133,14 +136,79 @@ const ConfirmEmail: React.FC = () => {
       return;
     }
 
-    // Show success and redirect to password reset
-    setStatus('success');
-    setMessage('Password reset link verified! Redirecting to password reset...');
-    
-    // Redirect to main app password reset page
-    setTimeout(() => {
-      window.location.href = 'https://therai.co/auth/password?token=' + token + '&type=recovery';
-    }, 2000);
+    // Show password reset form instead of redirecting
+    setStatus('update-password');
+    setMessage('Please set your new password');
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (newPassword !== confirmPassword) {
+      setMessage('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setMessage('Password must be at least 8 characters');
+      return;
+    }
+
+    setIsUpdating(true);
+    setMessage('Updating password...');
+
+    try {
+      // Get token from URL
+      const hash = new URLSearchParams(location.hash.slice(1));
+      const search = new URLSearchParams(location.search);
+      const token = hash.get('token') || search.get('token');
+
+      if (!token) {
+        throw new Error('Token not found');
+      }
+
+      // Get email from the token mapping (we need to look this up)
+      const { data: mappingData } = await supabase
+        .from('password_reset_tokens')
+        .select('email')
+        .eq('token_hash', token)
+        .single();
+
+      if (!mappingData) {
+        throw new Error('Token not found');
+      }
+
+      // Call update-password edge function
+      const { data, error } = await supabase.functions.invoke('update-password', {
+        body: {
+          token_hash: token,
+          email: mappingData.email,
+          newPassword: newPassword
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to update password');
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to update password');
+      }
+
+      // Success
+      setStatus('success');
+      setMessage('Password updated successfully! Redirecting to login...');
+      
+      // Redirect to login after delay
+      setTimeout(() => {
+        window.location.href = 'https://therai.co/login';
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('[AUTH-APP-CONFIRMEMAIL] Password update failed:', error);
+      setStatus('error');
+      setMessage(error.message || 'Failed to update password. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   useEffect(() => {
@@ -212,6 +280,75 @@ const ConfirmEmail: React.FC = () => {
       : status === 'success'
       ? 'bg-gray-900 text-white'
       : 'bg-red-50 text-red-600';
+
+  // Show password reset form
+  if (status === 'update-password') {
+    return (
+      <div className="min-h-screen flex flex-col bg-white">
+        <header className="w-full py-4 flex justify-center border-b border-gray-100">
+          <Logo size="sm" className="max-h-8" />
+        </header>
+
+        <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="w-full max-w-md"
+          >
+            <Card className="border-0 shadow-none bg-transparent">
+              <CardHeader className="text-center pb-8 px-0">
+                <CardTitle className="text-4xl font-light text-gray-900 mb-3">
+                  Set New Password
+                </CardTitle>
+                <CardDescription className="text-gray-600 font-light text-lg">
+                  Please enter your new password
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6 px-0">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      placeholder="Enter your new password"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      placeholder="Confirm your new password"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handlePasswordUpdate}
+                  disabled={isUpdating || !newPassword || !confirmPassword}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
+                >
+                  {isUpdating ? 'Updating...' : 'Update Password'}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
