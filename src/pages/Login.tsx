@@ -30,7 +30,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50">
       <UnifiedNavigation />
-      <div className="pt-24">
+      <div className="pt-8">
         <LoginModal onSuccess={handleSuccess} showAsPage={true} />
       </div>
       <Footer />
