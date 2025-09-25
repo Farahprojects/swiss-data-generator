@@ -38,32 +38,70 @@ serve(async (req) => {
       return new Response('Invalid token', { status: 401, headers: corsHeaders });
     }
 
-    const { amount, description, successUrl, cancelUrl } = await req.json();
+    const { planId, userId, successUrl, cancelUrl } = await req.json();
 
-    if (!amount || amount <= 0) {
-      return new Response(JSON.stringify({ error: "Amount is required" }), {
+    if (!planId) {
+      return new Response(JSON.stringify({ error: "Plan ID is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`Creating one-shot checkout for user: ${user.id}, amount: ${amount}`);
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "User ID is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Creating one-shot checkout for user: ${userId}, plan: ${planId}`);
+
+    // Get plan details from database
+    const { data: plan, error: planError } = await supabase
+      .from('price_list')
+      .select('id, name, description, unit_price_usd, product_code')
+      .eq('id', planId)
+      .single();
+
+    if (planError || !plan) {
+      console.error('Plan lookup error:', planError);
+      return new Response(JSON.stringify({ error: "Plan not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Found plan: ${plan.name}, price: $${plan.unit_price_usd}`);
 
     // Get or create Stripe customer
     const { data: profile } = await supabase
       .from('profiles')
       .select('stripe_customer_id')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     let customerId = profile?.stripe_customer_id;
 
     if (!customerId) {
+      // Get user email for Stripe customer creation
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .single();
+
+      if (!userProfile?.email) {
+        return new Response(JSON.stringify({ error: "User email not found" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Create new Stripe customer
       const customer = await stripe.customers.create({
-        email: user.email!,
+        email: userProfile.email,
         metadata: {
-          user_id: user.id
+          user_id: userId
         }
       });
       customerId = customer.id;
@@ -72,7 +110,7 @@ serve(async (req) => {
       await supabase
         .from('profiles')
         .update({ stripe_customer_id: customerId })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       console.log(`Created new Stripe customer: ${customerId}`);
     }
@@ -80,7 +118,7 @@ serve(async (req) => {
     // Create checkout session for one-shot payment
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      client_reference_id: user.id,
+      client_reference_id: userId,
       payment_method_types: ['card'],
       billing_address_collection: 'auto',
       line_items: [
@@ -88,10 +126,10 @@ serve(async (req) => {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: description || 'One-time payment',
-              description: description || 'One-time payment',
+              name: plan.name,
+              description: plan.description,
             },
-            unit_amount: Math.round(amount * 100),
+            unit_amount: Math.round(plan.unit_price_usd * 100),
           },
           quantity: 1,
         },
@@ -100,12 +138,13 @@ serve(async (req) => {
       success_url: successUrl || `${req.headers.get("origin")}/chat?payment_status=success`,
       cancel_url: cancelUrl || `${req.headers.get("origin")}/chat?payment_status=cancelled`,
       metadata: {
-        user_id: user.id,
+        user_id: userId,
+        plan_id: planId,
         payment_type: 'one_shot'
       }
     });
 
-    console.log(`Created checkout session: ${session.id} for user: ${user.id}`);
+    console.log(`Created checkout session: ${session.id} for user: ${userId}, plan: ${plan.name}`);
 
     return new Response(JSON.stringify({ 
       url: session.url,

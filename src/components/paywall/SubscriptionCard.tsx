@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SubscriptionCardProps {
   plan: {
@@ -29,6 +30,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   loading
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -91,16 +93,13 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       const isOneShot = plan.id === 'subscription_onetime' || plan.id === 'one_shot';
       
       if (isOneShot) {
-        // One-shot payment - use create-checkout with amount
+        // One-shot payment - use create-checkout with planId + userId
         const { data, error } = await supabase.functions.invoke('create-checkout', {
           body: {
-            mode: 'payment',
-            amount: plan.unit_price_usd,
-            description: plan.name,
+            planId: plan.id,
+            userId: user?.id,
             successUrl: `${window.location.origin}/chat?payment=success`,
-            cancelUrl: `${window.location.origin}/chat?payment=cancelled`,
-            isGuest: true,
-            email: 'user@example.com' // This will be replaced with actual user email
+            cancelUrl: `${window.location.origin}/chat?payment=cancelled`
           }
         });
 
