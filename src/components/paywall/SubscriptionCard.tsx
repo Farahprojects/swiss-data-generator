@@ -69,16 +69,16 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
 
   const getPlanTypeLabel = (planId: string, planName: string) => {
     if (planId === 'subscription_professional' || planName.toLowerCase().includes('professional')) {
-      return <span className="text-sm font-bold text-gray-900">Business</span>;
+      return <span className="text-xl font-bold text-gray-900">Business</span>;
     } else if (planId === '25_monthly' || planName.toLowerCase().includes('personal growth')) {
-      return <span className="text-sm font-bold text-gray-900">Premium</span>;
+      return <span className="text-xl font-bold text-gray-900">Premium</span>;
     } else if (planId === 'subscription_onetime' || planId === 'one_shot' || planName.toLowerCase().includes('single')) {
-      return <span className="text-sm font-bold text-gray-900">Starter</span>;
+      return <span className="text-xl font-bold text-gray-900">Starter</span>;
     }
     return null;
   };
 
-  const isPopular = plan.id === 'subscription_professional' || plan.id === '25_monthly' || plan.name.toLowerCase().includes('professional') || plan.name.toLowerCase().includes('personal growth');
+  const isPopular = plan.id === '25_monthly' || plan.name.toLowerCase().includes('personal growth');
 
   return (
     <motion.div
