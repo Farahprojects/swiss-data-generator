@@ -104,6 +104,9 @@ const EmbeddedCheckout: React.FC = () => {
       });
 
       console.log('🔍 EmbeddedCheckout: Edge function response:', { data, error });
+      console.log('🔍 EmbeddedCheckout: Client secret:', data?.client_secret);
+      console.log('🔍 EmbeddedCheckout: Amount:', data?.amount);
+      console.log('🔍 EmbeddedCheckout: Description:', data?.description);
 
       if (error) {
         console.error('❌ EmbeddedCheckout: Edge function error:', error);
@@ -219,12 +222,17 @@ const EmbeddedCheckout: React.FC = () => {
         </div>
       </div>
       <div className="p-10 bg-gray-50 flex items-center justify-center">
-        {clientSecret && (
+        {clientSecret ? (
           <Elements stripe={stripePromise} options={options as any}>
             <div className="max-w-md w-full bg-white p-6 rounded-xl shadow-sm">
               <CheckoutForm />
             </div>
           </Elements>
+        ) : (
+          <div className="text-center">
+            <p className="text-gray-600">Loading payment form...</p>
+            <p className="text-sm text-gray-400 mt-2">Client secret: {clientSecret ? 'Present' : 'Missing'}</p>
+          </div>
         )}
       </div>
     </div>
