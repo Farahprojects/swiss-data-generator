@@ -9,6 +9,7 @@ import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Auth from './pages/auth/Auth';
+import AuthSuccess from './pages/AuthSuccess';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
 import Contact from './pages/Contact';
@@ -62,6 +63,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/auth" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
               <Route path="/auth/password" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
               <Route path="/auth/email" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
+              <Route path="/auth/success" element={<AuthSuccess />} />
               
               {/* Payment/subscription routes - redirect authenticated users to chat */}
               <Route path="/subscription" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />

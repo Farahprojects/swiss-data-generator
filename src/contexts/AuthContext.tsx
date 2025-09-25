@@ -334,7 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { SUPABASE_URL } = await import('@/integrations/supabase/config');
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
+        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/auth/success`)}`,
         'googleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
