@@ -20,6 +20,7 @@ const ConfirmEmail: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const location = useLocation();
   const processedRef = useRef(false);
@@ -120,6 +121,12 @@ const ConfirmEmail: React.FC = () => {
 
       console.log('[AUTH-APP-CONFIRMEMAIL] ✓ Token verification successful:', data.message);
 
+      // Store the email for later use
+      if (data.email) {
+        setUserEmail(data.email);
+        console.log('[AUTH-APP-CONFIRMEMAIL] Stored email:', data.email);
+      }
+
       // Set session if provided
       if (data.session) {
         const { error: sessionError } = await supabase.auth.setSession(data.session);
@@ -165,11 +172,12 @@ const ConfirmEmail: React.FC = () => {
         throw new Error('Token not found');
       }
 
-      // Get email from the verify-token response (stored when token was verified)
-      const userEmail = data?.email;
+      // Use the stored email from token verification
       if (!userEmail) {
         throw new Error('Email not found in token verification');
       }
+
+      console.log(`[AUTH-APP-CONFIRMEMAIL] Calling update-password edge function with email: ${userEmail}`);
 
       // Call update-password edge function
       const { data: updateData, error } = await supabase.functions.invoke('update-password', {
@@ -311,7 +319,7 @@ const ConfirmEmail: React.FC = () => {
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      className="w-full px-6 py-4 border border-gray-300 rounded-full focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="Enter your new password"
                     />
                   </div>
@@ -324,7 +332,7 @@ const ConfirmEmail: React.FC = () => {
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      className="w-full px-6 py-4 border border-gray-300 rounded-full focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="Confirm your new password"
                     />
                   </div>
@@ -333,7 +341,7 @@ const ConfirmEmail: React.FC = () => {
                 <Button
                   onClick={handlePasswordUpdate}
                   disabled={isUpdating || !newPassword || !confirmPassword}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-full"
                 >
                   {isUpdating ? 'Updating...' : 'Update Password'}
                 </Button>
