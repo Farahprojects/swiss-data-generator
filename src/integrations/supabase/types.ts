@@ -859,7 +859,7 @@ export type Database = {
           error: Json | null
           id: string
           latency_ms: number | null
-          message_number: number | null
+          message_number: number
           meta: Json
           mode: string | null
           model: string | null
@@ -878,7 +878,7 @@ export type Database = {
           error?: Json | null
           id?: string
           latency_ms?: number | null
-          message_number?: number | null
+          message_number?: number
           meta?: Json
           mode?: string | null
           model?: string | null
@@ -897,7 +897,7 @@ export type Database = {
           error?: Json | null
           id?: string
           latency_ms?: number | null
-          message_number?: number | null
+          message_number?: number
           meta?: Json
           mode?: string | null
           model?: string | null
@@ -917,6 +917,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      password_reset_tokens: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+        }
+        Relationships: []
       }
       payment_method: {
         Row: {
