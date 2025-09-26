@@ -4,9 +4,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
-import { App as CapacitorApp } from '@capacitor/app';
+// Capacitor plugins are imported dynamically only on native to avoid web build issues
 
 import { authService } from '@/services/authService';
 /**
@@ -145,8 +143,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Expected deep link format: therai://auth/callback?code=XYZ
     // Configure iOS URL Types and Android intent filters to support this scheme
     let removeAppUrlOpen: (() => void) | undefined;
-    if (Capacitor?.isNativePlatform?.()) {
-      removeAppUrlOpen = CapacitorApp.addListener('appUrlOpen', async (data) => {
+    const isNative = typeof window !== 'undefined' && (window as any).Capacitor && (
+      typeof (window as any).Capacitor.isNativePlatform === 'function'
+        ? (window as any).Capacitor.isNativePlatform()
+        : (window as any).Capacitor.getPlatform && (window as any).Capacitor.getPlatform() !== 'web'
+    );
+    if (isNative) {
+      // Dynamically import Capacitor App plugin
+      (async () => {
+        try {
+          const { App } = await import(/* @vite-ignore */ '@capacitor/app');
+          const handle = App.addListener('appUrlOpen', async (data) => {
         try {
           const url = data?.url || '';
           if (!url) return;
@@ -160,7 +167,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (error) {
             console.error('OAuth error (native deep link):', error);
-            try { await Browser.close(); } catch {}
+            try {
+              const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
+              await Browser.close();
+            } catch {}
             return;
           }
 
@@ -176,7 +186,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Close the in-app browser if open
-          try { await Browser.close(); } catch {}
+          try {
+            const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
+            await Browser.close();
+          } catch {}
 
           // Restore previous URL if present, else go to /therai
           const returnPath = sessionStorage.getItem('postAuthReturnPath') || '/therai';
@@ -185,7 +198,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           console.error('[AuthContext] appUrlOpen handler error:', e);
         }
-      }).remove;
+          });
+          removeAppUrlOpen = handle.remove;
+        } catch (e) {
+          console.error('[AuthContext] Failed to register appUrlOpen listener:', e);
+        }
+      })();
     }
 
     // Set up auth state listener
@@ -432,7 +450,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      const isNative = Capacitor?.isNativePlatform?.() === true;
+      const isNative = typeof window !== 'undefined' && (window as any).Capacitor && (
+        typeof (window as any).Capacitor.isNativePlatform === 'function'
+          ? (window as any).Capacitor.isNativePlatform()
+          : (window as any).Capacitor.getPlatform && (window as any).Capacitor.getPlatform() !== 'web'
+      );
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
       // Preserve current location to restore after login
@@ -467,6 +489,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isNative) {
+        const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
         await Browser.open({ url, presentationStyle: 'fullscreen' });
       } else {
         window.location.assign(url);
@@ -481,7 +504,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
-      const isNative = Capacitor?.isNativePlatform?.() === true;
+      const isNative = typeof window !== 'undefined' && (window as any).Capacitor && (
+        typeof (window as any).Capacitor.isNativePlatform === 'function'
+          ? (window as any).Capacitor.isNativePlatform()
+          : (window as any).Capacitor.getPlatform && (window as any).Capacitor.getPlatform() !== 'web'
+      );
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
       // Preserve current location to restore after login
@@ -515,6 +542,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isNative) {
+        const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
         await Browser.open({ url, presentationStyle: 'fullscreen' });
       } else {
         window.location.assign(url);
