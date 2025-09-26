@@ -27,7 +27,7 @@ export const handleAppleAuth = async (): Promise<AppleAuthResult> => {
     }
 
     // Get Apple Client ID from environment
-    const clientId = process.env.VITE_APPLE_CLIENT_ID;
+    const clientId = import.meta.env.VITE_APPLE_CLIENT_ID;
     if (!clientId) {
       return { success: false, error: 'Apple Client ID not configured' };
     }

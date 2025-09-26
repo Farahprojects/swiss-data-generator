@@ -27,7 +27,7 @@ export const handleGoogleAuth = async (): Promise<GoogleAuthResult> => {
     }
 
     // Get Google Client ID from environment
-    const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) {
       return { success: false, error: 'Google Client ID not configured' };
     }
