@@ -123,7 +123,7 @@ class ChatController {
    * Handle incoming messages from unified WebSocket
    */
   private handleMessageReceived(message: Message) {
-    const { messages, updateMessage, addMessage } = useMessageStore.getState();
+    const { messages, updateMessage, handleWebSocketMessage } = useMessageStore.getState();
     
     // Reconciliation logic: check if this is updating an optimistic message
     if (message.role === 'user' && message.client_msg_id) {
@@ -135,23 +135,21 @@ class ChatController {
       }
     }
     
-    // Only add if not already present and no reconciliation occurred
-    if (!messages.find(m => m.id === message.id)) {
-      addMessage({ ...message, source: 'websocket' });
+    // Use gap detection wrapper for WebSocket messages
+    handleWebSocketMessage({ ...message, source: 'websocket' });
+    
+    // Handle side-effects after adding to store
+    if (message.role === 'assistant') {
+      const { setAssistantTyping } = useChatStore.getState();
+      setAssistantTyping(false);
       
-      // Handle side-effects after adding to store
-      if (message.role === 'assistant') {
-        const { setAssistantTyping } = useChatStore.getState();
-        setAssistantTyping(false);
-        
-        // Remove pending status from user messages when assistant responds
-        const { messages: currentMessages, updateMessage } = useMessageStore.getState();
-        currentMessages.forEach(userMsg => {
-          if (userMsg.role === 'user' && userMsg.pending) {
-            updateMessage(userMsg.id, { pending: false });
-          }
-        });
-      }
+      // Remove pending status from user messages when assistant responds
+      const { messages: currentMessages, updateMessage } = useMessageStore.getState();
+      currentMessages.forEach(userMsg => {
+        if (userMsg.role === 'user' && userMsg.pending) {
+          updateMessage(userMsg.id, { pending: false });
+        }
+      });
     }
   }
 

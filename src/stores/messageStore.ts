@@ -31,6 +31,7 @@ interface MessageStore {
   loading: boolean;
   error: string | null;
   hasOlder: boolean;
+  latestMessageNumber: number; // Track latest message number for gap detection
   
   // Actions
   setChatId: (id: string | null) => void;
@@ -41,6 +42,8 @@ interface MessageStore {
   fetchMessages: () => Promise<void>;
   loadOlder: () => Promise<void>;
   selfClean: () => void; // Self-cleaning method
+  forceResync: () => Promise<void>; // Force resync when gap detected
+  handleWebSocketMessage: (message: Message) => void; // Gap detection wrapper
 }
 
 const mapDbToMessage = (db: any): Message => ({
@@ -65,6 +68,7 @@ export const useMessageStore = create<MessageStore>()(
   loading: false,
   error: null,
   hasOlder: false,
+  latestMessageNumber: 0,
 
   // Set chat ID and auto-fetch messages
   setChatId: (id: string | null) => {
@@ -189,10 +193,12 @@ export const useMessageStore = create<MessageStore>()(
       if (error) throw error;
 
       const messages = (data || []).map(mapDbToMessage);
+      const latestMessage = messages[messages.length - 1];
       set({ 
         messages, 
         loading: false,
-        hasOlder: (data?.length || 0) === 50
+        hasOlder: (data?.length || 0) === 50,
+        latestMessageNumber: latestMessage?.message_number ?? 0
       });
     } catch (e: any) {
       console.warn('[MessageStore] Failed to fetch messages:', e.message);
@@ -229,6 +235,31 @@ export const useMessageStore = create<MessageStore>()(
     } catch (e: any) {
       console.error('[MessageStore] Failed to load older messages:', e);
     }
+  },
+
+  // Force resync when gap detected
+  forceResync: async () => {
+    console.log('[MessageStore] Gap detected, forcing resync...');
+    await get().fetchMessages();
+    const { messages } = get();
+    const latestMessage = messages[messages.length - 1];
+    set({ latestMessageNumber: latestMessage?.message_number ?? 0 });
+  },
+
+  // Gap detection wrapper for WebSocket messages
+  handleWebSocketMessage: (message: Message) => {
+    const { latestMessageNumber } = get();
+    
+    // Check for gap in message sequence
+    if (message.message_number && message.message_number !== latestMessageNumber + 1) {
+      console.log(`[MessageStore] Gap detected: expected ${latestMessageNumber + 1}, got ${message.message_number}`);
+      get().forceResync();
+      return;
+    }
+    
+    // Update latest message number and add message
+    set({ latestMessageNumber: Math.max(latestMessageNumber, message.message_number ?? 0) });
+    get().addMessage(message);
   },
 
 }),
@@ -289,4 +320,23 @@ if (typeof window !== 'undefined') {
       useMessageStore.getState().setChatId(null);
     }
   }, 100); // Small delay to ensure auth context is initialized
+
+  // Add event hooks for self-healing
+  // Browser focus - resync when user comes back to tab
+  window.addEventListener('focus', () => {
+    const { chat_id } = useMessageStore.getState();
+    if (chat_id) {
+      console.log('[MessageStore] Browser focus detected, checking sync...');
+      useMessageStore.getState().forceResync();
+    }
+  });
+
+  // WebSocket close - resync when connection is lost
+  window.addEventListener('beforeunload', () => {
+    const { chat_id } = useMessageStore.getState();
+    if (chat_id) {
+      console.log('[MessageStore] Page unload detected, forcing resync...');
+      useMessageStore.getState().forceResync();
+    }
+  });
 }
