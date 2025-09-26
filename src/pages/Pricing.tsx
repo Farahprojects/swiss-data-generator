@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TimingToolkitSection from '@/components/pricing/TimingToolkitSection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Star, Users, BrainCircuit, Sparkles, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import Footer from '@/components/Footer';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 
@@ -19,7 +19,7 @@ interface PricingData {
 }
 
 const Pricing: React.FC = () => {
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [pricingPlans, setPricingPlans] = useState<PricingData[]>([]);
   const [pricingLoading, setPricingLoading] = useState(true);
 
@@ -48,35 +48,8 @@ const Pricing: React.FC = () => {
     fetchPricing();
   }, []);
 
-  const handleUnlock = async (planId: string) => {
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.functions.invoke('create-subscription', {
-        body: {
-          planId: planId,
-          successUrl: `${window.location.origin}/success`,
-          cancelUrl: `${window.location.origin}/pricing`
-        }
-      });
-
-      if (error) {
-        console.error('Checkout error:', error);
-        toast.error('Failed to create checkout session. Please try again.');
-        return;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast.error('No checkout URL received. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error creating checkout:', error);
-      toast.error('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleGetStarted = () => {
+    navigate('/signup');
   };
 
   return (
@@ -157,30 +130,35 @@ const Pricing: React.FC = () => {
                         </p>
                       </div>
 
-                      {/* CTA Button */}
+                      {/* Button logic based on plan type */}
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 + index * 0.1, duration: 0.5 }}
                         className="pt-2"
                       >
-                        <Button
-                          onClick={() => handleUnlock(plan.id)}
-                          disabled={loading}
-                          className={`w-full font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 ${
-                            plan.id === 'subscription_professional' 
-                              ? 'bg-gray-900 hover:bg-gray-800 text-white' 
-                              : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300'
-                          }`}
-                        >
-                          {loading ? 'Processing...' : 'Get Started'}
-                        </Button>
+                        {/* One-time pass - Try now button */}
+                        {plan.name.toLowerCase().includes('single') || plan.name.toLowerCase().includes('one-time') || plan.id.includes('onetime') ? (
+                          <Button
+                            onClick={handleGetStarted}
+                            className="w-full font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md bg-gray-900 hover:bg-gray-800 text-white"
+                          >
+                            Try now
+                          </Button>
+                        ) : (
+                          /* Subscription plans - Coming Soon */
+                          <div className="w-full py-3 px-4 rounded-xl text-base font-light text-gray-500 bg-gray-100 border border-gray-200 text-center">
+                            Coming Soon
+                          </div>
+                        )}
                       </motion.div>
 
-                      {/* Security note */}
-                      <p className="text-xs text-gray-400 font-light leading-relaxed">
-                        Secure payment processed by Stripe. Cancel anytime.
-                      </p>
+                      {/* Security note - only for one-time pass */}
+                      {(plan.name.toLowerCase().includes('single') || plan.name.toLowerCase().includes('one-time') || plan.id.includes('onetime')) && (
+                        <p className="text-xs text-gray-400 font-light leading-relaxed">
+                          Secure payment processed by Stripe. Cancel anytime.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
