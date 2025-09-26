@@ -15,6 +15,15 @@ const SmartRedirect: React.FC = () => {
   const { chat_id } = useChatStore();
 
   useEffect(() => {
+    // Clean up any hash fragments from Supabase auth callbacks
+    if (window.location.hash) {
+      console.log('🧹 Cleaning up hash fragment:', window.location.hash);
+      // Remove hash from URL without triggering navigation
+      const url = new URL(window.location.href);
+      url.hash = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+
     // If user is authenticated, redirect to their chat
     if (user) {
       if (chat_id) {
@@ -30,14 +39,7 @@ const SmartRedirect: React.FC = () => {
     }
   }, [user, chat_id, navigate]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-        <p className="text-gray-600">Redirecting...</p>
-      </div>
-    </div>
-  );
+  return null; // This component doesn't render anything
 };
 
 export default SmartRedirect;
