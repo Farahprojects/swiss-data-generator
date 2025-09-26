@@ -5,10 +5,19 @@ const config: CapacitorConfig = {
   appName: 'Therai',
   webDir: 'dist',
   ios: {
-    path: 'ios'
+    path: 'ios',
+    scheme: 'therai'
   },
   android: {
-    path: 'android'
+    path: 'android',
+    allowMixedContent: true
+  },
+  plugins: {
+    App: {
+      appUrlOpen: {
+        iosCustomScheme: 'therai'
+      }
+    }
   }
 };
 

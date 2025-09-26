@@ -6,6 +6,7 @@ import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
 
 import { authService } from '@/services/authService';
+import { isCapacitorApp, handleMobileOAuth, handleOAuthCallback } from '@/services/mobileOAuth';
 /**
  * Utility – only logs outside production builds.
  */
@@ -137,6 +138,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Process OAuth callback if present
     handleOAuthCallback();
+
+    // Register deep-link handler for mobile OAuth callbacks
+    if (isCapacitorApp()) {
+      const setupMobileOAuthHandler = async () => {
+        try {
+          const { App } = await import('@capacitor/app');
+          
+          const handleAppUrlOpen = async (data: any) => {
+            const url = data?.url || '';
+            if (url && url.startsWith('therai://auth/callback')) {
+              await handleOAuthCallback(url);
+            }
+          };
+
+          App.addListener('appUrlOpen', handleAppUrlOpen);
+        } catch (error) {
+          console.warn('Failed to setup mobile OAuth handler:', error);
+        }
+      };
+
+      setupMobileOAuthHandler();
+    }
 
     // Set up auth state listener
     const {
@@ -379,6 +402,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
+      // Check if running in mobile app
+      if (isCapacitorApp()) {
+        const result = await handleMobileOAuth('google');
+        if (!result.success) {
+          return { error: new Error(result.error || 'Mobile Google sign-in failed') };
+        }
+        return { error: null };
+      }
+
+      // Web OAuth flow
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
       // Use Supabase's built-in OAuth method with proper popup handling
@@ -408,6 +441,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
+      // Check if running in mobile app
+      if (isCapacitorApp()) {
+        const result = await handleMobileOAuth('apple');
+        if (!result.success) {
+          return { error: new Error(result.error || 'Mobile Apple sign-in failed') };
+        }
+        return { error: null };
+      }
+
+      // Web OAuth flow
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
       // Use Supabase's built-in OAuth method with proper Apple configuration
