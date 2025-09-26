@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isCapacitorApp()) {
       const setupMobileOAuthHandler = async () => {
         try {
-          const { App } = await import('@capacitor/app');
+          const { App } = await import(/* @vite-ignore */ '@capacitor/app');
           
           const handleAppUrlOpen = async (data: any) => {
             const url = data?.url || '';

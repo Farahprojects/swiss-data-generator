@@ -69,8 +69,8 @@ export const handleMobileOAuth = async (provider: 'google' | 'apple'): Promise<M
   }
 
   try {
-    // Dynamically import Capacitor Browser plugin
-    const { Browser } = await import('@capacitor/browser');
+    // Dynamically import Capacitor Browser plugin with error handling
+    const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
     
     // Get OAuth URL
     const redirectTo = 'therai://auth/callback';
@@ -131,7 +131,7 @@ export const handleOAuthCallback = async (url: string): Promise<void> => {
 
     // Close the In-App Browser
     try {
-      const { Browser } = await import('@capacitor/browser');
+      const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
       await Browser.close();
     } catch (e) {
       console.warn('Failed to close browser:', e);
