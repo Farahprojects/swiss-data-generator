@@ -44,6 +44,7 @@ interface MessageStore {
   selfClean: () => void; // Self-cleaning method
   forceResync: () => Promise<void>; // Force resync when gap detected
   handleWebSocketMessage: (message: Message) => void; // Gap detection wrapper
+  validateMessageOrder: () => Promise<void>; // Order validation
   validateMessageCount: () => Promise<void>; // Invisible count validator
 }
 
@@ -263,6 +264,64 @@ export const useMessageStore = create<MessageStore>()(
     get().addMessage(message);
   },
 
+  // Order validation - ensures message sequence integrity
+  validateMessageOrder: async () => {
+    const { chat_id, messages } = get();
+    if (!chat_id || messages.length === 0) return;
+
+    try {
+      // Get messages from database in correct order
+      const { data: dbMessages, error } = await supabase
+        .from('messages')
+        .select('id, message_number, created_at')
+        .eq('chat_id', chat_id)
+        .not('context_injected', 'is', true)
+        .order('message_number', { ascending: true });
+
+      if (error) {
+        console.warn('[MessageStore] Order validation failed:', error);
+        return;
+      }
+
+      if (!dbMessages || dbMessages.length === 0) return;
+
+      // Check if store messages are in correct order
+      const storeOrder = messages.map(m => ({ id: m.id, message_number: m.message_number, created_at: m.createdAt }));
+      const dbOrder = dbMessages.map(m => ({ id: m.id, message_number: m.message_number, created_at: m.created_at }));
+
+      // Compare sequences
+      const isOrderCorrect = storeOrder.every((storeMsg, index) => {
+        const dbMsg = dbOrder[index];
+        return dbMsg && 
+               storeMsg.id === dbMsg.id && 
+               storeMsg.message_number === dbMsg.message_number;
+      });
+
+      // Check for sequence gaps
+      const hasSequenceGaps = storeOrder.some((msg, index) => {
+        if (index === 0) return false;
+        const prevMsg = storeOrder[index - 1];
+        return msg.message_number !== prevMsg.message_number + 1;
+      });
+
+      console.log(`[MessageStore] Order validation: Correct=${isOrderCorrect}, NoGaps=${!hasSequenceGaps}`);
+
+      // If order is wrong or has gaps, force complete refresh
+      if (!isOrderCorrect || hasSequenceGaps) {
+        console.warn(`[MessageStore] Order mismatch detected! Correct=${isOrderCorrect}, NoGaps=${!hasSequenceGaps}. Forcing complete refresh...`);
+        
+        // Clear store and storage completely
+        get().clearMessages();
+        sessionStorage.removeItem('therai-message-store');
+        
+        // Force fresh fetch
+        await get().fetchMessages();
+      }
+    } catch (error) {
+      console.warn('[MessageStore] Order validation error:', error);
+    }
+  },
+
   // Invisible count validator - detects sync issues
   validateMessageCount: async () => {
     const { chat_id, messages } = get();
@@ -394,11 +453,12 @@ if (typeof window !== 'undefined') {
     }
   });
 
-  // Periodic count validation - every 30 seconds
+  // Periodic validation - every 30 seconds (order + count)
   setInterval(() => {
     const { chat_id, messages } = useMessageStore.getState();
     if (chat_id && messages.length > 0) {
-      console.log('[MessageStore] Periodic count validation...');
+      console.log('[MessageStore] Periodic validation (order + count)...');
+      useMessageStore.getState().validateMessageOrder();
       useMessageStore.getState().validateMessageCount();
     }
   }, 30000);
