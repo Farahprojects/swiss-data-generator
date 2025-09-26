@@ -138,8 +138,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Process OAuth callback if present
     handleOAuthCallback();
 
-    // Mobile OAuth handling is now done in main.mobile.tsx
-
     // Set up auth state listener
     const {
       data: { subscription },
@@ -381,21 +379,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      // Dynamically import the appropriate auth module based on environment
-      const isMobile = typeof window !== 'undefined' && (window as any).Capacitor;
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
-      if (isMobile) {
-        // Mobile environment - use mobile auth
-        const { signInWithGoogle: mobileSignIn } = await import('@/auth/mobile');
-        const result = await mobileSignIn();
-        return { error: result.success ? null : new Error(result.error || 'Mobile Google sign-in failed') };
-      } else {
-        // Web environment - use web auth
-        const { signInWithGoogle: webSignIn } = await import('@/auth/web');
-        const result = await webSignIn();
-        return { error: result.success ? null : new Error(result.error || 'Web Google sign-in failed') };
+      // Use Supabase's built-in OAuth method with proper popup handling
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${baseUrl}/therai`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Google OAuth error:', error);
+        return { error: new Error(error.message || 'Google sign-in failed') };
       }
-    } catch (err) {
+
+      // OAuth flow initiated successfully
+      return { error: null };
+    } catch (err: unknown) {
       console.error('Google sign-in exception:', err);
       return { error: err instanceof Error ? err : new Error('Unexpected Google sign-in error') };
     }
@@ -403,21 +408,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
-      // Dynamically import the appropriate auth module based on environment
-      const isMobile = typeof window !== 'undefined' && (window as any).Capacitor;
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
-      if (isMobile) {
-        // Mobile environment - use mobile auth
-        const { signInWithApple: mobileSignIn } = await import('@/auth/mobile');
-        const result = await mobileSignIn();
-        return { error: result.success ? null : new Error(result.error || 'Mobile Apple sign-in failed') };
-      } else {
-        // Web environment - use web auth
-        const { signInWithApple: webSignIn } = await import('@/auth/web');
-        const result = await webSignIn();
-        return { error: result.success ? null : new Error(result.error || 'Web Apple sign-in failed') };
+      // Use Supabase's built-in OAuth method with proper Apple configuration
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${baseUrl}/therai`,
+          queryParams: {
+            response_mode: 'form_post',
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Apple OAuth error:', error);
+        return { error: new Error(error.message || 'Apple sign-in failed') };
       }
-    } catch (err) {
+
+      // OAuth flow initiated successfully
+      return { error: null };
+    } catch (err: unknown) {
       console.error('Apple sign-in exception:', err);
       return { error: err instanceof Error ? err : new Error('Unexpected Apple sign-in error') };
     }
