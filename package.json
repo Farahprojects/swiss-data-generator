@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "dev:web": "vite --mode web",
+    "dev:mobile": "vite --mode mobile",
+    "build": "vite build --mode web",
+    "build:web": "vite build --mode web",
+    "build:mobile": "vite build --mode mobile",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -13,10 +17,11 @@
     "build:shared-ui": "cd packages/shared-ui && npm install && npm run build",
     "build:auth": "cd auth-app && npm install && npm run build",
     "build:auth-full": "npm run build:shared-ui && npm run build:auth",
-    "build:main": "npm run build",
-    "build:all": "npm run build:shared-ui && npm run build:auth && npm run build:main"
+    "build:main": "npm run build:web",
+    "build:all": "npm run build:shared-ui && npm run build:auth && npm run build:web"
   },
   "dependencies": {
+    "@capacitor/app": "^7.1.0",
     "@capacitor/browser": "^7.0.2",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
