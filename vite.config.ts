@@ -27,5 +27,14 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ['src/workers/audio/ConversationAudioProcessor.js']
+  },
+  build: {
+    rollupOptions: {
+      external: [
+        '@capacitor/app',
+        '@capacitor/browser',
+        '@capacitor/core'
+      ]
+    }
   }
 }));
