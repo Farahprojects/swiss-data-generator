@@ -131,7 +131,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
-    if (userType.isAuthenticated && conversationToDelete) {
+    if (isAuthenticated && conversationToDelete) {
       // Authenticated user: Delete specific conversation (fire-and-forget)
       // Update UI immediately, don't wait for API call
       removeThread(conversationToDelete).catch((error) => {
@@ -271,7 +271,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
       {/* Thread history for authenticated users */}
-      {userType.isAuthenticated && uiConfig.showThreadHistory && (
+      {isAuthenticated && uiConfig.showThreadHistory && (
         <div className="space-y-2">
           {uiConfig.newChatLabel && (
             <button
