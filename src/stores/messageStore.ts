@@ -241,7 +241,6 @@ export const useMessageStore = create<MessageStore>()(
 
   // Force resync when gap detected
   forceResync: async () => {
-    console.log('[MessageStore] Gap detected, forcing resync...');
     await get().fetchMessages();
     const { messages } = get();
     const latestMessage = messages[messages.length - 1];
@@ -254,7 +253,6 @@ export const useMessageStore = create<MessageStore>()(
     
     // Check for gap in message sequence
     if (message.message_number && message.message_number !== latestMessageNumber + 1) {
-      console.log(`[MessageStore] Gap detected: expected ${latestMessageNumber + 1}, got ${message.message_number}`);
       get().forceResync();
       return;
     }
@@ -304,11 +302,8 @@ export const useMessageStore = create<MessageStore>()(
         return msg.message_number !== prevMsg.message_number + 1;
       });
 
-      console.log(`[MessageStore] Order validation: Correct=${isOrderCorrect}, NoGaps=${!hasSequenceGaps}`);
-
       // If order is wrong or has gaps, force complete refresh
       if (!isOrderCorrect || hasSequenceGaps) {
-        console.warn(`[MessageStore] Order mismatch detected! Correct=${isOrderCorrect}, NoGaps=${!hasSequenceGaps}. Forcing complete refresh...`);
         
         // Clear store and storage completely
         get().clearMessages();
@@ -343,11 +338,8 @@ export const useMessageStore = create<MessageStore>()(
       const dbCount = count || 0;
       const storeCount = messages.length;
 
-      console.log(`[MessageStore] Count validation: DB=${dbCount}, Store=${storeCount}`);
-
       // If counts don't match, force complete refresh
       if (dbCount !== storeCount) {
-        console.warn(`[MessageStore] Count mismatch detected! DB=${dbCount}, Store=${storeCount}. Forcing complete refresh...`);
         
         // Clear store and storage completely
         get().clearMessages();
@@ -409,7 +401,6 @@ if (typeof window !== 'undefined') {
   const unsubscribe = useMessageStore.subscribe((state) => {
     // Only run once after rehydration
     if (state.chat_id && state.messages.length > 0) {
-      console.log('[MessageStore] Rehydration detected, ensuring fresh data...');
       // Force fresh fetch to ensure sync with database
       setTimeout(() => {
         useMessageStore.getState().forceResync();
@@ -439,7 +430,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener('focus', () => {
     const { chat_id } = useMessageStore.getState();
     if (chat_id) {
-      console.log('[MessageStore] Browser focus detected, checking sync...');
       useMessageStore.getState().forceResync();
     }
   });
@@ -448,7 +438,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     const { chat_id } = useMessageStore.getState();
     if (chat_id) {
-      console.log('[MessageStore] Page unload detected, forcing resync...');
       useMessageStore.getState().forceResync();
     }
   });
@@ -457,7 +446,6 @@ if (typeof window !== 'undefined') {
   setInterval(() => {
     const { chat_id, messages } = useMessageStore.getState();
     if (chat_id && messages.length > 0) {
-      console.log('[MessageStore] Periodic validation (order + count)...');
       useMessageStore.getState().validateMessageOrder();
       useMessageStore.getState().validateMessageCount();
     }
