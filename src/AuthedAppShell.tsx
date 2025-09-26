@@ -48,30 +48,29 @@ const AuthedAppShell: React.FC = () => {
             <PricingProvider>
               <ModeProvider>
                 <Routes>
-              {/* Public routes - redirect authenticated users to chat */}
-              <Route path="/" element={<PublicOnlyGuard><ChatContainer /></PublicOnlyGuard>} />
-              <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
-              <Route path="/contact" element={<PublicOnlyGuard><Contact /></PublicOnlyGuard>} />
-              <Route path="/legal" element={<PublicOnlyGuard><Legal /></PublicOnlyGuard>} />
-              <Route path="/pricing" element={<PublicOnlyGuard><Pricing /></PublicOnlyGuard>} />
-              <Route path="/blog" element={<PublicOnlyGuard><Blog /></PublicOnlyGuard>} />
-              <Route path="/blog/:slug" element={<PublicOnlyGuard><BlogPost /></PublicOnlyGuard>} />
+              {/* Main public route */}
+              <Route path="/" element={<ChatContainer />} />
               
-              {/* Auth routes - redirect authenticated users to chat */}
-              <Route path="/login" element={<PublicOnlyGuard><Login /></PublicOnlyGuard>} />
-              <Route path="/signup" element={<PublicOnlyGuard><Signup /></PublicOnlyGuard>} />
-              <Route path="/" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
-              <Route path="/auth" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
-              <Route path="/auth/password" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
-              <Route path="/auth/email" element={<PublicOnlyGuard><Auth /></PublicOnlyGuard>} />
+              {/* Public routes */}
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/legal" element={<Legal />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
               
-              {/* Payment/subscription routes - redirect authenticated users to chat */}
-              <Route path="/subscription" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
-              <Route path="/subscription-paywall" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
-              <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
-              <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
+              {/* Auth routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/password" element={<Auth />} />
+              <Route path="/auth/email" element={<Auth />} />
               
-              {/* Payment routes - accessible for authenticated users */}
+              {/* Payment/subscription routes */}
+              <Route path="/subscription" element={<SubscriptionPaywall />} />
+              <Route path="/subscription-paywall" element={<SubscriptionPaywall />} />
+              <Route path="/success" element={<SubscriptionSuccess />} />
+              <Route path="/cancel" element={<SubscriptionPaywall />} />
               <Route path="/stripe" element={<EmbeddedCheckout />} />
               
               {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
@@ -83,8 +82,8 @@ const AuthedAppShell: React.FC = () => {
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
               
-              {/* 404 - redirect authenticated users to chat */}
-              <Route path="*" element={<PublicOnlyGuard><NotFound /></PublicOnlyGuard>} />
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
                 </Routes>
               </ModeProvider>
             </PricingProvider>
