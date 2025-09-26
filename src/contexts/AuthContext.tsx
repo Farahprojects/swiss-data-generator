@@ -379,26 +379,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      // Use Google provider SDK (works in both web and mobile)
+      const { handleGoogleAuth } = await import('@/services/googleAuth');
+      const result = await handleGoogleAuth();
       
-      // Use Supabase's built-in OAuth method with proper popup handling
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${baseUrl}/therai`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Google OAuth error:', error);
-        return { error: new Error(error.message || 'Google sign-in failed') };
+      if (!result.success) {
+        return { error: new Error(result.error || 'Google sign-in failed') };
       }
 
-      // OAuth flow initiated successfully
       return { error: null };
     } catch (err: unknown) {
       console.error('Google sign-in exception:', err);
@@ -408,25 +396,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      // Use Apple provider SDK (works in both web and mobile)
+      const { handleAppleAuth } = await import('@/services/appleAuth');
+      const result = await handleAppleAuth();
       
-      // Use Supabase's built-in OAuth method with proper Apple configuration
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${baseUrl}/therai`,
-          queryParams: {
-            response_mode: 'form_post',
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Apple OAuth error:', error);
-        return { error: new Error(error.message || 'Apple sign-in failed') };
+      if (!result.success) {
+        return { error: new Error(result.error || 'Apple sign-in failed') };
       }
 
-      // OAuth flow initiated successfully
       return { error: null };
     } catch (err: unknown) {
       console.error('Apple sign-in exception:', err);
