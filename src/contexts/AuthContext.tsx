@@ -143,8 +143,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isCapacitorApp()) {
       const setupMobileOAuthHandler = async () => {
         try {
-          const { App } = await import(/* @vite-ignore */ '@capacitor/app');
+          // Use dynamic import with error handling for Capacitor modules
+          const AppModule = await import(/* @vite-ignore */ '@capacitor/app').catch(() => null);
+          if (!AppModule) {
+            console.warn('Capacitor App module not available');
+            return;
+          }
           
+          const { App } = AppModule;
           const handleAppUrlOpen = async (data: any) => {
             const url = data?.url || '';
             if (url && url.startsWith('therai://auth/callback')) {
