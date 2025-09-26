@@ -36,6 +36,7 @@ export type AuthContextType = {
   isValidating: boolean;
   pendingEmailAddress?: string;
   isPendingEmailCheck?: boolean;
+  isAuthenticated: boolean; // Single source of truth
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signInWithGoogle: () => Promise<{ error: Error | null }>;
@@ -60,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
   const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
+  
+  // Single source of truth for authentication state
+  const isAuthenticated = !!user;
 
   // Functions to manage pending email state
   const setPendingEmailAddress = (email: string) => {
@@ -452,14 +456,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
       }
       
-      // Force page refresh to ensure clean state - this will naturally empty message store
-      // when there's no logged user, rather than manually clearing it
-      window.location.reload();
+      // Use router navigation instead of page reload for better UX
+      // The auth state change will naturally trigger component re-renders
+      // and clear stores through the auth state listener
       
     } catch (error) {
       console.error('Sign out error:', error);
-      // Force reload even on error to ensure clean state
-      window.location.reload();
+      // Continue with cleanup even on error - auth state change will handle the rest
     } finally {
       setLoading(false);
     }
@@ -501,6 +504,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isValidating,
         pendingEmailAddress,
         isPendingEmailCheck,
+        isAuthenticated,
         signIn,
         signUp,
         signInWithGoogle,

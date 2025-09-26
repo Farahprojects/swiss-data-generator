@@ -84,14 +84,14 @@ export const getUserTypeConfig = (userType: UserType) => {
  * Utility to check if current user can perform specific actions
  */
 export const useUserPermissions = () => {
-  const userType = useUserType();
+  const { isAuthenticated } = useAuth();
   
   return {
-    canCreateNewChat: userType.isAuthenticated,
-    canDeleteCurrentChat: userType.isAuthenticated,
-    canSearchChats: userType.isAuthenticated,
-    canAccessThreadHistory: userType.isAuthenticated,
-    canUseAstroData: userType.isAuthenticated,
-    needsAuthentication: userType.isUnauthenticated
+    canCreateNewChat: isAuthenticated,
+    canDeleteCurrentChat: isAuthenticated,
+    canSearchChats: isAuthenticated,
+    canAccessThreadHistory: isAuthenticated,
+    canUseAstroData: isAuthenticated,
+    needsAuthentication: !isAuthenticated
   };
 };

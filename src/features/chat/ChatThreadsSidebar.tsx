@@ -3,12 +3,13 @@ import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThreads } from '@/contexts/ThreadsContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { AuthModal } from '@/components/auth/AuthModal';
-import { useUserType, getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
+import { getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +25,10 @@ interface ChatThreadsSidebarProps {
 }
 
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, onDelete }) => {
-  // Use centralized user type detection
-  const userType = useUserType();
+  // Use single source of truth for auth state
+  const { isAuthenticated } = useAuth();
   const userPermissions = useUserPermissions();
-  const uiConfig = getUserTypeConfig(userType.type);
+  const uiConfig = getUserTypeConfig(isAuthenticated ? 'authenticated' : 'unauthenticated');
   
   // Get chat_id directly from URL (most reliable source)
   const { threadId } = useParams<{ threadId?: string }>();
@@ -39,15 +40,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   
   const { 
     clearChat,
-    clearAllData,
-    // Thread management from single source of truth
+    clearAllData
+  } = useChatStore();
+  
+  // Use centralized thread management
+  const {
     threads,
-    isLoadingThreads,
-    threadsError,
-    loadThreads,
+    loading: isLoadingThreads,
+    error: threadsError,
     addThread,
     removeThread
-  } = useChatStore();
+  } = useThreads();
   
   // Get messages from message store
   const { messages } = useMessageStore();
@@ -70,12 +73,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Load threads for authenticated users
-  useEffect(() => {
-    if (userType.isAuthenticated) {
-      loadThreads();
-    }
-  }, [userType.isAuthenticated, loadThreads]);
+  // Thread loading is now handled by ThreadsProvider
+  // No need for manual loadThreads() calls
 
   // Handle new chat creation - create new chat_id immediately
   const handleNewChat = async () => {

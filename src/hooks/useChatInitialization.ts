@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { chatController } from '@/features/chat/ChatController';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserType } from '@/hooks/useUserType';
 
 /**
  * Direct chat initialization - always fetch from source of truth (DB)
@@ -16,7 +15,7 @@ import { useUserType } from '@/hooks/useUserType';
  */
 export const useChatInitialization = () => {
   const { threadId } = useParams<{ threadId?: string }>();
-  const { chat_id, startConversation, loadThreads } = useChatStore();
+  const { chat_id, startConversation } = useChatStore();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -27,11 +26,9 @@ export const useChatInitialization = () => {
     
     initializeWebSocket();
 
-    // Load threads from DB (source of truth)
-    if (user) {
-      loadThreads();
-    }
-  }, [user, loadThreads]);
+    // Thread loading is now handled by ThreadsProvider
+    // No need for manual loadThreads() calls
+  }, [user]);
 
   useEffect(() => {
     // Handle direct URL navigation (typing /c/123 in browser)

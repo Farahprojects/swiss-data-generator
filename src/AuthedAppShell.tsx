@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThreadsProvider } from '@/contexts/ThreadsContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { ModeProvider } from '@/contexts/ModeContext';
@@ -42,11 +43,12 @@ const AuthedAppShell: React.FC = () => {
   return (
     <NavigationStateProvider>
       <AuthProvider>
-        <SubscriptionProvider>
-        <ModalStateProvider>
-          <SettingsModalProvider>
-            <PricingProvider>
-              <ModeProvider>
+        <ThreadsProvider>
+          <SubscriptionProvider>
+            <ModalStateProvider>
+              <SettingsModalProvider>
+                <PricingProvider>
+                  <ModeProvider>
                 <Routes>
               {/* Main public route */}
               <Route path="/" element={<ChatContainer />} />
@@ -85,11 +87,12 @@ const AuthedAppShell: React.FC = () => {
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
                 </Routes>
-              </ModeProvider>
-            </PricingProvider>
-          </SettingsModalProvider>
-        </ModalStateProvider>
-        </SubscriptionProvider>
+                  </ModeProvider>
+                </PricingProvider>
+              </SettingsModalProvider>
+            </ModalStateProvider>
+          </SubscriptionProvider>
+        </ThreadsProvider>
       </AuthProvider>
     </NavigationStateProvider>
   );
