@@ -284,6 +284,7 @@ export const useMessageStore = create<MessageStore>()(
         error: state.error,
         hasOlder: state.hasOlder,
         loading: state.loading,
+        latestMessageNumber: state.latestMessageNumber,
       } as Partial<MessageStore>),
     }
   )
@@ -305,6 +306,19 @@ export const triggerMessageStoreSelfClean = async () => {
 
 // Initialize message store - clear if no authenticated user
 if (typeof window !== 'undefined') {
+  // Handle rehydration - ensure fresh data on refresh
+  const unsubscribe = useMessageStore.subscribe((state) => {
+    // Only run once after rehydration
+    if (state.chat_id && state.messages.length > 0) {
+      console.log('[MessageStore] Rehydration detected, ensuring fresh data...');
+      // Force fresh fetch to ensure sync with database
+      setTimeout(() => {
+        useMessageStore.getState().forceResync();
+      }, 100);
+      unsubscribe(); // Only run once
+    }
+  });
+
   // Check auth state on store initialization
   setTimeout(async () => {
     try {
