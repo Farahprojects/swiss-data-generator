@@ -36,10 +36,26 @@ export const handleGoogleAuth = async (): Promise<GoogleAuthResult> => {
     google.accounts.id.initialize({
       client_id: clientId,
       callback: handleGoogleCallback,
+      auto_select: false, // Don't auto-select for first-time users
+      cancel_on_tap_outside: true,
     });
 
-    // Prompt the user to sign in
-    google.accounts.id.prompt();
+    // Use prompt() for explicit user interaction (no silent fetch)
+    google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Fallback: render button if prompt fails
+        google.accounts.id.renderButton(
+          document.getElementById('google-signin-button') || document.body,
+          {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            shape: 'rectangular',
+            logo_alignment: 'left',
+          }
+        );
+      }
+    });
 
     return { success: true };
   } catch (error) {
