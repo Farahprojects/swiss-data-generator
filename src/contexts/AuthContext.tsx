@@ -381,7 +381,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${baseUrl}/chat`,
+          redirectTo: `${baseUrl}/therai`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -410,7 +410,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo: `${baseUrl}/chat`,
+          redirectTo: `${baseUrl}/therai`,
           queryParams: {
             response_mode: 'form_post',
           }
