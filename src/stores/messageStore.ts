@@ -172,8 +172,6 @@ export const useMessageStore = create<MessageStore>()(
   // Clear all messages
   clearMessages: () => {
     set({ messages: [], error: null });
-    // Also clear from sessionStorage since we use persist middleware
-    sessionStorage.removeItem('therai-message-store');
   },
 
       // Simple fetch - just get messages, WebSocket handles real-time
@@ -304,11 +302,8 @@ export const useMessageStore = create<MessageStore>()(
       // If order is wrong or has gaps, force complete refresh
       if (!isOrderCorrect || hasSequenceGaps) {
         
-        // Clear store and storage completely
+        // Clear store and force fresh fetch
         get().clearMessages();
-        sessionStorage.removeItem('therai-message-store');
-        
-        // Force fresh fetch
         await get().fetchMessages();
       }
     } catch (error) {
@@ -340,11 +335,8 @@ export const useMessageStore = create<MessageStore>()(
       // If counts don't match, force complete refresh
       if (dbCount !== storeCount) {
         
-        // Clear store and storage completely
+        // Clear store and force fresh fetch
         get().clearMessages();
-        sessionStorage.removeItem('therai-message-store');
-        
-        // Force fresh fetch
         await get().fetchMessages();
       }
     } catch (error) {
@@ -367,14 +359,9 @@ export const useMessageStore = create<MessageStore>()(
           sessionStorage.removeItem(name);
         },
       },
-      // Only persist essential state, not loading states or functions
+      // Only persist chat_id - messages live in memory only
       partialize: (state: MessageStore) => ({
         chat_id: state.chat_id,
-        messages: state.messages,
-        error: state.error,
-        hasOlder: state.hasOlder,
-        loading: state.loading,
-        latestMessageNumber: state.latestMessageNumber,
       } as Partial<MessageStore>),
     }
   )
@@ -396,18 +383,6 @@ export const triggerMessageStoreSelfClean = async () => {
 
 // Initialize message store - clear if no authenticated user
 if (typeof window !== 'undefined') {
-  // Handle rehydration - ensure fresh data on refresh
-  const unsubscribe = useMessageStore.subscribe((state) => {
-    // Only run once after rehydration
-    if (state.chat_id && state.messages.length > 0) {
-      // Force fresh fetch to ensure sync with database
-      setTimeout(() => {
-        useMessageStore.getState().forceResync();
-      }, 100);
-      unsubscribe(); // Only run once
-    }
-  });
-
   // Check auth state on store initialization
   setTimeout(async () => {
     try {
