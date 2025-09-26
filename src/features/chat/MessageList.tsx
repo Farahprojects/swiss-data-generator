@@ -12,7 +12,6 @@ import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/contexts/ModeContext';
-import { MessageCountValidator } from '@/components/MessageCountValidator';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
 const renderMessages = (messages: Message[]) => {
@@ -235,9 +234,6 @@ export const MessageList = () => {
         </>
       )}
     </div>
-    
-    {/* Invisible message count validator */}
-    <MessageCountValidator />
     </>
   );
 };
