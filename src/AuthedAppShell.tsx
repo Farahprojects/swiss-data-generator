@@ -26,6 +26,7 @@ import ChatContainer from './pages/ChatContainer';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import EmbeddedCheckout from './pages/EmbeddedCheckout';
+import SmartRedirect from './components/SmartRedirect';
 
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
@@ -82,8 +83,8 @@ const AuthedAppShell: React.FC = () => {
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
               
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
+              {/* Smart redirect for invalid URLs */}
+              <Route path="*" element={<SmartRedirect />} />
                 </Routes>
               </ModeProvider>
             </PricingProvider>
