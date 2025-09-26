@@ -62,7 +62,7 @@ export const getMessagesForConversation = async (chat_id: string): Promise<Messa
     .from('messages')
     .select('*')
     .eq('chat_id', chat_id)
-    .order('created_at', { ascending: true });
+    .order('message_number', { ascending: true });
 
   if (error) throw new Error(error.message);
   
@@ -79,6 +79,7 @@ export const getMessagesForConversation = async (chat_id: string): Promise<Messa
       createdAt: msg.created_at,
       meta: (msg.meta as Record<string, any>) || {},
       client_msg_id: msg.client_msg_id,
-      status: (msg.status as Message['status']) || 'complete'
+      status: (msg.status as Message['status']) || 'complete',
+      message_number: msg.message_number
     }));
 };
