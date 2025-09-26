@@ -108,7 +108,6 @@ export const useMessageStore = create<MessageStore>()(
       selfClean: async () => {
         const shouldClean = await shouldSelfClean();
         if (shouldClean) {
-          console.log('[MessageStore] Self-cleaning: No auth user or chat_id detected');
           set({ chat_id: null, messages: [], error: null, hasOlder: false });
         }
       },
@@ -415,7 +414,6 @@ if (typeof window !== 'undefined') {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // No authenticated user, clear the message store
-        console.log('[MessageStore] No authenticated user on init, clearing store');
         useMessageStore.getState().setChatId(null);
       }
     } catch (error) {

@@ -64,10 +64,8 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
           const savedMode = metaData?.mode;
           if (savedMode && (savedMode === 'chat' || savedMode === 'astro')) {
             setMode(savedMode);
-            console.log(`[ModeContext] Loaded mode '${savedMode}' from conversations.meta`);
           } else {
             setMode('chat'); // Default mode for new chats
-            console.log('[ModeContext] No saved mode found, defaulting to chat');
           }
         } catch (error) {
           console.error('[ModeContext] Error loading mode from conversation:', error);
