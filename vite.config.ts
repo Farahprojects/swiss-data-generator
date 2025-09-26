@@ -26,17 +26,6 @@ export default defineConfig(({ mode }) => ({
     format: 'es'
   },
   optimizeDeps: {
-    exclude: [
-      'src/workers/audio/ConversationAudioProcessor.js',
-      '@capacitor/app',
-      '@capacitor/browser',
-      '@capacitor/core'
-    ]
-  },
-  build: {
-    rollupOptions: {
-      // Prevent Rollup from trying to resolve Capacitor plugins during web build
-      external: ['@capacitor/app', '@capacitor/browser', '@capacitor/core']
-    }
+    exclude: ['src/workers/audio/ConversationAudioProcessor.js']
   }
 }));

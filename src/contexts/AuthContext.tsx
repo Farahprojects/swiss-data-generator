@@ -4,7 +4,6 @@ import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
-// Capacitor plugins are imported dynamically only on native to avoid web build issues
 
 import { authService } from '@/services/authService';
 /**
@@ -136,75 +135,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Process OAuth callback if present (web-based redirects)
+    // Process OAuth callback if present
     handleOAuthCallback();
-
-    // Register deep-link handler for native (Capacitor) redirects
-    // Expected deep link format: therai://auth/callback?code=XYZ
-    // Configure iOS URL Types and Android intent filters to support this scheme
-    let removeAppUrlOpen: (() => void) | undefined;
-    const isNative = typeof window !== 'undefined' && (window as any).Capacitor && (
-      typeof (window as any).Capacitor.isNativePlatform === 'function'
-        ? (window as any).Capacitor.isNativePlatform()
-        : (window as any).Capacitor.getPlatform && (window as any).Capacitor.getPlatform() !== 'web'
-    );
-    if (isNative) {
-      // Dynamically import Capacitor App plugin
-      (async () => {
-        try {
-          const { App } = await import(/* @vite-ignore */ '@capacitor/app');
-          const handle = App.addListener('appUrlOpen', async (data) => {
-        try {
-          const url = data?.url || '';
-          if (!url) return;
-
-          // Only handle our auth callback scheme
-          if (!url.startsWith('therai://auth/callback')) return;
-
-          const parsed = new URL(url);
-          const code = parsed.searchParams.get('code');
-          const error = parsed.searchParams.get('error');
-
-          if (error) {
-            console.error('OAuth error (native deep link):', error);
-            try {
-              const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
-              await Browser.close();
-            } catch {}
-            return;
-          }
-
-          if (code) {
-            try {
-              const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-              if (exchangeError) {
-                console.error('OAuth code exchange error (native):', exchangeError);
-              }
-            } catch (e) {
-              console.error('OAuth code exchange exception (native):', e);
-            }
-          }
-
-          // Close the in-app browser if open
-          try {
-            const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
-            await Browser.close();
-          } catch {}
-
-          // Restore previous URL if present, else go to /therai
-          const returnPath = sessionStorage.getItem('postAuthReturnPath') || '/therai';
-          sessionStorage.removeItem('postAuthReturnPath');
-          window.location.replace(returnPath);
-        } catch (e) {
-          console.error('[AuthContext] appUrlOpen handler error:', e);
-        }
-          });
-          removeAppUrlOpen = handle.remove;
-        } catch (e) {
-          console.error('[AuthContext] Failed to register appUrlOpen listener:', e);
-        }
-      })();
-    }
 
     // Set up auth state listener
     const {
@@ -348,9 +280,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       log('debug', 'Cleaning up auth subscription', null, 'auth');
       subscription.unsubscribe();
       clearInterval(validationInterval);
-      if (removeAppUrlOpen) {
-        try { removeAppUrlOpen(); } catch {}
-      }
     };
   }, [user?.id]);
 
@@ -450,32 +379,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      const isNative = typeof window !== 'undefined' && (window as any).Capacitor && (
-        typeof (window as any).Capacitor.isNativePlatform === 'function'
-          ? (window as any).Capacitor.isNativePlatform()
-          : (window as any).Capacitor.getPlatform && (window as any).Capacitor.getPlatform() !== 'web'
-      );
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-      // Preserve current location to restore after login
-      if (typeof window !== 'undefined') {
-        const currentPath = window.location.pathname + window.location.search;
-        sessionStorage.setItem('postAuthReturnPath', currentPath);
-      }
-
-      const redirectTo = isNative ? 'therai://auth/callback' : `${baseUrl}/therai`;
-
-      // Request URL-only (no automatic redirect) so we control navigation
+      
+      // Use Supabase's built-in OAuth method with proper popup handling
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
-          skipBrowserRedirect: true,
+          redirectTo: `${baseUrl}/therai`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          },
-        },
+          }
+        }
       });
 
       if (error) {
@@ -483,18 +398,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error(error.message || 'Google sign-in failed') };
       }
 
-      const url = (data as any)?.url as string | undefined;
-      if (!url) {
-        return { error: new Error('Failed to initiate Google OAuth flow') };
-      }
-
-      if (isNative) {
-        const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
-        await Browser.open({ url, presentationStyle: 'fullscreen' });
-      } else {
-        window.location.assign(url);
-      }
-
+      // OAuth flow initiated successfully
       return { error: null };
     } catch (err: unknown) {
       console.error('Google sign-in exception:', err);
@@ -504,31 +408,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
-      const isNative = typeof window !== 'undefined' && (window as any).Capacitor && (
-        typeof (window as any).Capacitor.isNativePlatform === 'function'
-          ? (window as any).Capacitor.isNativePlatform()
-          : (window as any).Capacitor.getPlatform && (window as any).Capacitor.getPlatform() !== 'web'
-      );
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-      // Preserve current location to restore after login
-      if (typeof window !== 'undefined') {
-        const currentPath = window.location.pathname + window.location.search;
-        sessionStorage.setItem('postAuthReturnPath', currentPath);
-      }
-
-      const redirectTo = isNative ? 'therai://auth/callback' : `${baseUrl}/therai`;
-
-      // Request URL-only (no automatic redirect) so we control navigation
+      
+      // Use Supabase's built-in OAuth method with proper Apple configuration
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo,
-          skipBrowserRedirect: true,
+          redirectTo: `${baseUrl}/therai`,
           queryParams: {
             response_mode: 'form_post',
-          },
-        },
+          }
+        }
       });
 
       if (error) {
@@ -536,18 +426,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error(error.message || 'Apple sign-in failed') };
       }
 
-      const url = (data as any)?.url as string | undefined;
-      if (!url) {
-        return { error: new Error('Failed to initiate Apple OAuth flow') };
-      }
-
-      if (isNative) {
-        const { Browser } = await import(/* @vite-ignore */ '@capacitor/browser');
-        await Browser.open({ url, presentationStyle: 'fullscreen' });
-      } else {
-        window.location.assign(url);
-      }
-
+      // OAuth flow initiated successfully
       return { error: null };
     } catch (err: unknown) {
       console.error('Apple sign-in exception:', err);
