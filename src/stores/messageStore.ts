@@ -44,6 +44,7 @@ interface MessageStore {
   selfClean: () => void; // Self-cleaning method
   forceResync: () => Promise<void>; // Force resync when gap detected
   handleWebSocketMessage: (message: Message) => void; // Gap detection wrapper
+  validateMessageCount: () => Promise<void>; // Invisible count validator
 }
 
 const mapDbToMessage = (db: any): Message => ({
@@ -262,6 +263,45 @@ export const useMessageStore = create<MessageStore>()(
     get().addMessage(message);
   },
 
+  // Invisible count validator - detects sync issues
+  validateMessageCount: async () => {
+    const { chat_id, messages } = get();
+    if (!chat_id || messages.length === 0) return;
+
+    try {
+      // Get actual count from database
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('chat_id', chat_id)
+        .not('context_injected', 'is', true); // Exclude system messages
+
+      if (error) {
+        console.warn('[MessageStore] Count validation failed:', error);
+        return;
+      }
+
+      const dbCount = count || 0;
+      const storeCount = messages.length;
+
+      console.log(`[MessageStore] Count validation: DB=${dbCount}, Store=${storeCount}`);
+
+      // If counts don't match, force complete refresh
+      if (dbCount !== storeCount) {
+        console.warn(`[MessageStore] Count mismatch detected! DB=${dbCount}, Store=${storeCount}. Forcing complete refresh...`);
+        
+        // Clear store and storage completely
+        get().clearMessages();
+        sessionStorage.removeItem('therai-message-store');
+        
+        // Force fresh fetch
+        await get().fetchMessages();
+      }
+    } catch (error) {
+      console.warn('[MessageStore] Count validation error:', error);
+    }
+  },
+
 }),
     {
       name: 'therai-message-store',
@@ -353,4 +393,13 @@ if (typeof window !== 'undefined') {
       useMessageStore.getState().forceResync();
     }
   });
+
+  // Periodic count validation - every 30 seconds
+  setInterval(() => {
+    const { chat_id, messages } = useMessageStore.getState();
+    if (chat_id && messages.length > 0) {
+      console.log('[MessageStore] Periodic count validation...');
+      useMessageStore.getState().validateMessageCount();
+    }
+  }, 30000);
 }
