@@ -24,6 +24,7 @@ import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import ChatContainer from './pages/ChatContainer';
+import MobileLanding from './pages/MobileLanding';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import EmbeddedCheckout from './pages/EmbeddedCheckout';
@@ -50,8 +51,10 @@ const AuthedAppShell: React.FC = () => {
                 <PricingProvider>
                   <ModeProvider>
                 <Routes>
-              {/* Main public route */}
-              <Route path="/" element={<ChatContainer />} />
+              {/* Main public route - show MobileLanding on mobile, ChatContainer on desktop */}
+              <Route path="/" element={
+                isMobile && !isNativeApp ? <MobileLanding /> : <ChatContainer />
+              } />
               
               {/* Public routes */}
               <Route path="/about" element={<About />} />
