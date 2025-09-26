@@ -435,31 +435,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       debug('========== SIGN‑OUT ==========');
       setLoading(true);
       
-      // Clear local state immediately (UI updates first)
+      // Clear local state first
       setUser(null);
       setSession(null);
       clearNavigationState();
 
-      // Start comprehensive cleanup in background (fire and forget)
-      const { comprehensiveLogoutCleanup } = await import('@/utils/authCleanup');
-      
-      // Run cleanup in background - don't await
-      comprehensiveLogoutCleanup().catch(error => {
-        console.warn('Background cleanup failed:', error);
-      });
+      // Import and use cleanup utility
+      const { cleanupAuthState } = await import('@/utils/authCleanup');
+      cleanupAuthState();
 
-      // Sign out from Supabase with global scope (fire and forget)
-      supabase.auth.signOut({ scope: 'global' }).catch(signOutError => {
-        console.warn('Supabase signOut failed:', signOutError);
-      });
+      // Sign out from Supabase with global scope
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (signOutError) {
+        // Continue even if Supabase signOut fails
+        console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
+      }
       
-      // Navigate to home page instead of reload (avoids race condition)
-      window.location.href = '/';
+      // Force page refresh to ensure clean state - this will naturally empty message store
+      // when there's no logged user, rather than manually clearing it
+      window.location.reload();
       
     } catch (error) {
       console.error('Sign out error:', error);
-      // Navigate to home even on error
-      window.location.href = '/';
+      // Force reload even on error to ensure clean state
+      window.location.reload();
     } finally {
       setLoading(false);
     }

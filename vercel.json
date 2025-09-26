@@ -1,13 +1,6 @@
 {
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "redirects": [
-    {
-      "source": "/chat",
-      "destination": "/",
-      "permanent": false
-    }
-  ],
   "rewrites": [
     {
       "source": "/:path*",
