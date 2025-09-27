@@ -36,13 +36,19 @@ export const useChatInitialization = () => {
 
   useEffect(() => {
     // Handle direct URL navigation (typing /c/123 in browser)
-    if (threadId && threadId !== "1") {
+    if (threadId && threadId !== "1" && user) {
       // Validate threadId exists in DB before using it
       const validateAndLoadThread = async () => {
         try {
-          // Check if this thread exists in our loaded threads
-          const { threads } = useChatStore.getState();
-          const threadExists = threads.some(thread => thread.id === threadId);
+          // Ensure threads are loaded first
+          const { threads, loadThreads } = useChatStore.getState();
+          if (threads.length === 0) {
+            await loadThreads();
+          }
+          
+          // Re-check after loading threads
+          const { threads: updatedThreads } = useChatStore.getState();
+          const threadExists = updatedThreads.some(thread => thread.id === threadId);
           
           if (threadExists) {
             // Use the same direct flow as handleSwitchToChat
@@ -63,5 +69,5 @@ export const useChatInitialization = () => {
     } else if (threadId === "1") {
       useChatStore.getState().clearChat();
     }
-  }, [threadId, startConversation]);
+  }, [threadId, startConversation, user]);
 };
