@@ -50,7 +50,7 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
           <h1 className="text-4xl font-light text-gray-900 leading-tight">
             Know Your{' '}
             <SpinningText 
-              words={['Mind', 'Self', 'Energy', 'Patterns', 'Growth']}
+              words={['Energy', 'Self']}
               interval={2500}
               className="text-gray-900"
             />
