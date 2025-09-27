@@ -5,7 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
+import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
 import { validateEmail } from '@/utils/authValidation';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,6 +19,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
   const { toast } = useToast();
   const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -244,7 +247,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
         </Button>
       </form>
 
-      <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
+      {isMobile ? (
+        <CapacitorSocialLogin onSuccess={onSuccess} />
+      ) : (
+        <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
+      )}
     </div>
   );
 };

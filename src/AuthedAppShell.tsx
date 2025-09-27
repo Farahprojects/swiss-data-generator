@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThreadsProvider } from '@/contexts/ThreadsContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
+import { AuthModalProvider } from '@/contexts/AuthModalContext';
 import { ModeProvider } from '@/contexts/ModeContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
@@ -48,8 +49,9 @@ const AuthedAppShell: React.FC = () => {
           <SubscriptionProvider>
             <ModalStateProvider>
               <SettingsModalProvider>
-                <PricingProvider>
-                  <ModeProvider>
+                <AuthModalProvider>
+                  <PricingProvider>
+                    <ModeProvider>
                 <Routes>
               {/* Main public route - show MobileLanding on mobile, ChatContainer on desktop */}
               <Route path="/" element={
@@ -90,8 +92,9 @@ const AuthedAppShell: React.FC = () => {
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
                 </Routes>
-                  </ModeProvider>
-                </PricingProvider>
+                    </ModeProvider>
+                  </PricingProvider>
+                </AuthModalProvider>
               </SettingsModalProvider>
             </ModalStateProvider>
           </SubscriptionProvider>

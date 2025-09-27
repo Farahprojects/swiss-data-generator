@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { LogoutConfirmationDialog } from '@/components/ui/logout-confirmation-dialog';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { AuthModal } from '@/components/auth/AuthModal';
 // Dashboard sidebar removed
 import { Sheet, SheetContent, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from "@radix-ui/react-dialog";
@@ -70,6 +72,7 @@ const UnifiedNavigation = ({
   const isMobile = useIsMobile();
   
   const { openSettings } = useSettingsModal();
+  const { isAuthModalOpen, openAuthModal, closeAuthModal, authModalMode } = useAuthModal();
   
   const isLoggedIn = !!user;
   const isCalendarPage = location.pathname === '/calendar';
@@ -111,6 +114,23 @@ const UnifiedNavigation = ({
 
   const handleOpenSettings = (panel: string) => {
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
+  };
+
+  // Mobile auth handlers
+  const handleMobileLogin = () => {
+    if (isMobile) {
+      openAuthModal('login');
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleMobileSignup = () => {
+    if (isMobile) {
+      openAuthModal('signup');
+    } else {
+      navigate('/signup');
+    }
   };
 
   const handlePreview = () => {
@@ -346,12 +366,19 @@ const UnifiedNavigation = ({
                 </>
               ) : (
                 <>
-                  <Link to="/login">
-                    <Button variant="outline" className="px-4">Log In</Button>
-                  </Link>
-                  <Link to="/signup">
-                    <Button className="px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:scale-105">Sign Up</Button>
-                  </Link>
+                  <Button 
+                    variant="outline" 
+                    className="px-4"
+                    onClick={handleMobileLogin}
+                  >
+                    Log In
+                  </Button>
+                  <Button 
+                    className="px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:scale-105"
+                    onClick={handleMobileSignup}
+                  >
+                    Sign Up
+                  </Button>
                 </>
               )}
             </div>
@@ -408,12 +435,19 @@ const UnifiedNavigation = ({
               </Link>
               
               <div className="flex flex-col space-y-2 pt-4">
-                <Link to="/login">
-                  <Button variant="outline" className="w-full hover:bg-gray-50 transition-all duration-300 ease-out">Log In</Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:scale-105">Sign Up</Button>
-                </Link>
+                <Button 
+                  variant="outline" 
+                  className="w-full hover:bg-gray-50 transition-all duration-300 ease-out"
+                  onClick={handleMobileLogin}
+                >
+                  Log In
+                </Button>
+                <Button 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:scale-105"
+                  onClick={handleMobileSignup}
+                >
+                  Sign Up
+                </Button>
               </div>
             </div>
           </div>
@@ -443,6 +477,13 @@ const UnifiedNavigation = ({
         isOpen={showLogoutDialog}
         onClose={handleLogoutCancel}
         onConfirm={handleLogoutConfirm}
+      />
+
+      {/* Mobile Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        defaultMode={authModalMode}
       />
     </>
   );

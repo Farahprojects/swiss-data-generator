@@ -5,7 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
+import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
 import { validateEmail } from '@/utils/authValidation';
+import { useIsMobile } from '@/hooks/use-mobile';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,6 +18,7 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // ————————————————————————————————————————————————
   // Auth context
@@ -240,7 +243,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }
           Forgot your password?
         </button>
 
-        <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
+        {isMobile ? (
+          <CapacitorSocialLogin onSuccess={onSuccess} />
+        ) : (
+          <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
+        )}
       </div>
       </div>
     </div>
