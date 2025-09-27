@@ -1,0 +1,6 @@
+Apple Icon Placeholder
+Replace with actual Apple icon
+Size: 24x24px
+Format: PNG
+Color: Black or Apple brand colors
+

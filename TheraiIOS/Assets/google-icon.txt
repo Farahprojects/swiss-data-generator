@@ -1,0 +1,6 @@
+Google Icon Placeholder
+Replace with actual Google icon
+Size: 24x24px
+Format: PNG
+Color: Google brand colors
+
