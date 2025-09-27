@@ -456,9 +456,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
       }
       
-      // Use router navigation instead of page reload for better UX
-      // The auth state change will naturally trigger component re-renders
-      // and clear stores through the auth state listener
+      // Navigate to index page to ensure user goes to landing page, not login page
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
       
     } catch (error) {
       console.error('Sign out error:', error);
