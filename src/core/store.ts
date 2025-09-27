@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Message } from './types';
 import { Conversation } from '@/services/conversations';
-import { STORAGE_KEYS } from '@/utils/storageKeys';
 import { useMessageStore } from '@/stores/messageStore';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,9 +50,6 @@ interface ChatState {
   setAssistantTyping: (isTyping: boolean) => void;
   setPaymentFlowStopIcon: (show: boolean) => void;
   
-  // Hydration and persistence
-  hydrateFromStorage: (authId?: string) => string | null;
-  persistActiveChat: (chat_id: string, authId?: string) => void;
 
   // Thread actions
   loadThreads: () => Promise<void>;
@@ -72,9 +67,7 @@ interface ChatState {
   
 }
 
-export const useChatStore = create<ChatState>()(
-  persist(
-    (set, get) => ({
+export const useChatStore = create<ChatState>()((set, get) => ({
   // Current active chat
   chat_id: null,
   // Messages moved to useMessageStore - single source of truth
@@ -107,8 +100,6 @@ export const useChatStore = create<ChatState>()(
       isAssistantTyping: false
     });
     
-    // Persist active chat_id to sessionStorage
-    get().persistActiveChat(id);
   },
 
   startNewConversation: async (user_id?: string) => {
@@ -127,8 +118,6 @@ export const useChatStore = create<ChatState>()(
         isAssistantTyping: false
       });
       
-      // Persist active chat_id to sessionStorage (namespaced by user)
-      get().persistActiveChat(conversationId, user_id);
       
       return conversationId;
     } else {
@@ -191,32 +180,6 @@ export const useChatStore = create<ChatState>()(
       isPaymentFlowStopIcon: false
     });
     
-    // Clear namespaced chat_id storage keys
-    if (typeof window !== 'undefined') {
-      try {
-        // Clear shared cache
-        sessionStorage.removeItem(STORAGE_KEYS.CHAT.SHARED.UUID);
-        
-        // Clear any auth keys (in case of mixed state)
-        const authKeys = Object.keys(sessionStorage).filter(key => 
-          key.startsWith('therai_active_chat_auth_')
-        );
-        authKeys.forEach(key => {
-          sessionStorage.removeItem(key);
-        });
-        
-        
-        // Extra safety: Clear any remaining chat-related keys
-        const chatKeys = Object.keys(sessionStorage).filter(key => 
-          key.includes('chat_id') || key.includes('therai_chat')
-        );
-        chatKeys.forEach(key => {
-          sessionStorage.removeItem(key);
-        });
-      } catch (error) {
-        console.error('[Store] Error clearing namespaced chat_id keys:', error);
-      }
-    }
   },
 
   clearAllData: () => {
@@ -425,74 +388,4 @@ export const useChatStore = create<ChatState>()(
   },
 
 
-  // Hydration and persistence methods
-  hydrateFromStorage: (authId?: string) => {
-    if (typeof window === 'undefined') return null;
-    
-    try {
-      // Try shared cache first
-      const cachedChatId = sessionStorage.getItem(STORAGE_KEYS.CHAT.SHARED.UUID);
-      if (cachedChatId) {
-        console.log('[Store] Hydrated from shared cache:', cachedChatId);
-        return cachedChatId;
-      }
-      
-      console.log('[Store] No cached chat_id found');
-      return null;
-    } catch (error) {
-      console.error('[Store] Error hydrating from storage:', error);
-      return null;
-    }
-  },
-
-  persistActiveChat: (chat_id: string, authId?: string) => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      // Always write to sessionStorage as cache
-      sessionStorage.setItem(STORAGE_KEYS.CHAT.SHARED.UUID, chat_id);
-      
-      // Also write to namespaced keys if available (for user-specific caching)
-      if (authId) {
-        const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
-        sessionStorage.setItem(authKey, chat_id);
-      }
-    } catch (error) {
-      console.error('[Store] Error persisting chat_id to storage:', error);
-    }
-  },
-}),
-    {
-      name: 'therai-chat-store',
-      storage: {
-        getItem: (name) => {
-          const str = sessionStorage.getItem(name);
-          return str ? JSON.parse(str) : null;
-        },
-        setItem: (name, value) => {
-          sessionStorage.setItem(name, JSON.stringify(value));
-        },
-        removeItem: (name) => {
-          sessionStorage.removeItem(name);
-        },
-      },
-      // Only persist essential state, not real-time sync data or functions
-      partialize: (state: ChatState) => ({
-        chat_id: state.chat_id,
-        status: state.status,
-        error: state.error,
-        ttsVoice: state.ttsVoice,
-        isAssistantTyping: state.isAssistantTyping,
-        isPaymentFlowStopIcon: state.isPaymentFlowStopIcon,
-        threads: state.threads,
-        isLoadingMessages: state.isLoadingMessages,
-        messageLoadError: state.messageLoadError,
-        lastMessagesFetch: state.lastMessagesFetch,
-        isLoadingThreads: state.isLoadingThreads,
-        threadsError: state.threadsError,
-        // Exclude conversationChannel and isConversationSyncActive from persistence
-        // as they contain circular references and should be re-initialized
-      } as Partial<ChatState>),
-    }
-  )
-);
+}));

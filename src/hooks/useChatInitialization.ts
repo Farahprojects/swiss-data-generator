@@ -28,15 +28,9 @@ export const useChatInitialization = () => {
 
     // Load threads when user signs in (useChatStore needs this for ChatThreadsSidebar)
     if (user) {
-      const { loadThreads, chat_id: existingChatId } = useChatStore.getState();
+      const { loadThreads } = useChatStore.getState();
       loadThreads();
-      
-      // If there's an existing chat_id in the store, load it
-      if (existingChatId && !threadId) {
-        // Load the existing conversation
-        startConversation(existingChatId);
-        chatController.switchToChat(existingChatId);
-      }
+      // No persistence - always start fresh from URL
     }
   }, [user]);
 

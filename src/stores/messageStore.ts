@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { useChatStore } from '@/core/store';
@@ -61,9 +60,7 @@ const mapDbToMessage = (db: any): Message => ({
   message_number: db.message_number,
 });
 
-export const useMessageStore = create<MessageStore>()(
-  persist(
-    (set, get) => ({
+export const useMessageStore = create<MessageStore>()((set, get) => ({
   // Initial state
   chat_id: null,
   messages: [],
@@ -344,28 +341,7 @@ export const useMessageStore = create<MessageStore>()(
     }
   },
 
-}),
-    {
-      name: 'therai-message-store',
-      storage: {
-        getItem: (name) => {
-          const str = sessionStorage.getItem(name);
-          return str ? JSON.parse(str) : null;
-        },
-        setItem: (name, value) => {
-          sessionStorage.setItem(name, JSON.stringify(value));
-        },
-        removeItem: (name) => {
-          sessionStorage.removeItem(name);
-        },
-      },
-      // Only persist chat_id - messages live in memory only
-      partialize: (state: MessageStore) => ({
-        chat_id: state.chat_id,
-      } as Partial<MessageStore>),
-    }
-  )
-);
+}));
 
 // Cleanup function
 export const cleanupMessageStore = () => {
