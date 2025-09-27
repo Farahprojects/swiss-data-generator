@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { mapRowToCalendarSession } from "@/utils/calendarHelpers";
 
-// Add import for auth to get current user
-import { createClient } from "@supabase/supabase-js";
+// Helper to get current user ID
 const getCurrentUserId = () => supabase.auth.getUser().then(res => res.data.user?.id || null);
 
 // Service for CRUD calendar sessions
