@@ -43,14 +43,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     clearAllData
   } = useChatStore();
   
-  // Use centralized thread management
+  // Use centralized thread management with broadcast support
   const {
     threads,
-    loading: isLoadingThreads,
-    error: threadsError,
+    isLoadingThreads,
+    threadsError,
     addThread,
     removeThread
-  } = useThreads();
+  } = useChatStore();
   
   // Get messages from message store
   const { messages } = useMessageStore();
@@ -87,7 +87,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       console.log('[ChatThreadsSidebar] Creating new conversation for authenticated user');
       
       // Create new conversation immediately
-      const { addThread } = useChatStore.getState();
       const newChatId = await addThread(user.id, 'New Chat');
       
       // DIRECT FLOW: Immediately set chat_id and fetch messages (same as handleSwitchToChat)
