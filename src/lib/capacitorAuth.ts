@@ -18,11 +18,11 @@ export class CapacitorAuth {
     return CapacitorAuth.instance;
   }
 
-  async signInWithOAuth(provider: 'google' | 'apple') {
+  async signInWithOAuth(provider: 'google' | 'apple', onSuccess?: () => void) {
     try {
       // Set up URL listener if not already listening
       if (!this.isListening) {
-        this.setupUrlListener();
+        this.setupUrlListener(onSuccess);
       }
 
       // Open OAuth provider in browser
@@ -54,7 +54,7 @@ export class CapacitorAuth {
     }
   }
 
-  private setupUrlListener() {
+  private setupUrlListener(onSuccess?: () => void) {
     if (this.isListening) return;
 
     App.addListener('appUrlOpen', async (event) => {
@@ -81,6 +81,8 @@ export class CapacitorAuth {
             console.error('Error setting session:', error);
           } else {
             console.log('Successfully authenticated via OAuth');
+            // Call the success callback to clear loading state
+            onSuccess?.();
           }
         }
       }

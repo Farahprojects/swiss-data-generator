@@ -17,23 +17,30 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
     try {
       setIsLoading(provider);
       
-      const { error } = await capacitorAuth.signInWithOAuth(provider);
+      const { error } = await capacitorAuth.signInWithOAuth(provider, wrappedOnSuccess);
       
       if (error) {
         console.error(`${provider} OAuth error:`, error);
         toast.error(`Failed to sign in with ${provider}`);
         onError?.(error as Error);
+        setIsLoading(null);
       } else {
-        toast.success(`Successfully signed in with ${provider}`);
-        onSuccess?.();
+        // Don't clear loading state here - keep it until OAuth completes
+        // The loading state will be cleared when onSuccess is called
+        console.log(`${provider} OAuth initiated, waiting for completion...`);
       }
     } catch (error) {
       console.error(`${provider} sign-in error:`, error);
       toast.error(`Failed to sign in with ${provider}`);
       onError?.(error as Error);
-    } finally {
       setIsLoading(null);
     }
+  };
+
+  // Create a wrapper for onSuccess that clears loading state
+  const wrappedOnSuccess = () => {
+    setIsLoading(null);
+    onSuccess?.();
   };
 
   return (
