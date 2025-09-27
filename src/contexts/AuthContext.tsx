@@ -437,31 +437,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       debug('========== SIGN‑OUT ==========');
-      console.log('🚪 Starting comprehensive logout process...');
       setLoading(true);
       
       // Step 1: Clear local state first
-      console.log('🧹 Step 1: Clearing local auth state...');
       setUser(null);
       setSession(null);
       clearNavigationState();
 
       // Step 2: Comprehensive cleanup using utility
-      console.log('🧹 Step 2: Running comprehensive auth cleanup...');
       const { cleanupAuthState } = await import('@/utils/authCleanup');
       await cleanupAuthState();
 
       // Step 3: Sign out from Supabase with global scope
-      console.log('🧹 Step 3: Signing out from Supabase globally...');
       try {
         await supabase.auth.signOut({ scope: 'global' });
-        console.log('✅ Supabase global signOut completed');
       } catch (signOutError) {
-        console.warn('⚠️ Supabase signOut failed, but continuing with cleanup:', signOutError);
+        console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
       }
 
       // Step 4: Additional aggressive cleanup
-      console.log('🧹 Step 4: Additional aggressive cleanup...');
       try {
         // Clear any remaining Supabase session data
         await supabase.auth.signOut({ scope: 'local' });
@@ -478,21 +472,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } catch (cleanupError) {
-        console.warn('⚠️ Additional cleanup failed:', cleanupError);
+        console.warn('Additional cleanup failed:', cleanupError);
       }
 
       // Step 5: Navigate to index page
-      console.log('🧹 Step 5: Redirecting to landing page...');
-      if (typeof window !== 'undefined') {
-        if (window.location.pathname !== '/') {
-          console.log('🔄 Redirecting from', window.location.pathname, 'to /');
-          window.location.href = '/';
-        } else {
-          console.log('✅ Already on landing page');
-        }
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.location.href = '/';
       }
-      
-      console.log('✅ Comprehensive logout completed successfully');
       
     } catch (error) {
       console.error('Sign out error:', error);

@@ -2,8 +2,6 @@
  * Utility for cleaning up authentication state to prevent limbo states
  */
 export const cleanupAuthState = async () => {
-  console.log('🧹 Cleaning up auth state...');
-  
   // Clear chat stores first (downstream from auth)
   try {
     // Clear message store using dynamic import (works in browser)
@@ -18,7 +16,6 @@ export const cleanupAuthState = async () => {
   }
   
   // Clear all Supabase auth keys from localStorage (comprehensive patterns)
-  console.log('🧹 Clearing localStorage...');
   Object.keys(localStorage).forEach((key) => {
     if (key.startsWith('supabase') || 
         key.includes('sb-') || 
@@ -26,13 +23,11 @@ export const cleanupAuthState = async () => {
         key.includes('session') ||
         key.includes('token') ||
         key.includes('user')) {
-      console.log('Removing localStorage key:', key);
       localStorage.removeItem(key);
     }
   });
   
   // Clear from sessionStorage if present (comprehensive patterns)
-  console.log('🧹 Clearing sessionStorage...');
   Object.keys(sessionStorage || {}).forEach((key) => {
     if (key.startsWith('supabase') || 
         key.includes('sb-') || 
@@ -40,28 +35,25 @@ export const cleanupAuthState = async () => {
         key.includes('session') ||
         key.includes('token') ||
         key.includes('user')) {
-      console.log('Removing sessionStorage key:', key);
       sessionStorage.removeItem(key);
     }
   });
 
   // Clear IndexedDB if present (for Supabase offline storage)
-  console.log('🧹 Clearing IndexedDB...');
   try {
     if ('indexedDB' in window) {
       const dbNames = ['supabase', 'supabase-auth-token'];
       dbNames.forEach(dbName => {
-        indexedDB.deleteDatabase(dbName).catch(err => {
-          console.log('IndexedDB cleanup (expected if not exists):', err.message);
+        indexedDB.deleteDatabase(dbName).catch(() => {
+          // Expected if database doesn't exist
         });
       });
     }
   } catch (error) {
-    console.log('IndexedDB cleanup failed (expected):', error);
+    // Expected if IndexedDB is not available
   }
 
   // Clear any cookies that might contain auth data
-  console.log('🧹 Clearing auth cookies...');
   if (typeof document !== 'undefined') {
     document.cookie.split(";").forEach((c) => {
       const eqPos = c.indexOf("=");
@@ -71,15 +63,12 @@ export const cleanupAuthState = async () => {
           name.includes('auth') ||
           name.includes('session') ||
           name.includes('token')) {
-        console.log('Clearing cookie:', name);
         document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
         document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
         document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + window.location.hostname;
       }
     });
   }
-  
-  console.log('✅ Comprehensive auth state cleanup completed');
 };
 
 /**
