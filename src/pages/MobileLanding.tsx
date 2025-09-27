@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
 import Logo from '@/components/Logo';
+import { SpinningText } from '@/components/ui/SpinningText';
 
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -47,8 +48,13 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
         </div>
         <div className="mt-12 space-y-3">
           <h1 className="text-4xl font-light text-gray-900 leading-tight">
-            Focus Your Energy.
-            <span className="italic"> Master Your Self.</span>
+            Know Your{' '}
+            <SpinningText 
+              words={['Mind', 'Self', 'Energy', 'Patterns', 'Growth']}
+              interval={2500}
+              className="text-gray-900"
+            />
+            .
           </h1>
           <p className="text-gray-600 font-light">
             Transform the way you reflect, reframe, and act. Our AI-powered system guides you to breaking your energy patterns for personal growth.
