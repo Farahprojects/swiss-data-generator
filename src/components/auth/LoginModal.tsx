@@ -5,9 +5,11 @@ import { useToast } from '@/hooks/use-toast';
 import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
+import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
+import { useIsMobile } from '@/hooks/use-mobile';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,6 +20,7 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // ————————————————————————————————————————————————
   // Auth context
@@ -242,26 +245,30 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }
           Forgot your password?
         </button>
 
-        {/* Social Login - Same beautiful buttons as landing page */}
-        <div className="space-y-3">
-          <Button
-            type="button"
-            className="w-full h-12 rounded-full bg-white text-black hover:bg-gray-50 border border-gray-200"
-            onClick={handleGoogleSignIn}
-          >
-            <FcGoogle className="mr-2 h-5 w-5" />
-            Continue with Google
-          </Button>
+        {/* Social Login - Use Capacitor auth on mobile, regular auth on desktop */}
+        {isMobile ? (
+          <CapacitorSocialLogin onSuccess={onSuccess} />
+        ) : (
+          <div className="space-y-3">
+            <Button
+              type="button"
+              className="w-full h-12 rounded-full bg-white text-black hover:bg-gray-50 border border-gray-200"
+              onClick={handleGoogleSignIn}
+            >
+              <FcGoogle className="mr-2 h-5 w-5" />
+              Continue with Google
+            </Button>
 
-          <Button
-            type="button"
-            className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-900"
-            onClick={handleAppleSignIn}
-          >
-            <FaApple className="mr-2 h-5 w-5" />
-            Continue with Apple
-          </Button>
-        </div>
+            <Button
+              type="button"
+              className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-900"
+              onClick={handleAppleSignIn}
+            >
+              <FaApple className="mr-2 h-5 w-5" />
+              Continue with Apple
+            </Button>
+          </div>
+        )}
       </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Apple, Chrome } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
+import { FaApple } from 'react-icons/fa';
 import { capacitorAuth } from '@/lib/capacitorAuth';
 import { toast } from 'sonner';
 
@@ -36,32 +37,26 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        <Button
-          variant="outline"
-          className="w-full h-12 bg-white border-gray-200 hover:bg-gray-50 text-gray-900 font-medium"
-          onClick={() => handleOAuthSignIn('google')}
-          disabled={isLoading !== null}
-        >
-          <Chrome className="w-5 h-5 mr-3" />
-          {isLoading === 'google' ? 'Signing in...' : 'Continue with Google'}
-        </Button>
-        
-        <Button
-          variant="outline"
-          className="w-full h-12 bg-black border-gray-200 hover:bg-gray-900 text-white font-medium"
-          onClick={() => handleOAuthSignIn('apple')}
-          disabled={isLoading !== null}
-        >
-          <Apple className="w-5 h-5 mr-3" />
-          {isLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}
-        </Button>
-      </div>
-      
-      <div className="text-center text-sm text-gray-500">
-        Secure authentication powered by Supabase
-      </div>
+    <div className="space-y-3">
+      <Button
+        type="button"
+        className="w-full h-12 rounded-full bg-white text-black hover:bg-gray-50 border border-gray-200"
+        onClick={() => handleOAuthSignIn('google')}
+        disabled={isLoading !== null}
+      >
+        <FcGoogle className="mr-2 h-5 w-5" />
+        {isLoading === 'google' ? 'Signing in...' : 'Continue with Google'}
+      </Button>
+
+      <Button
+        type="button"
+        className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-900"
+        onClick={() => handleOAuthSignIn('apple')}
+        disabled={isLoading !== null}
+      >
+        <FaApple className="mr-2 h-5 w-5" />
+        {isLoading === 'apple' ? 'Signing in...' : 'Continue with Apple'}
+      </Button>
     </div>
   );
 }
