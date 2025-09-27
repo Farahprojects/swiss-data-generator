@@ -47,11 +47,11 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
         </div>
         <div className="mt-12 space-y-3">
           <h1 className="text-4xl font-light text-gray-900 leading-tight">
-            Know yourself
-            <span className="italic"> better.</span>
+            Focus Your Energy.
+            <span className="italic"> Master Your Self.</span>
           </h1>
           <p className="text-gray-600 font-light">
-            Your personal AI‑driven astrology companion
+            Transform the way you reflect, reframe, and act. Our AI-powered system guides you to breaking your energy patterns for personal growth.
           </p>
         </div>
       </header>
