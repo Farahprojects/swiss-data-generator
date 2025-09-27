@@ -5,6 +5,8 @@ import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
 import { Star, Clock, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,6 +18,7 @@ type Props = {
 const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
   const navigate = useNavigate();
   const { signInWithGoogle, signInWithApple } = useAuth();
+  const { isAuthModalOpen, openAuthModal, closeAuthModal, authModalMode } = useAuthModal();
 
   // Rotating words for the "Your..." animation - same as desktop
   const rotatingWords = ['Self', 'Mind', 'Bae', 'Soul', 'Will'];
@@ -144,12 +147,19 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
           <Button
             type="button"
             className="w-full h-12 rounded-full bg-white/0 text-white border border-white hover:bg-white/10"
-            onClick={() => navigate('/login')}
+            onClick={() => openAuthModal('login')}
           >
             Log in
           </Button>
         </div>
       </section>
+
+      {/* Mobile Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        defaultMode={authModalMode}
+      />
     </div>
   );
 };
