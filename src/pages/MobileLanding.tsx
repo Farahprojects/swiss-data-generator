@@ -7,6 +7,7 @@ import { Star, Clock, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
 
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,7 +18,6 @@ type Props = {
 
 const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
   const navigate = useNavigate();
-  const { signInWithGoogle, signInWithApple } = useAuth();
   const { isAuthModalOpen, openAuthModal, closeAuthModal, authModalMode } = useAuthModal();
 
   // Rotating words for the "Your..." animation - same as desktop
@@ -33,26 +33,9 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
     return () => clearInterval(interval);
   }, [rotatingWords.length]);
 
-  const handleGoogleSignIn = async () => {
-    if (onGoogle) {
-      onGoogle();
-    } else {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        console.error('Google sign-in error:', error);
-      }
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    if (onApple) {
-      onApple();
-    } else {
-      const { error } = await signInWithApple();
-      if (error) {
-        console.error('Apple sign-in error:', error);
-      }
-    }
+  const handleSocialLoginSuccess = () => {
+    // Social login completed successfully
+    navigate('/chat');
   };
 
   return (
@@ -126,23 +109,7 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
       {/* Auth (black) */}
       <section className="mt-auto bg-black text-white px-5 pt-8 pb-10 rounded-t-3xl">
         <div className="space-y-3">
-          <Button
-            type="button"
-            className="w-full h-12 rounded-full bg-white text-black hover:bg-white/90"
-            onClick={handleGoogleSignIn}
-          >
-            <FcGoogle className="mr-2 h-5 w-5" />
-            Continue with Google
-          </Button>
-
-          <Button
-            type="button"
-            className="w-full h-12 rounded-full bg-white text-black hover:bg-white/90"
-            onClick={handleAppleSignIn}
-          >
-            <FaApple className="mr-2 h-5 w-5" />
-            Continue with Apple
-          </Button>
+          <CapacitorSocialLogin onSuccess={handleSocialLoginSuccess} />
 
           <Button
             type="button"

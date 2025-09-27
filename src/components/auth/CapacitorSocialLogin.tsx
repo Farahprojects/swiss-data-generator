@@ -40,7 +40,7 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
     <div className="space-y-3">
       <Button
         type="button"
-        className="w-full h-12 rounded-full bg-white text-black hover:bg-gray-50 border border-gray-200"
+        className="w-full h-12 rounded-full bg-white text-black hover:bg-white/90"
         onClick={() => handleOAuthSignIn('google')}
         disabled={isLoading !== null}
       >
@@ -50,7 +50,7 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
 
       <Button
         type="button"
-        className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-900"
+        className="w-full h-12 rounded-full bg-white text-black hover:bg-white/90"
         onClick={() => handleOAuthSignIn('apple')}
         disabled={isLoading !== null}
       >
