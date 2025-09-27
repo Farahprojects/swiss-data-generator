@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
 import Logo from '@/components/Logo';
-import { Loader2 } from 'lucide-react';
+
 import { useAuth } from '@/contexts/AuthContext';
 
 type Props = {
@@ -50,10 +50,9 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
             Know yourself
             <span className="italic"> better.</span>
           </h1>
-          <div className="flex items-center gap-2 text-gray-600 font-light">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Your personal AI‑driven astrology companion</span>
-          </div>
+          <p className="text-gray-600 font-light">
+            Your personal AI‑driven astrology companion
+          </p>
         </div>
       </header>
 
