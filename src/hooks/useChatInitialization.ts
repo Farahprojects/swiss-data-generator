@@ -26,8 +26,18 @@ export const useChatInitialization = () => {
     
     initializeWebSocket();
 
-    // Thread loading is now handled by ThreadsProvider
-    // No need for manual loadThreads() calls
+    // Load threads when user signs in (useChatStore needs this for ChatThreadsSidebar)
+    if (user) {
+      const { loadThreads, chat_id: existingChatId } = useChatStore.getState();
+      loadThreads();
+      
+      // If there's an existing chat_id in the store, load it
+      if (existingChatId && !threadId) {
+        // Load the existing conversation
+        startConversation(existingChatId);
+        chatController.switchToChat(existingChatId);
+      }
+    }
   }, [user]);
 
   useEffect(() => {
