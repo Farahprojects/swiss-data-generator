@@ -67,9 +67,13 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               
-              {/* Auth routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+              {/* Auth routes - redirect mobile users to landing page */}
+              <Route path="/login" element={
+                isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Login />
+              } />
+              <Route path="/signup" element={
+                isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Signup />
+              } />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/password" element={<Auth />} />
               <Route path="/auth/email" element={<Auth />} />
