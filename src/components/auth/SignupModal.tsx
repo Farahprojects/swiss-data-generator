@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
-import SocialLogin from '@/components/auth/SocialLogin';
-import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { FcGoogle } from 'react-icons/fc';
+import { FaApple } from 'react-icons/fa';
 import { Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,7 +18,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
   const { toast } = useToast();
   const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -247,11 +245,26 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
         </Button>
       </form>
 
-      {isMobile ? (
-        <CapacitorSocialLogin onSuccess={onSuccess} />
-      ) : (
-        <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
-      )}
+      {/* Social Login - Same beautiful buttons as landing page */}
+      <div className="space-y-3">
+        <Button
+          type="button"
+          className="w-full h-12 rounded-full bg-white text-black hover:bg-gray-50 border border-gray-200"
+          onClick={handleGoogleSignIn}
+        >
+          <FcGoogle className="mr-2 h-5 w-5" />
+          Continue with Google
+        </Button>
+
+        <Button
+          type="button"
+          className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-900"
+          onClick={handleAppleSignIn}
+        >
+          <FaApple className="mr-2 h-5 w-5" />
+          Continue with Apple
+        </Button>
+      </div>
     </div>
   );
 };

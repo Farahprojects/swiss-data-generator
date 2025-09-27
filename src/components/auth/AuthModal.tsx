@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import LoginModal from './LoginModal';
 import SignupModal from './SignupModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,12 +16,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   defaultMode = 'login' 
 }) => {
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode);
+  const isMobile = useIsMobile();
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-hidden">
+      <div className={`bg-white shadow-xl w-full overflow-hidden ${
+        isMobile 
+          ? 'h-full rounded-none' 
+          : 'rounded-xl max-w-md max-h-[95vh]'
+      }`}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">
