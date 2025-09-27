@@ -42,7 +42,7 @@ export const CleanPlaceAutocomplete = ({
     const [isOpen, setIsOpen] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
-    const debounceRef = useRef<NodeJS.Timeout>();
+    const debounceRef = useRef<number | undefined>(undefined);
     const wrapperRef = useRef<HTMLDivElement>(null);
     const isMobile = useIsMobile();
 
@@ -115,7 +115,7 @@ export const CleanPlaceAutocomplete = ({
       // Set new debounce
       debounceRef.current = setTimeout(() => {
         searchPlaces(newValue);
-      }, 300);
+      }, 300) as any;
     };
 
     const handlePlaceSelect = async (prediction: Prediction) => {

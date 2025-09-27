@@ -8,7 +8,7 @@ interface VoiceWaveformProps {
 
 export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const barsRef = useRef<number[]>([]);
   const lastLevelRef = useRef<number>(0);
   const lastAddTimeRef = useRef<number>(0);

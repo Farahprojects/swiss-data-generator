@@ -50,7 +50,7 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<number | undefined>(undefined);
 
   // Debounced search function
   const searchPlaces = async (input: string) => {
@@ -92,7 +92,7 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
     // Set new debounce timer
     debounceRef.current = setTimeout(() => {
       searchPlaces(newValue);
-    }, 300);
+    }, 300) as any;
   };
 
   const handlePlaceSelect = async (prediction: Prediction) => {

@@ -43,7 +43,7 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialTime.period);
 
   // Debounce timer ref
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const debounceTimer = useRef<number | undefined>(undefined);
 
   // Debounced onChange to prevent rapid updates during scrolling
   const debouncedOnChange = useCallback((hour: number, minute: number, period: 'AM' | 'PM') => {
@@ -54,7 +54,7 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
     debounceTimer.current = setTimeout(() => {
       const time24 = convertTo24Hour(hour, minute, period);
       onChange(time24);
-    }, 100); // 100ms debounce
+    }, 100) as any; // 100ms debounce
   }, [onChange, convertTo24Hour]);
 
   useEffect(() => {

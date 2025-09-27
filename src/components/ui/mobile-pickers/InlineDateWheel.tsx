@@ -52,7 +52,7 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
   const [selectedYear, setSelectedYear] = useState<number>(initialDate.year);
 
   // Debounce timer ref
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const debounceTimer = useRef<number | undefined>(undefined);
 
   const getDaysInMonth = useCallback((month: number, year: number) => {
     return new Date(year, month, 0).getDate();
@@ -76,7 +76,7 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
       
       const dateString = `${year}-${month.toString().padStart(2, '0')}-${adjustedDay.toString().padStart(2, '0')}`;
       onChange(dateString);
-    }, 100); // 100ms debounce
+    }, 100) as any; // 100ms debounce
   }, [onChange, getDaysInMonth]);
 
   useEffect(() => {
