@@ -437,29 +437,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       debug('========== SIGN‑OUT ==========');
+      console.log('🚪 Starting comprehensive logout process...');
       setLoading(true);
       
-      // Clear local state first
+      // Step 1: Clear local state first
+      console.log('🧹 Step 1: Clearing local auth state...');
       setUser(null);
       setSession(null);
       clearNavigationState();
 
-      // Import and use cleanup utility
+      // Step 2: Comprehensive cleanup using utility
+      console.log('🧹 Step 2: Running comprehensive auth cleanup...');
       const { cleanupAuthState } = await import('@/utils/authCleanup');
-      cleanupAuthState();
+      await cleanupAuthState();
 
-      // Sign out from Supabase with global scope
+      // Step 3: Sign out from Supabase with global scope
+      console.log('🧹 Step 3: Signing out from Supabase globally...');
       try {
         await supabase.auth.signOut({ scope: 'global' });
+        console.log('✅ Supabase global signOut completed');
       } catch (signOutError) {
-        // Continue even if Supabase signOut fails
-        console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
+        console.warn('⚠️ Supabase signOut failed, but continuing with cleanup:', signOutError);
+      }
+
+      // Step 4: Additional aggressive cleanup
+      console.log('🧹 Step 4: Additional aggressive cleanup...');
+      try {
+        // Clear any remaining Supabase session data
+        await supabase.auth.signOut({ scope: 'local' });
+        
+        // Clear any cookies that might contain session data
+        if (typeof document !== 'undefined') {
+          document.cookie.split(";").forEach((c) => {
+            const eqPos = c.indexOf("=");
+            const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+            if (name.includes('supabase') || name.includes('sb-') || name.includes('auth')) {
+              document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+              document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+            }
+          });
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Additional cleanup failed:', cleanupError);
+      }
+
+      // Step 5: Navigate to index page
+      console.log('🧹 Step 5: Redirecting to landing page...');
+      if (typeof window !== 'undefined') {
+        if (window.location.pathname !== '/') {
+          console.log('🔄 Redirecting from', window.location.pathname, 'to /');
+          window.location.href = '/';
+        } else {
+          console.log('✅ Already on landing page');
+        }
       }
       
-      // Navigate to index page to ensure user goes to landing page, not login page
-      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-        window.location.href = '/';
-      }
+      console.log('✅ Comprehensive logout completed successfully');
       
     } catch (error) {
       console.error('Sign out error:', error);
