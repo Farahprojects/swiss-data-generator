@@ -10,11 +10,15 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
+import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { UserAvatar } from '@/components/settings/UserAvatar';
+import { Settings, User, Bell, CreditCard, LifeBuoy, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { updateConversationTitle } from '@/services/conversations';
 
@@ -59,6 +63,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
+  const { openSettings } = useSettingsModal();
+
+  // Settings handler
+  const handleOpenSettings = (panel: string) => {
+    openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
+  };
 
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -389,17 +399,69 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-      {/* Unauthenticated user sign in */}
-      {uiConfig.authButtonLabel && (
-        <div className="mt-auto pt-4 border-t border-gray-200">
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
-          >
-            {uiConfig.authButtonLabel}
-          </button>
-        </div>
-      )}
+      {/* Clean Footer - No Lines */}
+      <div className="mt-auto pt-6">
+        {isAuthenticated ? (
+          /* Authenticated User - Settings Menu */
+          <div className="space-y-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start p-3 h-auto rounded-xl hover:bg-gray-100">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar size="sm" />
+                    <div className="flex-1 text-left">
+                      <div className="text-sm font-medium text-gray-900">
+                        {user?.email || 'User'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Account Settings
+                      </div>
+                    </div>
+                    <Settings className="w-4 h-4 text-gray-500" />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-48">
+                <div className="px-2 py-1.5">
+                  <div className="text-sm font-medium text-gray-900">{user?.email}</div>
+                </div>
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  General
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Account Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Billing
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notifications
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
+                  <LifeBuoy className="mr-2 h-4 w-4" />
+                  Support
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          /* Unauthenticated User - Sign In Button */
+          uiConfig.authButtonLabel && (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="w-full px-3 py-3 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-xl transition-colors font-light"
+            >
+              {uiConfig.authButtonLabel}
+            </button>
+          )
+        )}
+      </div>
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && uiConfig.chatMenuActions.delete && (
