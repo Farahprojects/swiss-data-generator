@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
@@ -18,6 +18,7 @@ type Props = {
 
 const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const { isAuthModalOpen, openAuthModal, closeAuthModal, authModalMode } = useAuthModal();
 
   // Rotating words for the "Your..." animation - same as desktop
@@ -35,8 +36,13 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
 
   const handleSocialLoginSuccess = () => {
     // Social login completed successfully
-    navigate('/chat');
+    navigate('/therai');
   };
+
+  // Redirect authenticated users to chat
+  if (!loading && user) {
+    return <Navigate to="/therai" replace />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

@@ -39,9 +39,9 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [rotatingWords.length]);
 
-  // Redirect authenticated users to calendar
+  // Redirect authenticated users to chat
   if (!loading && user) {
-    return <Navigate to="/calendar" replace />;
+    return <Navigate to="/therai" replace />;
   }
 
   return (
