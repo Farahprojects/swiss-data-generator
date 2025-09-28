@@ -298,9 +298,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
       // If order is wrong or has gaps, force complete refresh
       if (!isOrderCorrect || hasSequenceGaps) {
-        
-        // Clear store and force fresh fetch
-        get().clearMessages();
+        // Refresh messages without temporarily clearing to avoid UI flicker
         await get().fetchMessages();
       }
     } catch (error) {
@@ -331,9 +329,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
       // If counts don't match, force complete refresh
       if (dbCount !== storeCount) {
-        
-        // Clear store and force fresh fetch
-        get().clearMessages();
+        // Refresh messages without temporarily clearing to avoid UI flicker
         await get().fetchMessages();
       }
     } catch (error) {

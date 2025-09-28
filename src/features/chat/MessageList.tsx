@@ -28,7 +28,7 @@ const renderMessages = (messages: Message[]) => {
     // Render user messages
     if (message.role === 'user') {
       elements.push(
-        <div key={`user-${message.id}`} className="flex items-end gap-3 justify-end mb-4">
+        <div key={`msg-${message.message_number ?? message.id}`} className="flex items-end gap-3 justify-end mb-4">
           <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
             message.pending ? 'bg-gray-200 opacity-75' : 'bg-gray-200'
           }`}>
@@ -46,7 +46,7 @@ const renderMessages = (messages: Message[]) => {
     // Render assistant messages
     if (message.role === 'assistant') {
       elements.push(
-        <div key={`assistant-${message.id}`} className="flex items-end gap-3 justify-start mb-8">
+        <div key={`msg-${message.message_number ?? message.id}`} className="flex items-end gap-3 justify-start mb-8">
           <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
             <p className="text-base font-light leading-relaxed text-left selectable-text">
               {message.source === 'websocket' ? (
@@ -68,7 +68,7 @@ const renderMessages = (messages: Message[]) => {
     // Render system messages as assistant messages
     if (message.role === 'system') {
       elements.push(
-        <div key={`system-${message.id}`} className="flex items-end gap-3 justify-start mb-8">
+        <div key={`msg-${message.message_number ?? message.id}`} className="flex items-end gap-3 justify-start mb-8">
           <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
             <p className="text-base font-light leading-relaxed text-left selectable-text">
               <span className="whitespace-pre-wrap">
