@@ -13,7 +13,7 @@ import Footer from '@/components/Footer';
 const Profile: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'intro' | 'astro-form' | 'profile'>('intro');
   const [profileData, setProfileData] = useState<ReportFormData | null>(null);
-  const [isMobile] = useIsMobile();
+  const isMobile = useIsMobile();
   const { user } = useAuth();
 
   const handleAstroFormSubmit = (data: ReportFormData) => {
