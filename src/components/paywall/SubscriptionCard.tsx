@@ -98,24 +98,10 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
         url.searchParams.set('planId', plan.id);
         window.location.href = url.toString();
       } else {
-        // Subscription - use create-subscription-checkout
-        const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
-          body: {
-            priceId: plan.stripe_price_id || plan.id, // Use stripe_price_id if available
-            successUrl: `${window.location.origin}/chat?subscription=success`,
-            cancelUrl: `${window.location.origin}/chat?subscription=cancelled`
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data?.url) {
-          window.location.href = data.url;
-        } else {
-          throw new Error('No checkout URL returned');
-        }
+        // Subscription embedded checkout: navigate to /stripe with planId
+        const url = new URL(window.location.origin + '/stripe');
+        url.searchParams.set('planId', plan.id);
+        window.location.href = url.toString();
       }
     } catch (error) {
       console.error('Checkout error:', error);
