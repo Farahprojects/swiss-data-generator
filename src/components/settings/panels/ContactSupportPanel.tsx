@@ -22,7 +22,7 @@ type SupportFile = {
 };
 
 const SUPPORTED_FORMATS = ["image/jpeg", "image/png", "application/pdf"];
-const MAX_FILE_SIZE = 6 * 1024 * 1024; // 6MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB - more standard for modern images
 const MAX_FILES = 3;
 
 export const ContactSupportPanel = () => {
@@ -30,6 +30,7 @@ export const ContactSupportPanel = () => {
   const [message, setMessage] = useState<string>("");
   const [files, setFiles] = useState<SupportFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [fileError, setFileError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -39,45 +40,41 @@ export const ContactSupportPanel = () => {
     if (!e.target.files?.length) return;
     
     const newFiles = Array.from(e.target.files);
+    setFileError(""); // Clear any previous errors
     
     if (files.length + newFiles.length > MAX_FILES) {
-      toast({
-        title: "Too many files",
-        description: "You can upload up to 3 attachments only.",
-        variant: "destructive"
-      });
+      setFileError("You can upload up to 3 attachments only.");
       return;
     }
     
-    const validFiles = newFiles.filter(file => {
+    const validFiles = [];
+    const invalidFiles = [];
+    
+    newFiles.forEach(file => {
       if (!SUPPORTED_FORMATS.includes(file.type)) {
-        toast({
-          title: "Invalid file format",
-          description: `${file.name} is not a supported format. Please upload JPEG, PNG, or PDF.`,
-          variant: "destructive"
-        });
-        return false;
+        invalidFiles.push(`${file.name} is not a supported format (JPEG, PNG, PDF only).`);
+      } else if (file.size > MAX_FILE_SIZE) {
+        invalidFiles.push(`${file.name} exceeds the 25MB limit. Please compress the file or choose a smaller one.`);
+      } else {
+        validFiles.push(file);
       }
-      
-      if (file.size > MAX_FILE_SIZE) {
-        toast({
-          title: "File too large",
-          description: `${file.name} exceeds the 6MB limit.`,
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      return true;
     });
     
-    const filesToAdd = validFiles.map(file => ({
-      file,
-      id: crypto.randomUUID(),
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-    }));
+    // Show inline error for invalid files
+    if (invalidFiles.length > 0) {
+      setFileError(invalidFiles.join(" "));
+    }
     
-    setFiles(prev => [...prev, ...filesToAdd]);
+    // Only add valid files
+    if (validFiles.length > 0) {
+      const filesToAdd = validFiles.map(file => ({
+        file,
+        id: crypto.randomUUID(),
+        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+      }));
+      
+      setFiles(prev => [...prev, ...filesToAdd]);
+    }
     
     // Reset the input to allow selecting the same file again
     if (fileInputRef.current) {
@@ -95,6 +92,8 @@ export const ContactSupportPanel = () => {
       }
       return updatedFiles;
     });
+    // Clear file error when removing files
+    setFileError("");
   };
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -142,6 +141,7 @@ export const ContactSupportPanel = () => {
       // Reset form
       setSubject("");
       setMessage("");
+      setFileError("");
       setFiles(files => {
         // Clean up URL.createObjectURL resources
         files.forEach(file => {
@@ -172,6 +172,103 @@ export const ContactSupportPanel = () => {
             <p className="text-sm text-gray-600">We're here to help. Select a subject and tell us what's going on.</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="subject" className="text-sm font-medium">
+                Subject
+              </label>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger id="subject" className="rounded-lg">
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="api">API Issue</SelectItem>
+                  <SelectItem value="billing">Billing Issue</SelectItem>
+                  <SelectItem value="account">Account Problem</SelectItem>
+                  <SelectItem value="general">General Inquiry</SelectItem>
+                  <SelectItem value="marketing">Marketing/Partnership Inquiry</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="message" className="text-sm font-medium">
+                Message
+              </label>
+              <Textarea
+                id="message"
+                placeholder="Type your message here..."
+                className="min-h-[150px] rounded-lg resize-y"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Attachments</label>
+                <span className="text-xs text-gray-500">
+                  Max 3 files JPEG, PNG, PDF
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mt-2">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1"
+                  >
+                    <span className="text-sm truncate max-w-[200px]">
+                      {file.file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(file.id)}
+                      className="text-gray-600 hover:text-red-500 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                
+                {files.length < MAX_FILES && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex gap-2 rounded-md"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip size={16} />
+                    <span>Add file</span>
+                  </Button>
+                )}
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".jpeg,.jpg,.png,.pdf"
+                  multiple
+                  className="hidden"
+                />
+              </div>
+              
+              {fileError && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{fileError}</p>
+                </div>
+              )}
+            </div>
+            
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="rounded-lg w-full"
+            >
+              {isSubmitting ? "Sending..." : "Send"}
+            </Button>
+          </form>
+        </div>
       ) : (
         <div className="p-6">
           <div className="mb-6">
@@ -179,100 +276,102 @@ export const ContactSupportPanel = () => {
             <p className="text-sm text-gray-600">We're here to help. Select a subject and tell us what's going on.</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-6">
-      )}
-          <div className="space-y-2">
-            <label htmlFor="subject" className="text-sm font-medium">
-              Subject
-            </label>
-            <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger id="subject" className="rounded-lg">
-                <SelectValue placeholder="Select a subject" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="api">API Issue</SelectItem>
-                <SelectItem value="billing">Billing Issue</SelectItem>
-                <SelectItem value="account">Account Problem</SelectItem>
-                <SelectItem value="general">General Inquiry</SelectItem>
-                <SelectItem value="marketing">Marketing/Partnership Inquiry</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="message" className="text-sm font-medium">
-              Message
-            </label>
-            <Textarea
-              id="message"
-              placeholder="Type your message here..."
-              className="min-h-[150px] rounded-lg resize-y"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Attachments</label>
-              <span className="text-xs text-gray-500">
-                Max 3 files (JPEG, PNG, PDF) up to 6MB each
-              </span>
+            <div className="space-y-2">
+              <label htmlFor="subject" className="text-sm font-medium">
+                Subject
+              </label>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger id="subject" className="rounded-lg">
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="api">API Issue</SelectItem>
+                  <SelectItem value="billing">Billing Issue</SelectItem>
+                  <SelectItem value="account">Account Problem</SelectItem>
+                  <SelectItem value="general">General Inquiry</SelectItem>
+                  <SelectItem value="marketing">Marketing/Partnership Inquiry</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
-            <div className="flex flex-wrap gap-2 mt-2">
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1"
-                >
-                  <span className="text-sm truncate max-w-[200px]">
-                    {file.file.name}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(file.id)}
-                    className="text-gray-600 hover:text-red-500 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-              
-              {files.length < MAX_FILES && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex gap-2 rounded-md"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Paperclip size={16} />
-                  <span>Add file</span>
-                </Button>
-              )}
-              
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".jpeg,.jpg,.png,.pdf"
-                multiple
-                className="hidden"
+            <div className="space-y-2">
+              <label htmlFor="message" className="text-sm font-medium">
+                Message
+              </label>
+              <Textarea
+                id="message"
+                placeholder="Type your message here..."
+                className="min-h-[150px] rounded-lg resize-y"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
               />
             </div>
-          </div>
-          
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="rounded-lg w-full"
-          >
-            {isSubmitting ? "Sending..." : "Send"}
-          </Button>
-        </form>
-      {isMobile ? (
-        </div>
-      ) : (
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Attachments</label>
+                <span className="text-xs text-gray-500">
+                  Max 3 files JPEG, PNG, PDF
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mt-2">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1"
+                  >
+                    <span className="text-sm truncate max-w-[200px]">
+                      {file.file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(file.id)}
+                      className="text-gray-600 hover:text-red-500 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                
+                {files.length < MAX_FILES && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex gap-2 rounded-md"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip size={16} />
+                    <span>Add file</span>
+                  </Button>
+                )}
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".jpeg,.jpg,.png,.pdf"
+                  multiple
+                  className="hidden"
+                />
+              </div>
+              
+              {fileError && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{fileError}</p>
+                </div>
+              )}
+            </div>
+            
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="rounded-lg w-full"
+            >
+              {isSubmitting ? "Sending..." : "Send"}
+            </Button>
+          </form>
         </div>
       )}
     </div>
