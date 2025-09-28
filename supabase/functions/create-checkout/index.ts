@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'https://esm.sh/stripe@12.18.0';
+import Stripe from 'https://esm.sh/stripe@14.21.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-08-16',
+  apiVersion: '2023-10-16',
 });
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -38,7 +38,7 @@ serve(async (req) => {
       return new Response('Invalid token', { status: 401, headers: corsHeaders });
     }
 
-    const { planId, userId, successUrl, cancelUrl } = await req.json();
+    const { planId, userId, successUrl, cancelUrl, embedded, returnUrl } = await req.json();
 
     if (!planId) {
       return new Response(JSON.stringify({ error: "Plan ID is required" }), {
@@ -115,7 +115,7 @@ serve(async (req) => {
       console.log(`Created new Stripe customer: ${customerId}`);
     }
 
-    // Create checkout session for one-shot payment
+    // Create checkout session for one-shot payment (supports hosted or embedded)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       client_reference_id: userId,
@@ -135,8 +135,11 @@ serve(async (req) => {
         },
       ],
       mode: 'payment',
-      success_url: successUrl || `${req.headers.get("origin")}/chat?payment_status=success`,
-      cancel_url: cancelUrl || `${req.headers.get("origin")}/chat?payment_status=cancelled`,
+      // Hosted Checkout uses success/cancel URLs; Embedded uses ui_mode + return_url + client_secret
+      success_url: embedded ? undefined : (successUrl || `${req.headers.get("origin")}/chat?payment_status=success`),
+      cancel_url: embedded ? undefined : (cancelUrl || `${req.headers.get("origin")}/chat?payment_status=cancelled`),
+      return_url: embedded ? (returnUrl || `${req.headers.get("origin")}/chat?payment_status=success`) : undefined,
+      ui_mode: embedded ? 'embedded' : undefined,
       metadata: {
         user_id: userId,
         plan_id: planId,
@@ -148,7 +151,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       url: session.url,
-      sessionId: session.id 
+      sessionId: session.id,
+      clientSecret: (session as any).client_secret || null
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

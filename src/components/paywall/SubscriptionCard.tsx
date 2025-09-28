@@ -93,25 +93,10 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
       const isOneShot = plan.id === 'starter-plan';
       
       if (isOneShot) {
-        // One-shot payment - use create-checkout with planId + userId
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: {
-            planId: plan.id,
-            userId: user?.id,
-            successUrl: `${window.location.origin}/chat?payment=success`,
-            cancelUrl: `${window.location.origin}/chat?payment=cancelled`
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data?.url) {
-          window.location.href = data.url;
-        } else {
-          throw new Error('No checkout URL returned');
-        }
+        // One-shot embedded checkout: navigate to /stripe with planId
+        const url = new URL(window.location.origin + '/stripe');
+        url.searchParams.set('planId', plan.id);
+        window.location.href = url.toString();
       } else {
         // Subscription - use create-subscription-checkout
         const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
