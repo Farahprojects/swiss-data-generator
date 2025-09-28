@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { chatController } from './ChatController';
 import { supabase } from '@/integrations/supabase/client';
 
-import { Menu, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
+import { Menu, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
@@ -13,9 +13,7 @@ import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { UserAvatar } from '@/components/settings/UserAvatar';
-import { useSettingsModal } from '@/contexts/SettingsModalContext';
+ 
 import { ModeDropdown } from '@/components/chat/ModeDropdown';
 
 // Lazy load components for better performance
@@ -37,7 +35,7 @@ interface ChatBoxProps {
 
 export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const { error } = useChatStore();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
@@ -71,20 +69,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
     feature: '' 
   });
   
-  const { openSettings } = useSettingsModal();
   
-
-  const handleOpenSettings = (panel: string) => {
-    openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
 
 
 
@@ -148,47 +133,12 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
           {/* Main Chat Area */}
           <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
-            {/* Top Header with Mode Dropdown and User Avatar */}
+            {/* Top Header with Mode Dropdown */}
             <div className="flex items-center justify-between p-3 bg-white border-b border-gray-100">
               <div className="flex items-center">
                 <ModeDropdown />
               </div>
               <div className="flex-1" />
-              
-              {/* User Avatar Dropdown - Top Right */}
-              {user && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                      <UserAvatar size="sm" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      General
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
-                      <User className="mr-2 h-4 w-4" />
-                      Account
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Billing
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
-                      <Bell className="mr-2 h-4 w-4" />
-                      Notifications
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             </div>
 
             {/* Mobile Header */}

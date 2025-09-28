@@ -8,9 +8,9 @@ interface ChatSidebarControlsProps {
 
 export const ChatSidebarControls: React.FC<ChatSidebarControlsProps> = ({ onDelete }) => {
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="w-full h-full flex flex-col">
       {/* Chat Threads */}
-      <ChatThreadsSidebar onDelete={onDelete} />
+      <ChatThreadsSidebar className="h-full" onDelete={onDelete} />
     </div>
   );
 };

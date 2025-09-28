@@ -4,7 +4,7 @@ import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThreads } from '@/contexts/ThreadsContext';
-import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
@@ -12,7 +12,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
-import { Settings, User, Bell, CreditCard, LifeBuoy, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -276,8 +276,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
   return (
-    <div className={cn("w-full flex flex-col gap-4", className)}>
+    <div className={cn("w-full h-full flex flex-col", className)}>
 
+      {/* Scrollable middle section */}
+      <div className="flex-1 overflow-auto">
 
       {/* Thread history for authenticated users */}
       {isAuthenticated && uiConfig.showThreadHistory && (
@@ -399,29 +401,30 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
+      </div>
+
       {/* Clean Footer - No Lines */}
       <div className="mt-auto pt-6">
         {isAuthenticated ? (
           /* Authenticated User - Settings Menu */
           <div className="space-y-2">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start p-3 h-auto rounded-xl hover:bg-gray-100">
-                  <div className="flex items-center gap-3">
-                    <UserAvatar size="sm" />
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium text-gray-900">
-                        {user?.email || 'User'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Account Settings
+              {/* Wrapper controls full-row hover and padding */}
+              <div className="w-full rounded-none hover:bg-gray-100 transition-colors">
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start p-0 h-auto rounded-none bg-transparent !hover:bg-gray-100 !hover:text-gray-900">
+                    <div className="flex items-center gap-3 px-3 py-3 w-full">
+                      <UserAvatar size="sm" />
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="text-sm font-medium text-gray-900 break-all whitespace-normal pr-2">
+                          {user?.email || 'User'}
+                        </div>
                       </div>
                     </div>
-                    <Settings className="w-4 h-4 text-gray-500" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-48">
+                  </Button>
+                </DropdownMenuTrigger>
+              </div>
+              <DropdownMenuContent align="end" className="min-w-48 rounded-xl border border-gray-200 shadow-lg p-1">
                 <div className="px-2 py-1.5">
                   <div className="text-sm font-medium text-gray-900">{user?.email}</div>
                 </div>
