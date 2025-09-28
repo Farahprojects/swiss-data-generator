@@ -24,21 +24,13 @@ export const VoiceSelectionPanel: React.FC = () => {
         >
           <optgroup label="Male Voices">
             <option value="Puck">Puck</option>
-            <option value="Achird">Achird</option>
             <option value="Algenib">Algenib</option>
-            <option value="Charon">Charon</option>
             <option value="Enceladus">Enceladus</option>
-            <option value="Fenrir">Fenrir</option>
             <option value="Orus">Orus</option>
-            <option value="Rasalgethi">Rasalgethi</option>
           </optgroup>
           <optgroup label="Female Voices">
             <option value="Achernar">Achernar</option>
             <option value="Aoede">Aoede</option>
-            <option value="Callirrhoe">Callirrhoe</option>
-            <option value="Despina">Despina</option>
-            <option value="Gacrux">Gacrux</option>
-            <option value="Kore">Kore</option>
             <option value="Leda">Leda</option>
             <option value="Sulafat">Sulafat</option>
             <option value="Zephyr">Zephyr</option>
