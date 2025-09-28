@@ -38,7 +38,7 @@ export const VoiceSelectionPanel: React.FC = () => {
         'Orus': 'https://api.therai.co/storage/v1/object/public/therai-assets/chirp3-hd-orus.wav',
         'Algenib': 'https://api.therai.co/storage/v1/object/public/therai-assets/chirp3-hd-algenib.wav', // TODO: Upload
         
-        // Female voices - TODO: Upload all
+        // Female voices - CONFIRMED WORKING
         'Achernar': 'https://api.therai.co/storage/v1/object/public/therai-assets/chirp3-hd-achernar.wav',
         'Aoede': 'https://api.therai.co/storage/v1/object/public/therai-assets/chirp3-hd-aoede.wav',
         'Leda': 'https://api.therai.co/storage/v1/object/public/therai-assets/chirp3-hd-leda.wav',
