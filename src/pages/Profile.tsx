@@ -7,12 +7,11 @@ import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { ReportFormData } from '@/types/public-report';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import UnifiedNavigation from '@/components/UnifiedNavigation';
-import Footer from '@/components/Footer';
 
 const Profile: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'intro' | 'astro-form' | 'profile'>('intro');
   const [profileData, setProfileData] = useState<ReportFormData | null>(null);
+  const [preselectedMode, setPreselectedMode] = useState<'self' | null>(null);
   const isMobile = useIsMobile();
   const { user } = useAuth();
 
@@ -24,43 +23,47 @@ const Profile: React.FC = () => {
   const handleStartOver = () => {
     setCurrentStep('intro');
     setProfileData(null);
+    setPreselectedMode(null);
+  };
+
+  const handleGetStarted = () => {
+    setPreselectedMode('self');
+    setCurrentStep('astro-form');
   };
 
   const profileSections = [
     {
-      id: 'cognitive',
-      title: 'Cognitive',
+      id: 'mindset',
+      title: 'Mindset',
       description: 'Your mental patterns and thinking style',
       icon: Brain,
       color: 'bg-blue-50 border-blue-200',
       iconColor: 'text-blue-600',
-      placeholder: 'Explore your cognitive patterns and mental frameworks...'
+      placeholder: 'Explore your mindset patterns and mental frameworks...'
     },
     {
-      id: 'relationship',
-      title: 'Relationship',
+      id: 'connections',
+      title: 'Connections',
       description: 'How you connect and relate to others',
       icon: Heart,
       color: 'bg-pink-50 border-pink-200',
       iconColor: 'text-pink-600',
-      placeholder: 'Discover your relationship dynamics and connection patterns...'
+      placeholder: 'Discover your connection dynamics and relationship patterns...'
     },
     {
-      id: 'spiritual',
-      title: 'Spiritual',
+      id: 'purpose',
+      title: 'Purpose',
       description: 'Your inner journey and higher purpose',
       icon: Sparkles,
       color: 'bg-purple-50 border-purple-200',
       iconColor: 'text-purple-600',
-      placeholder: 'Explore your spiritual path and inner wisdom...'
+      placeholder: 'Explore your purpose and inner wisdom...'
     }
   ];
 
   if (currentStep === 'intro') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <UnifiedNavigation />
-        
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -72,7 +75,7 @@ const Profile: React.FC = () => {
                 Create Your Profile
               </h1>
               <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                Begin your journey of self-discovery with personalized AI insights across cognitive, relationship, and spiritual dimensions.
+                Begin your journey of self-discovery with personalized AI insights across mindset, connections, and purpose dimensions.
               </p>
             </div>
 
@@ -104,7 +107,7 @@ const Profile: React.FC = () => {
               className="pt-8"
             >
               <Button
-                onClick={() => setCurrentStep('astro-form')}
+                onClick={handleGetStarted}
                 className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-xl font-light text-lg"
               >
                 Get Started
@@ -113,7 +116,6 @@ const Profile: React.FC = () => {
           </motion.div>
         </div>
 
-        <Footer />
       </div>
     );
   }
@@ -121,8 +123,6 @@ const Profile: React.FC = () => {
   if (currentStep === 'astro-form') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <UnifiedNavigation />
-        
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -143,6 +143,7 @@ const Profile: React.FC = () => {
                 <AstroDataForm
                   onClose={() => setCurrentStep('intro')}
                   onSubmit={handleAstroFormSubmit}
+                  preselectedType={preselectedMode === 'self' ? 'essence' : undefined}
                 />
               </CardContent>
             </Card>
@@ -155,8 +156,6 @@ const Profile: React.FC = () => {
   if (currentStep === 'profile' && profileData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <UnifiedNavigation />
-        
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -255,7 +254,6 @@ const Profile: React.FC = () => {
           </motion.div>
         </div>
 
-        <Footer />
       </div>
     );
   }

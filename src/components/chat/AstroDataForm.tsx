@@ -25,14 +25,18 @@ import { chatController } from '@/features/chat/ChatController';
 interface AstroDataFormProps {
   onClose: () => void;
   onSubmit: (data: ReportFormData) => void;
+  preselectedType?: string;
 }
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onClose,
   onSubmit,
+  preselectedType,
 }) => {
-  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>('type');
-  const [selectedAstroType, setSelectedAstroType] = useState<string>('');
+  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
+    preselectedType ? 'details' : 'type'
+  );
+  const [selectedAstroType, setSelectedAstroType] = useState<string>(preselectedType || '');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = useIsMobile();
@@ -67,17 +71,25 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       secondPersonLongitude: undefined,
       secondPersonPlaceId: '',
       request: '',
-      reportType: '',
+      reportType: null,
     },
   });
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
   const formValues = watch();
 
+  // Set preselected values when component mounts
+  React.useEffect(() => {
+    if (preselectedType) {
+      setValue('request', preselectedType);
+      setValue('reportType', null);
+    }
+  }, [preselectedType, setValue]);
+
   const handleAstroTypeSelect = (type: string) => {
     setSelectedAstroType(type);
     setValue('request', type);
-    setValue('reportType', type);
+    setValue('reportType', null);
     setCurrentStep('details');
   };
 

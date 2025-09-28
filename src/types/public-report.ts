@@ -9,7 +9,7 @@ export interface PlaceData {
 }
 
 export interface ReportFormData {
-  reportType: string;
+  reportType: string | null;
   relationshipType?: string;
   essenceType?: string;
   // Mobile-specific fields
