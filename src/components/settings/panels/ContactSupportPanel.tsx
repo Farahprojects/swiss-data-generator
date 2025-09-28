@@ -1,13 +1,7 @@
 
 import { useState, useRef } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Select, 
   SelectContent, 
@@ -39,6 +33,7 @@ export const ContactSupportPanel = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
@@ -169,13 +164,22 @@ export const ContactSupportPanel = () => {
   };
   
   return (
-    <Card className="shadow-md">
-      <CardHeader>
-        <CardTitle>Contact Support</CardTitle>
-        <CardDescription>We're here to help. Select a subject and tell us what's going on.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className={isMobile ? "w-full" : "shadow-md"}>
+      {isMobile ? (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">Contact Support</h3>
+            <p className="text-sm text-gray-600">We're here to help. Select a subject and tell us what's going on.</p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+      ) : (
+        <div className="p-6">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold">Contact Support</h3>
+            <p className="text-sm text-gray-600">We're here to help. Select a subject and tell us what's going on.</p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+      )}
           <div className="space-y-2">
             <label htmlFor="subject" className="text-sm font-medium">
               Subject
@@ -266,7 +270,11 @@ export const ContactSupportPanel = () => {
             {isSubmitting ? "Sending..." : "Send"}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+      {isMobile ? (
+        </div>
+      ) : (
+        </div>
+      )}
+    </div>
   );
 };

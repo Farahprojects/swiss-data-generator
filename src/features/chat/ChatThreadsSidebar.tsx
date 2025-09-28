@@ -13,6 +13,7 @@ import { getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +65,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { openSettings } = useSettingsModal();
+  const isMobile = useIsMobile();
 
   // Settings handler
   const handleOpenSettings = (panel: string) => {
@@ -408,50 +410,70 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         {isAuthenticated ? (
           /* Authenticated User - Settings Menu */
           <div className="space-y-2">
-            <DropdownMenu>
-              {/* Wrapper controls full-row hover and padding */}
-              <div className="w-full rounded-none hover:bg-gray-100 transition-colors">
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start p-0 h-auto rounded-none bg-transparent !hover:bg-gray-100 !hover:text-gray-900">
-                    <div className="flex items-center gap-3 px-3 py-3 w-full">
-                      <UserAvatar size="sm" />
-                      <div className="flex-1 text-left min-w-0">
-                        <div className="text-sm font-medium text-gray-900 break-all whitespace-normal pr-2">
-                          {user?.email || 'User'}
+            {isMobile ? (
+              /* Mobile: Simple button that opens settings directly */
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start p-0 h-auto rounded-none bg-transparent hover:bg-gray-100 hover:text-gray-900"
+                onClick={() => handleOpenSettings('general')}
+              >
+                <div className="flex items-center gap-3 px-3 py-3 w-full">
+                  <UserAvatar size="sm" />
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="text-sm font-medium text-gray-900 break-all whitespace-normal pr-2">
+                      {user?.email || 'User'}
+                    </div>
+                  </div>
+                  <Settings className="h-4 w-4 text-gray-500" />
+                </div>
+              </Button>
+            ) : (
+              /* Desktop: Dropdown Menu */
+              <DropdownMenu>
+                {/* Wrapper controls full-row hover and padding */}
+                <div className="w-full rounded-none hover:bg-gray-100 transition-colors">
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-start p-0 h-auto rounded-none bg-transparent !hover:bg-gray-100 !hover:text-gray-900">
+                      <div className="flex items-center gap-3 px-3 py-3 w-full">
+                        <UserAvatar size="sm" />
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="text-sm font-medium text-gray-900 break-all whitespace-normal pr-2">
+                            {user?.email || 'User'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-              </div>
-              <DropdownMenuContent align="end" className="min-w-48 rounded-xl border border-gray-200 shadow-lg p-1">
-                <div className="px-2 py-1.5">
-                  <div className="text-sm font-medium text-gray-900">{user?.email}</div>
+                    </Button>
+                  </DropdownMenuTrigger>
                 </div>
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  General
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
-                  <User className="mr-2 h-4 w-4" />
-                  Account Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Billing
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
-                  <Bell className="mr-2 h-4 w-4" />
-                  Notifications
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
-                  <LifeBuoy className="mr-2 h-4 w-4" />
-                  Support
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenuContent align="end" className="min-w-48 rounded-xl border border-gray-200 shadow-lg p-1">
+                  <div className="px-2 py-1.5">
+                    <div className="text-sm font-medium text-gray-900">{user?.email}</div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    General
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Billing
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
+                    <LifeBuoy className="mr-2 h-4 w-4" />
+                    Support
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         ) : (
           /* Unauthenticated User - Sign In Button */

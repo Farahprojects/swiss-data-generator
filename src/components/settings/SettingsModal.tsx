@@ -1,17 +1,16 @@
-
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard } from "lucide-react";
+import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard, ArrowLeft } from "lucide-react";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { VoiceSelectionPanel } from "./VoiceSelectionPanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsData } from "@/hooks/useSettingsData";
 
@@ -21,6 +20,8 @@ export const SettingsModal = () => {
   const { fetchData: fetchSettingsData } = useSettingsData();
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const isMobile = useIsMobile();
+  const [showMobileMenu, setShowMobileMenu] = useState(true);
 
   // Fetch settings data when modal opens and user is signed in
   useEffect(() => {
@@ -29,8 +30,36 @@ export const SettingsModal = () => {
     }
   }, [isOpen, user, fetchSettingsData]);
 
+  // Reset mobile menu when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setShowMobileMenu(true);
+    }
+  }, [isOpen]);
+
   const handleTabChange = (value) => {
     setActivePanel(value);
+  };
+
+  const handlePanelClick = (panel: string) => {
+    if (!user && panel !== 'general' && panel !== 'support') {
+      setShowSignInPrompt(true);
+      return;
+    }
+    setActivePanel(panel as any);
+  };
+
+  const handleMobilePanelClick = (panel: string) => {
+    if (!user && panel !== 'general' && panel !== 'support') {
+      setShowSignInPrompt(true);
+      return;
+    }
+    setActivePanel(panel as any);
+    setShowMobileMenu(false); // Hide menu, show panel
+  };
+
+  const handleMobileBack = () => {
+    setShowMobileMenu(true); // Show menu, hide panel
   };
 
   const handleLogout = async () => {
@@ -49,14 +78,6 @@ export const SettingsModal = () => {
     }
   };
 
-  const handlePanelClick = (panel: string) => {
-    if (!user && panel !== 'general' && panel !== 'support') {
-      setShowSignInPrompt(true);
-      return;
-    }
-    setActivePanel(panel as any);
-  };
-
   // Filter tabs based on user login status
   const tabs = [
     { id: "general", label: "General", icon: SettingsIcon },
@@ -68,12 +89,85 @@ export const SettingsModal = () => {
     { id: "support", label: "Support", icon: LifeBuoy },
   ];
 
+  const renderSettingsContent = () => (
+    <Tabs value={activePanel} className="space-y-4">
+      <TabsContent value="general">
+        <div className="space-y-6">
+          {/* Voice Selection - Available for all users */}
+          <VoiceSelectionPanel />
+          
+          <div className="border-t pt-6">
+            {user ? (
+              <>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-gray-800">Log out on this device</span>
+                  <Button 
+                    variant="outline" 
+                    className="text-sm" 
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                  >
+                    {loggingOut ? "Logging out..." : "Log out"}
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-red-600">Delete account</span>
+                  <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
+                </div>
+              </>
+            ) : (
+              <div className="py-6 text-center">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-light text-gray-900 mb-2">
+                      Sign in to access <span className="italic">account settings</span>
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Create an account to save preferences and access advanced features.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setShowSignInPrompt(true)}
+                    className="bg-gray-900 text-white hover:bg-gray-800 font-light"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </TabsContent>
+      <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
+      <TabsContent value="billing">
+        <div className="p-4 text-center text-gray-500">
+          <p>Billing features have been removed</p>
+        </div>
+      </TabsContent>
+      <TabsContent value="notifications"><NotificationsPanel /></TabsContent>
+      <TabsContent value="support"><ContactSupportPanel /></TabsContent>
+      <TabsContent value="delete"><DeleteAccountPanel /></TabsContent>
+    </Tabs>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeSettings()}>
-      <DialogContent className="sm:max-w-[800px] h-[80vh] p-0 flex flex-col bg-white">
+      <DialogContent className={`${isMobile ? 'max-w-full h-full' : 'sm:max-w-[800px] h-[80vh]'} p-0 flex flex-col bg-white`}>
         <DialogTitle className="sr-only">Settings</DialogTitle>
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-2xl font-semibold">Settings</h2>
+        
+        {/* Header */}
+        <div className={`flex justify-between items-center ${isMobile ? 'p-4' : 'p-6'} border-b`}>
+          {isMobile && !showMobileMenu ? (
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={handleMobileBack} className="hover:bg-gray-100 hover:text-gray-900">
+                <ArrowLeft size={20} className="text-gray-800" />
+              </Button>
+              <h2 className="text-base font-medium">Settings</h2>
+            </div>
+          ) : (
+            <h2 className={`${isMobile ? 'text-base font-medium' : 'text-2xl font-semibold'}`}>Settings</h2>
+          )}
           <DialogClose asChild>
             <Button variant="ghost" size="icon" onClick={closeSettings} className="hover:bg-gray-100 hover:text-gray-900">
               <X size={20} className="text-gray-800" />
@@ -81,87 +175,63 @@ export const SettingsModal = () => {
           </DialogClose>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-[220px] border-r p-4">
-            <nav className="space-y-1">
-              {tabs.map((tab) => (
-                  <Button
-                    key={tab.id}
-                    variant="ghost"
-                    className={`w-full justify-start hover:bg-gray-100 hover:text-gray-900 ${
-                      activePanel === tab.id ? "bg-muted font-semibold" : "text-gray-700"
-                    }`}
-                    onClick={() => handlePanelClick(tab.id)}
-                  >
-                  <tab.icon className="mr-2 h-4 w-4" />
-                  {tab.label}
-                </Button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <Tabs value={activePanel} className="space-y-4">
-              <TabsContent value="general">
-                <div className="space-y-6">
-                  {/* Voice Selection - Available for all users */}
-                  <VoiceSelectionPanel />
-                  
-                  <div className="border-t pt-6">
-                    {user ? (
-                      <>
-                        <div className="flex items-center justify-between py-3">
-                          <span className="text-sm text-gray-800">Log out on this device</span>
-                          <Button 
-                            variant="outline" 
-                            className="text-sm" 
-                            onClick={handleLogout}
-                            disabled={loggingOut}
-                          >
-                            {loggingOut ? "Logging out..." : "Log out"}
-                          </Button>
-                        </div>
-                        <div className="flex items-center justify-between py-3">
-                          <span className="text-sm text-red-600">Delete account</span>
-                          <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="py-6 text-center">
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-lg font-light text-gray-900 mb-2">
-                              Sign in to access <span className="italic">account settings</span>
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              Create an account to save preferences and access advanced features.
-                            </p>
-                          </div>
-                          <Button 
-                            onClick={() => setShowSignInPrompt(true)}
-                            className="bg-gray-900 text-white hover:bg-gray-800 font-light"
-                          >
-                            <User className="w-4 h-4 mr-2" />
-                            Sign In
-                          </Button>
+        {/* Mobile Navigation */}
+        {isMobile ? (
+          <div className="flex-1 overflow-y-auto">
+            {showMobileMenu ? (
+              /* Mobile Settings Menu */
+              <div className="p-6">
+                <div className="space-y-3">
+                  {tabs.map((tab) => (
+                    <Button
+                      key={tab.id}
+                      variant="ghost"
+                      className="w-full justify-start p-4 h-auto hover:bg-gray-100 hover:text-gray-900 text-left"
+                      onClick={() => handleMobilePanelClick(tab.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <tab.icon className="h-5 w-5" />
+                        <div>
+                          <div className="font-medium">{tab.label}</div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </Button>
+                  ))}
                 </div>
-              </TabsContent>
-              <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
-              <TabsContent value="billing">
-                <div className="p-4 text-center text-gray-500">
-                  Billing features have been removed
-                </div>
-              </TabsContent>
-              <TabsContent value="notifications"><NotificationsPanel /></TabsContent>
-              <TabsContent value="support"><ContactSupportPanel /></TabsContent>
-              <TabsContent value="delete"><DeleteAccountPanel /></TabsContent>
-            </Tabs>
+              </div>
+            ) : (
+              /* Mobile Settings Panel */
+              <div className="p-6">
+                {renderSettingsContent()}
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          /* Desktop Navigation */
+          <div className="flex flex-1 overflow-hidden">
+            <div className="w-[220px] border-r p-4">
+              <nav className="space-y-1">
+                {tabs.map((tab) => (
+                    <Button
+                      key={tab.id}
+                      variant="ghost"
+                      className={`w-full justify-start hover:bg-gray-100 hover:text-gray-900 ${
+                        activePanel === tab.id ? "bg-muted font-semibold" : "text-gray-700"
+                      }`}
+                      onClick={() => handlePanelClick(tab.id)}
+                    >
+                    <tab.icon className="mr-2 h-4 w-4" />
+                    {tab.label}
+                  </Button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {renderSettingsContent()}
+            </div>
+          </div>
+        )}
       </DialogContent>
       
       {showSignInPrompt && (

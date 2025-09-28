@@ -133,8 +133,8 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
           {/* Main Chat Area */}
           <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
-            {/* Top Header with Mode Dropdown */}
-            <div className="flex items-center justify-between p-3 bg-white border-b border-gray-100">
+            {/* Top Header with Mode Dropdown - Desktop Only */}
+            <div className="hidden md:flex items-center justify-between p-3 bg-white border-b border-gray-100">
               <div className="flex items-center">
                 <ModeDropdown />
               </div>
@@ -164,6 +164,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                   </div>
                 </SheetContent>
               </Sheet>
+              
+              {/* Mode Dropdown next to burger menu */}
+              <ModeDropdown />
               
               <div className="flex-1" />
               
