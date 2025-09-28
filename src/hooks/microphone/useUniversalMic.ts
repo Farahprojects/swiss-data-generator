@@ -28,11 +28,9 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
   }, []);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
-    console.log('[useUniversalMic] startRecording called - isRecording:', isRecording, 'isProcessing:', isProcessing);
     if (isRecording || isProcessing) return false;
 
     try {
-      console.log('[useUniversalMic] Checking permissions and support...');
 
       // Check secure context
       if (!window.isSecureContext && location.hostname !== 'localhost') {
@@ -49,14 +47,11 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
       try {
         const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
         permissionState = result.state;
-        console.log('[useUniversalMic] Permission state:', permissionState);
       } catch (permError) {
-        console.log('[useUniversalMic] Permission query not supported, proceeding with getUserMedia');
       }
 
       recorderRef.current = new UniversalSTTRecorder({
         onTranscriptReady: (transcript) => {
-          console.log('[useUniversalMic] Transcript ready:', transcript);
           
           // 1. First: Turn off browser mic (dispose recorder)
           if (recorderRef.current) {
@@ -106,7 +101,6 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
 
       await recorderRef.current.start();
       setIsRecording(true);
-      console.log('[useUniversalMic] Recording started successfully');
       return true;
 
     } catch (error) {
@@ -147,12 +141,9 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
   }, []);
 
   const toggleRecording = useCallback(async () => {
-    console.log('[useUniversalMic] Toggle called - isRecording:', isRecording);
     if (isRecording) {
-      console.log('[useUniversalMic] Stopping recording...');
       stopRecording();
     } else {
-      console.log('[useUniversalMic] Starting recording...');
       await startRecording();
     }
   }, [isRecording, startRecording, stopRecording]);

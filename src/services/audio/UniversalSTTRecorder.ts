@@ -271,7 +271,6 @@ export class UniversalSTTRecorder {
     this.baselineCapturing = true;
     this.baselineEnergySum = 0;
     this.baselineEnergyCount = 0;
-    console.log('[UniversalSTTRecorder] 🎯 Starting baseline energy capture for', this.options.baselineCaptureDuration, 'ms');
   }
 
   private startEnergyMonitoring(): void {
@@ -312,7 +311,6 @@ export class UniversalSTTRecorder {
           this.baselineCapturing = false;
           // Arm VAD slightly after baseline to avoid UI click/glitch triggers
           this.vadArmUntilTs = now + 250;
-          console.log('[UniversalSTTRecorder] ✅ Baseline energy captured:', this.baselineEnergy.toFixed(6));
           // Desktop-only: initialize adaptive gain from baseline
           if (!this.isMobileDevice() && this.adaptiveGain) {
             const target = this.desktopTargetRMS;
@@ -364,7 +362,6 @@ export class UniversalSTTRecorder {
           if (!isSpeaking) {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
-                console.log('[UniversalSTTRecorder] 🔇 Silence detected - finalizing segment');
                 this.finalizeActiveSegment();
               }, this.options.silenceHangover);
             }
