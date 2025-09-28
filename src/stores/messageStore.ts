@@ -379,6 +379,24 @@ if (typeof window !== 'undefined') {
     }
   });
 
+  // Tab becomes visible again - resync to avoid stale state after backgrounding
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      const { chat_id } = useMessageStore.getState();
+      if (chat_id) {
+        useMessageStore.getState().forceResync();
+      }
+    }
+  });
+
+  // Network comes back online - resubscribe and resync
+  window.addEventListener('online', () => {
+    const { chat_id } = useMessageStore.getState();
+    if (chat_id) {
+      useMessageStore.getState().forceResync();
+    }
+  });
+
   // WebSocket close - resync when connection is lost
   window.addEventListener('beforeunload', () => {
     const { chat_id } = useMessageStore.getState();
