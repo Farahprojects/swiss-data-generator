@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import PaywallModal from '@/components/paywall/PaywallModal';
@@ -17,9 +18,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const { user } = useAuth();
   const { isActive, plan, loading } = useSubscriptionStatus();
   const [showPaywall, setShowPaywall] = useState(false);
+  const location = useLocation();
 
   // Show paywall if user is authenticated but doesn't have active subscription
   useEffect(() => {
+    // Suppress paywall overlay on checkout-related pages
+    const suppressedPrefixes = ['/stripe', '/subscription', '/subscription-paywall', '/success', '/cancel'];
+    const path = location.pathname || '';
+    if (suppressedPrefixes.some(prefix => path.startsWith(prefix))) {
+      setShowPaywall(false);
+      return;
+    }
+
     if (user && !loading) {
       // Only show paywall if user is logged in and doesn't have active subscription
       if (!isActive) {
@@ -31,7 +41,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       // Don't show paywall for unauthenticated users
       setShowPaywall(false);
     }
-  }, [user, isActive, loading]);
+  }, [user, isActive, loading, location.pathname]);
 
   const handlePaywallClose = () => {
     setShowPaywall(false);
