@@ -133,8 +133,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         return;
       }
 
-      // Success - close modal
-      onClose();
+      console.log('[AstroDataForm] Edge function succeeded, calling onSubmit');
+      
+      // Success - call onSubmit to trigger parent's success flow
+      onSubmit(data);
+      
+      // Close modal after a brief delay to show success
+      setTimeout(() => {
+        onClose();
+      }, 1000);
       
     } catch (error) {
       console.error('[AstroDataForm] Error submitting astro data:', error);
