@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,10 +23,10 @@ const Profile: React.FC = () => {
     setCurrentStep('processing');
   };
 
-  const handleReportReady = () => {
+  const handleReportReady = useCallback(() => {
     console.log('[Profile] Report is ready, transitioning to profile view');
     setCurrentStep('profile');
-  };
+  }, []);
 
   const handleStartOver = () => {
     setCurrentStep('intro');
@@ -138,7 +138,7 @@ const Profile: React.FC = () => {
     return (
       <ReportProcessingScreen
         reportType={reportType}
-        userName={profileData?.name || user?.email?.split('@')[0] || 'Friend'}
+        userName={profileData?.name || 'Friend'}
         userId={user?.id || ''}
         onReportReady={handleReportReady}
       />

@@ -21,6 +21,9 @@ export const ReportProcessingScreen: React.FC<ReportProcessingScreenProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [reportStatus, setReportStatus] = useState<'processing' | 'ready'>('processing');
 
+  // Debug: Log component renders
+  console.log('[ReportProcessing] Component render:', { userName, reportType, userId });
+
   // Animate dots
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,7 +74,7 @@ export const ReportProcessingScreen: React.FC<ReportProcessingScreenProps> = ({
       console.log('[ReportProcessing] Cleaning up WebSocket listener');
       supabase.removeChannel(channel);
     };
-  }, [userId, reportType, onReportReady]);
+  }, [userId, reportType]); // onReportReady is now stable via useCallback
 
   const processingSteps = [
     {
