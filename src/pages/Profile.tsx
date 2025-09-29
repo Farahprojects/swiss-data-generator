@@ -9,6 +9,7 @@ import { ReportFormData } from '@/types/public-report';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
+import { useProfileState } from '@/contexts/ProfileContext';
 
 const Profile: React.FC = () => {
   // Default to loading, then decide profile vs onboarding after DB check
@@ -18,28 +19,22 @@ const Profile: React.FC = () => {
   const [reportType, setReportType] = useState<string>('');
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const { hasProfileSetup, profileId, setProfileSetupCompleted, refresh } = useProfileState();
 
-  // On mount: if user has completed profile setup, go straight to profile view
+  // React to global profile state rather than re-query here
   useEffect(() => {
-    const checkProfileSetup = async () => {
-      if (!user?.id) {
-        // Wait for auth to be ready
-        setCurrentStep('loading');
-        return;
-      }
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('has_profile_setup')
-        .eq('id', user.id)
-        .single();
-      if (!error && data?.has_profile_setup) {
-        setCurrentStep('profile');
-      } else {
-        setCurrentStep('intro');
-      }
-    };
-    checkProfileSetup();
-  }, [user?.id]);
+    if (hasProfileSetup === null) {
+      // Kick a gentle refresh; ProfileContext will short-circuit if cached
+      setCurrentStep('loading');
+      refresh();
+      return;
+    }
+    if (hasProfileSetup === true || !!profileId) {
+      setCurrentStep('profile');
+    } else {
+      setCurrentStep('intro');
+    }
+  }, [hasProfileSetup, profileId, refresh]);
 
   const handleAstroFormSubmit = (data: ReportFormData) => {
     setProfileData(data);
@@ -49,6 +44,7 @@ const Profile: React.FC = () => {
 
   const handleReportReady = useCallback(() => {
     console.log('[Profile] Report is ready, transitioning to profile view');
+    setProfileSetupCompleted(profileId || user?.id || undefined);
     setCurrentStep('profile');
   }, []);
 
