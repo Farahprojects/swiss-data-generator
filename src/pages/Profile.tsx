@@ -48,12 +48,6 @@ const Profile: React.FC = () => {
     setCurrentStep('profile');
   }, []);
 
-  const handleStartOver = () => {
-    setCurrentStep('intro');
-    setProfileData(null);
-    setPreselectedMode(null);
-    setReportType('');
-  };
 
   const handleGetStarted = () => {
     setPreselectedMode('self');
@@ -330,27 +324,6 @@ const Profile: React.FC = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex justify-center gap-4 pt-8"
-            >
-              <Button
-                onClick={handleStartOver}
-                variant="outline"
-                className="px-6 py-2 rounded-xl border-gray-200 hover:bg-gray-50"
-              >
-                Start Over
-              </Button>
-              <Button
-                onClick={() => setCurrentStep('astro-form')}
-                className="px-6 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white"
-              >
-                Edit Details
-              </Button>
-            </motion.div>
           </motion.div>
         </div>
 
