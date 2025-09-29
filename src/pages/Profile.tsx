@@ -4,19 +4,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, Heart, Sparkles, MessageCircle, ChevronRight, User, Calendar, MapPin } from 'lucide-react';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
+import { ReportProcessingScreen } from '@/components/profile/ReportProcessingScreen';
 import { ReportFormData } from '@/types/public-report';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const Profile: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'intro' | 'astro-form' | 'profile'>('intro');
+  const [currentStep, setCurrentStep] = useState<'intro' | 'astro-form' | 'processing' | 'profile'>('intro');
   const [profileData, setProfileData] = useState<ReportFormData | null>(null);
   const [preselectedMode, setPreselectedMode] = useState<'self' | null>(null);
+  const [reportType, setReportType] = useState<string>('');
   const isMobile = useIsMobile();
   const { user } = useAuth();
 
   const handleAstroFormSubmit = (data: ReportFormData) => {
     setProfileData(data);
+    setReportType(data.reportType || 'essence_personal');
+    setCurrentStep('processing');
+  };
+
+  const handleReportReady = () => {
+    console.log('[Profile] Report is ready, transitioning to profile view');
     setCurrentStep('profile');
   };
 
@@ -24,6 +32,7 @@ const Profile: React.FC = () => {
     setCurrentStep('intro');
     setProfileData(null);
     setPreselectedMode(null);
+    setReportType('');
   };
 
   const handleGetStarted = () => {
@@ -125,6 +134,17 @@ const Profile: React.FC = () => {
     );
   }
 
+  if (currentStep === 'processing') {
+    return (
+      <ReportProcessingScreen
+        reportType={reportType}
+        userName={profileData?.name || user?.email?.split('@')[0] || 'Friend'}
+        userId={user?.id || ''}
+        onReportReady={handleReportReady}
+      />
+    );
+  }
+
   if (currentStep === 'astro-form') {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -150,6 +170,7 @@ const Profile: React.FC = () => {
                   onSubmit={handleAstroFormSubmit}
                   preselectedType={preselectedMode === 'self' ? 'essence' : undefined}
                   reportType="essence_personal"
+                  contextId={user?.id}
                 />
               </CardContent>
             </Card>

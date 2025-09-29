@@ -27,6 +27,8 @@ interface AstroDataFormProps {
   onSubmit: (data: ReportFormData) => void;
   preselectedType?: string;
   reportType?: string;
+  // Universal ID parameter - can be chat_id or user_id
+  contextId?: string;
 }
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
@@ -34,6 +36,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onSubmit,
   preselectedType,
   reportType,
+  contextId,
 }) => {
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
     preselectedType ? 'details' : 'type'
@@ -54,6 +57,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const { addThread } = useChatStore();
   const chat_id = useChatStore((state) => state.chat_id);
   const { mode } = useMode();
+  
+  // Universal ID logic: use provided contextId or fall back to chat store
+  const finalContextId = contextId || chat_id;
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -113,7 +119,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
 
       // Build payload for initiate-auth-report
-      const payload = buildAuthReportPayload(data, currentChatId);
+      const payload = buildAuthReportPayload(data, finalContextId);
       
       // Invoke initiate-auth-report edge function
       const { data: result, error } = await supabase.functions.invoke('initiate-auth-report', {
@@ -159,7 +165,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   // Build payload for initiate-auth-report
-  const buildAuthReportPayload = (data: ReportFormData, chatId: string) => {
+  const buildAuthReportPayload = (data: ReportFormData, contextId: string) => {
     // Build person_a data
     const personA: any = {
       birth_date: convertDateFormat(data.birthDate),
@@ -199,7 +205,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
 
     return {
-      chat_id: chatId,
+      chat_id: contextId,
       report_data: reportData,
       email: user?.email || '',
       name: data.name,

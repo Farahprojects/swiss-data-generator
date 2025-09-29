@@ -87,28 +87,39 @@ serve(async (req) => {
     const user = userRes.user;
     console.log(`✅ [initiate-auth-report] JWT verified for user: ${user.id}`);
 
-    // Step 2: Verify the conversation belongs to this user
-    const { data: conversation, error: convError } = await supabase
-      .from("conversations")
-      .select("id, user_id")
-      .eq("id", chat_id)
-      .eq("user_id", user.id)
-      .single();
+    // Step 2: Determine if chat_id is a conversation ID or user ID
+    let actualChatId = chat_id;
+    let isUserProfile = false;
+    
+    // Check if the chat_id is actually a user_id (from profile page)
+    if (chat_id === user.id) {
+      console.log(`🔄 [initiate-auth-report] chat_id matches user_id - profile page flow`);
+      isUserProfile = true;
+      actualChatId = user.id; // Use user_id directly for profile reports
+    } else {
+      // Verify the conversation belongs to this user (chat flow)
+      const { data: conversation, error: convError } = await supabase
+        .from("conversations")
+        .select("id, user_id")
+        .eq("id", chat_id)
+        .eq("user_id", user.id)
+        .single();
 
-    if (convError || !conversation) {
-      console.error(`❌ [initiate-auth-report] Conversation not found or access denied: ${chat_id}`, convError);
-      return new Response(JSON.stringify({ error: "Conversation not found or access denied" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      if (convError || !conversation) {
+        console.error(`❌ [initiate-auth-report] Conversation not found or access denied: ${chat_id}`, convError);
+        return new Response(JSON.stringify({ error: "Conversation not found or access denied" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      console.log(`✅ [initiate-auth-report] Conversation verified: ${chat_id}`);
     }
-
-    console.log(`✅ [initiate-auth-report] Conversation verified: ${chat_id}`);
 
     // Step 3: Build translator-edge payload
     const translatorPayload = {
       ...report_data,
-      user_id: chat_id,
+      user_id: user.id, // Always use the authenticated user's ID
+      context_id: actualChatId, // Pass the original chat_id for context
       request_id: crypto.randomUUID().slice(0, 8),
       email: email,
       name: name,
@@ -126,30 +137,34 @@ serve(async (req) => {
       })
     );
 
-    // Step 5: Save form details to conversations.meta
-    const { error: metaError } = await supabase
-      .from("conversations")
-      .update({
-        meta: {
-          last_report_form: {
-            request: report_data.request,
-            reportType: report_data.reportType,
-            person_a: report_data.person_a,
-            person_b: report_data.person_b,
-            email: email,
-            name: name,
-            submitted_at: new Date().toISOString()
-          }
-        },
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", chat_id);
+    // Step 5: Save form details to conversations.meta (only for chat flows)
+    if (!isUserProfile) {
+      const { error: metaError } = await supabase
+        .from("conversations")
+        .update({
+          meta: {
+            last_report_form: {
+              request: report_data.request,
+              reportType: report_data.reportType,
+              person_a: report_data.person_a,
+              person_b: report_data.person_b,
+              email: email,
+              name: name,
+              submitted_at: new Date().toISOString()
+            }
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", chat_id);
 
-    if (metaError) {
-      console.error(`❌ [initiate-auth-report] Failed to save form meta: ${chat_id}`, metaError);
-      // Don't fail the request, just log the error
+      if (metaError) {
+        console.error(`❌ [initiate-auth-report] Failed to save form meta: ${chat_id}`, metaError);
+        // Don't fail the request, just log the error
+      } else {
+        console.log(`✅ [initiate-auth-report] Form meta saved for: ${chat_id}`);
+      }
     } else {
-      console.log(`✅ [initiate-auth-report] Form meta saved for: ${chat_id}`);
+      console.log(`✅ [initiate-auth-report] Skipping conversation meta save for profile flow`);
     }
 
     console.log(`✅ [initiate-auth-report] Successfully processed: ${chat_id}`);
@@ -158,7 +173,8 @@ serve(async (req) => {
       success: true,
       chat_id,
       message: "Astro data submitted successfully",
-      user_id: user.id
+      user_id: user.id,
+      flow_type: isUserProfile ? 'profile' : 'chat'
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
