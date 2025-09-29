@@ -14,7 +14,7 @@ const SUPABASE_ANON_KEY_FALLBACK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3M
 
 // Use environment variables if available, otherwise use hardcoded fallbacks
 // Try custom domain first, then fallback to original Supabase URL
-export const SUPABASE_URL = SUPABASE_URL_ENV || SUPABASE_URL_FALLBACK || SUPABASE_URL_FALLBACK_ALT;
+export const SUPABASE_URL = SUPABASE_URL_ENV || SUPABASE_URL_FALLBACK_ALT || SUPABASE_URL_FALLBACK;
 export const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_ENV || SUPABASE_ANON_KEY_FALLBACK;
 
 // Validation helper
