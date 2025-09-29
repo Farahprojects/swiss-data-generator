@@ -81,7 +81,14 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(requestPayload),
-  }).catch(error => {
+  })
+  .then(response => {
+    console.log(`[report-orchestrator] Engine ${engine} response status:`, response.status);
+    if (!response.ok) {
+      console.error(`[report-orchestrator] Engine ${engine} failed with status:`, response.status);
+    }
+  })
+  .catch(error => {
     console.error(`[report-orchestrator] Engine ${engine} fire-and-forget failed:`, error);
   });
 }

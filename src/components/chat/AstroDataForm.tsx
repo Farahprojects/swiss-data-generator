@@ -26,12 +26,14 @@ interface AstroDataFormProps {
   onClose: () => void;
   onSubmit: (data: ReportFormData) => void;
   preselectedType?: string;
+  reportType?: string;
 }
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onClose,
   onSubmit,
   preselectedType,
+  reportType,
 }) => {
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
     preselectedType ? 'details' : 'type'
@@ -70,21 +72,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       secondPersonLatitude: undefined,
       secondPersonLongitude: undefined,
       secondPersonPlaceId: '',
-      request: '',
-      reportType: null,
+      request: preselectedType || '',
+      reportType: reportType || null,
     },
   });
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
   const formValues = watch();
 
-  // Set preselected values when component mounts
-  React.useEffect(() => {
-    if (preselectedType) {
-      setValue('request', preselectedType);
-      setValue('reportType', null);
-    }
-  }, [preselectedType, setValue]);
+  // No useEffect needed - everything handled in initial values
 
   const handleAstroTypeSelect = (type: string) => {
     setSelectedAstroType(type);

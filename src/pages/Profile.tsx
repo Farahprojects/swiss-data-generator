@@ -16,12 +16,7 @@ const Profile: React.FC = () => {
   const { user } = useAuth();
 
   const handleAstroFormSubmit = (data: ReportFormData) => {
-    // Set reportType for profile flow
-    const profileDataWithReportType = {
-      ...data,
-      reportType: 'essence_personal'
-    };
-    setProfileData(profileDataWithReportType);
+    setProfileData(data);
     setCurrentStep('profile');
   };
 
@@ -154,6 +149,7 @@ const Profile: React.FC = () => {
                   onClose={() => setCurrentStep('intro')}
                   onSubmit={handleAstroFormSubmit}
                   preselectedType={preselectedMode === 'self' ? 'essence' : undefined}
+                  reportType="essence_personal"
                 />
               </CardContent>
             </Card>
