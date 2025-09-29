@@ -310,6 +310,32 @@ serve(async (req)=>{
         console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
       }
     }
+
+    // Call report-orchestrator for essence_personal reports (fire-and-forget)
+    if (body.user_id && swiss.ok && parsed.reportType === 'essence_personal') {
+      console.log(`[translator-edge-${reqId}] Calling report-orchestrator for essence_personal report`);
+      try {
+        const orchestratorPayload = {
+          endpoint: 'profile',
+          report_type: 'essence_personal',
+          user_id: body.user_id,
+          chartData: swissData,
+          is_guest: false
+        };
+        
+        const { error: orchestratorError } = await sb.functions.invoke('report-orchestrator', {
+          body: orchestratorPayload
+        });
+        
+        if (orchestratorError) {
+          console.error(`[translator-edge-${reqId}] Report-orchestrator failed:`, orchestratorError);
+        } else {
+          console.log(`[translator-edge-${reqId}] Report-orchestrator called successfully`);
+        }
+      } catch (orchestratorErr) {
+        console.error(`[translator-edge-${reqId}] Report-orchestrator error:`, orchestratorErr);
+      }
+    }
     
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
   }catch(err){

@@ -16,7 +16,12 @@ const Profile: React.FC = () => {
   const { user } = useAuth();
 
   const handleAstroFormSubmit = (data: ReportFormData) => {
-    setProfileData(data);
+    // Set reportType for profile flow
+    const profileDataWithReportType = {
+      ...data,
+      reportType: 'essence_personal'
+    };
+    setProfileData(profileDataWithReportType);
     setCurrentStep('profile');
   };
 
@@ -75,7 +80,7 @@ const Profile: React.FC = () => {
                 Create Your Profile
               </h1>
               <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                Begin your journey of self-discovery with personalized AI insights across mindset, connections, and purpose dimensions.
+                Your journey to self-discovery starts here—mindset, connections, purpose.
               </p>
             </div>
 
