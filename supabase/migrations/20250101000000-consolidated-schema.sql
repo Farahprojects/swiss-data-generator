@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS public.guest_reports (
 -- Create report_logs table
 CREATE TABLE IF NOT EXISTS public.report_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_key TEXT,
   user_id TEXT, -- Can be auth user UUID or guest report UUID
   report_type TEXT,
   endpoint TEXT,
@@ -40,7 +39,6 @@ CREATE TABLE IF NOT EXISTS public.report_logs (
   status TEXT NOT NULL DEFAULT 'pending',
   error_message TEXT,
   duration_ms INTEGER,
-  client_id UUID,
   engine_used TEXT,
   metadata JSONB DEFAULT '{}',
   is_guest BOOLEAN DEFAULT false,

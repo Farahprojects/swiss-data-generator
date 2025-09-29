@@ -249,14 +249,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 function logAndSignalCompletion(logPrefix: string, reportData: any, report: string, metadata: any, durationMs: number, selectedEngine: string) {
   // Fire-and-forget report_logs insert
   supabase.from("report_logs").insert({
-    api_key: null,
     user_id: reportData.user_id || null,
     report_type: reportData.reportType || reportData.report_type || "standard",
     endpoint: reportData.endpoint,
     report_text: report,
     status: "success",
     duration_ms: durationMs,
-    client_id: reportData.client_id || null,
     engine_used: selectedEngine,
     metadata: metadata,
     is_guest: reportData.is_guest || false,
@@ -373,7 +371,6 @@ serve(async (req) => {
     const durationMs = Date.now() - startTime;
     
     supabase.from("report_logs").insert({
-      api_key: null,
       user_id: reportData?.user_id || null,
       report_type: reportData?.reportType || reportData?.report_type || null,
       endpoint: reportData?.endpoint || null,
@@ -381,7 +378,6 @@ serve(async (req) => {
       status: "error",
       error_message: errorMessage,
       duration_ms: durationMs,
-      client_id: reportData?.client_id || null,
       engine_used: reportData?.selectedEngine || "standard-report-three",
       created_at: new Date().toISOString(),
     })
