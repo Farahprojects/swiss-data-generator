@@ -29,6 +29,8 @@ interface AstroDataFormProps {
   reportType?: string;
   // Universal ID parameter - can be chat_id or user_id
   contextId?: string;
+  // Whether this form is being used in profile flow (should trigger onSubmit)
+  isProfileFlow?: boolean;
 }
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
@@ -37,6 +39,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   preselectedType,
   reportType,
   contextId,
+  isProfileFlow = false,
 }) => {
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
     preselectedType ? 'details' : 'type'
@@ -133,15 +136,22 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         return;
       }
 
-      console.log('[AstroDataForm] Edge function succeeded, calling onSubmit');
+      console.log('[AstroDataForm] Edge function succeeded');
       
-      // Success - call onSubmit to trigger parent's success flow
-      onSubmit(data);
-      
-      // Close modal after a brief delay to show success
-      setTimeout(() => {
+      // Only call onSubmit for profile flow (triggers processing screen)
+      if (isProfileFlow) {
+        console.log('[AstroDataForm] Profile flow detected, calling onSubmit');
+        onSubmit(data);
+        
+        // Close modal after a brief delay to show success
+        setTimeout(() => {
+          onClose();
+        }, 1000);
+      } else {
+        console.log('[AstroDataForm] Chat flow detected, just closing modal');
+        // Chat flow - just close the modal
         onClose();
-      }, 1000);
+      }
       
     } catch (error) {
       console.error('[AstroDataForm] Error submitting astro data:', error);

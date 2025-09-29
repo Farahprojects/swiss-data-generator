@@ -171,6 +171,7 @@ const Profile: React.FC = () => {
                   preselectedType={preselectedMode === 'self' ? 'essence' : undefined}
                   reportType="essence_personal"
                   contextId={user?.id}
+                  isProfileFlow={true}
                 />
               </CardContent>
             </Card>
