@@ -142,11 +142,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       if (isProfileFlow) {
         console.log('[AstroDataForm] Profile flow detected, calling onSubmit');
         onSubmit(data);
-        
-        // Close modal after a brief delay to show success
-        setTimeout(() => {
-          onClose();
-        }, 1000);
+        // Do NOT close the modal here; parent will transition to processing screen
       } else {
         console.log('[AstroDataForm] Chat flow detected, just closing modal');
         // Chat flow - just close the modal

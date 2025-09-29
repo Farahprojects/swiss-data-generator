@@ -72,7 +72,12 @@ export const ReportProcessingScreen: React.FC<ReportProcessingScreenProps> = ({
 
     return () => {
       console.log('[ReportProcessing] Cleaning up WebSocket listener');
-      supabase.removeChannel(channel);
+      // Only remove the specific channel if it exists
+      try {
+        supabase.removeChannel(channel);
+      } catch (e) {
+        console.warn('[ReportProcessing] removeChannel failed (likely already removed):', e);
+      }
     };
   }, [userId, reportType]); // onReportReady is now stable via useCallback
 
