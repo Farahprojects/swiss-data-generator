@@ -79,22 +79,27 @@ const Profile: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="max-w-3xl mx-auto space-y-4 md:grid md:grid-cols-3 md:gap-6 md:space-y-0">
               {profileSections.map((section, index) => {
                 const IconComponent = section.icon;
+                const rowClass = index % 2 === 1 ? 'flex-row-reverse' : 'flex-row';
                 return (
                   <motion.div
                     key={section.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="text-center space-y-3"
+                    className="md:block"
                   >
-                    <div className={`w-16 h-16 mx-auto rounded-2xl ${section.color} flex items-center justify-center`}>
-                      <IconComponent className={`w-8 h-8 ${section.iconColor}`} />
+                    <div className={`flex ${rowClass} items-center gap-4 p-4 rounded-2xl bg-white md:flex-col`}>
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 md:mx-auto">
+                        <IconComponent className={`w-6 h-6 ${section.iconColor}`} />
+                      </div>
+                      <div className="flex-1 min-w-0 md:mt-3 text-left">
+                        <h3 className="text-lg font-medium text-gray-900 truncate md:truncate-none">{section.title}</h3>
+                        <p className="text-sm text-gray-600 line-clamp-2 md:line-clamp-none">{section.description}</p>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900">{section.title}</h3>
-                    <p className="text-sm text-gray-600">{section.description}</p>
                   </motion.div>
                 );
               })}
@@ -185,50 +190,89 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Profile Sections */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {profileSections.map((section, index) => {
-                const IconComponent = section.icon;
-                return (
-                  <motion.div
-                    key={section.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card className={`border-0 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-200 ${section.color}`}>
-                      <CardContent className="p-6 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-xl ${section.color} flex items-center justify-center`}>
-                            <IconComponent className={`w-6 h-6 ${section.iconColor}`} />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">{section.title}</h3>
-                            <p className="text-sm text-gray-600">{section.description}</p>
-                          </div>
+            {isMobile ? (
+              <div className="space-y-4">
+                {profileSections.map((section, index) => {
+                  const IconComponent = section.icon;
+                  const rowClass = index % 2 === 1 ? 'flex-row-reverse' : 'flex-row';
+                  return (
+                    <motion.div
+                      key={section.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className={`flex ${rowClass} items-start gap-4 p-4 rounded-2xl bg-white flex-nowrap`}> 
+                        <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                          <IconComponent className={`w-6 h-6 ${section.iconColor}`} />
                         </div>
-
-                        <div className="space-y-3">
-                          <div className="text-sm text-gray-700 bg-white/50 rounded-lg p-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-medium text-gray-900 truncate">{section.title}</h3>
+                          <p className="text-sm text-gray-600 line-clamp-2">
                             {section.placeholder}
-                          </div>
-                          
+                          </p>
                           <Button
-                            variant="outline"
-                            className="w-full justify-between bg-white/50 hover:bg-white/70 border-gray-200"
+                            variant="ghost"
+                            className="mt-3 px-0 h-auto text-gray-700 hover:text-gray-900"
                           >
-                            <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-2">
                               <MessageCircle className="w-4 h-4" />
-                              <span>Chat about this</span>
-                            </div>
-                            <ChevronRight className="w-4 h-4" />
+                              Chat about this
+                            </span>
+                            <ChevronRight className="w-4 h-4 ml-2" />
                           </Button>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {profileSections.map((section, index) => {
+                  const IconComponent = section.icon;
+                  return (
+                    <motion.div
+                      key={section.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className={`border-0 shadow-lg rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-200 ${section.color}`}>
+                        <CardContent className="p-6 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-12 h-12 rounded-xl ${section.color} flex items-center justify-center`}>
+                              <IconComponent className={`w-6 h-6 ${section.iconColor}`} />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-medium text-gray-900">{section.title}</h3>
+                              <p className="text-sm text-gray-600">{section.description}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="text-sm text-gray-700 bg-white/50 rounded-lg p-3">
+                              {section.placeholder}
+                            </div>
+                            
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between bg-white/50 hover:bg-white/70 border-gray-200"
+                            >
+                              <div className="flex items-center gap-2">
+                                <MessageCircle className="w-4 h-4" />
+                                <span>Chat about this</span>
+                              </div>
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <motion.div

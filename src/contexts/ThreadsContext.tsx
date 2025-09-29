@@ -20,7 +20,16 @@ interface ThreadsProviderProps {
 }
 
 export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  // Guard against useAuth being called before AuthProvider is ready
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    // AuthProvider not ready yet, render children without threads functionality
+    return <>{children}</>;
+  }
+  
+  const { user, isAuthenticated } = authContext;
   const [threads, setThreads] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
