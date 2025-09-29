@@ -137,7 +137,21 @@ serve(async (req) => {
       })
     );
 
-    // Step 5: Save form details to conversations.meta (only for chat flows)
+    // Step 5: If profile flow, mark profile setup as completed
+    if (isUserProfile) {
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .update({ has_profile_setup: true, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (profileErr) {
+        console.error('❌ [initiate-auth-report] Failed to mark profile setup complete:', profileErr);
+      } else {
+        console.log('✅ [initiate-auth-report] Marked has_profile_setup=true for user:', user.id);
+      }
+    }
+
+    // Step 6: Save form details to conversations.meta (only for chat flows)
     if (!isUserProfile) {
       const { error: metaError } = await supabase
         .from("conversations")

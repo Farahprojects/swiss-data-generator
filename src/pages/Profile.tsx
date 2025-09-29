@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { ReportProcessingScreen } from '@/components/profile/ReportProcessingScr
 import { ReportFormData } from '@/types/public-report';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 const Profile: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'intro' | 'astro-form' | 'processing' | 'profile'>('intro');
@@ -16,6 +17,22 @@ const Profile: React.FC = () => {
   const [reportType, setReportType] = useState<string>('');
   const isMobile = useIsMobile();
   const { user } = useAuth();
+
+  // On mount: if user has completed profile setup, go straight to profile view
+  useEffect(() => {
+    const checkProfileSetup = async () => {
+      if (!user?.id) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('has_profile_setup')
+        .eq('id', user.id)
+        .single();
+      if (!error && data?.has_profile_setup) {
+        setCurrentStep('profile');
+      }
+    };
+    checkProfileSetup();
+  }, [user?.id]);
 
   const handleAstroFormSubmit = (data: ReportFormData) => {
     setProfileData(data);
