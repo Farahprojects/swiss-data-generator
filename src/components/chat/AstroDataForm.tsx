@@ -180,7 +180,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
 
     const reportData: any = {
       request: data.request || selectedAstroType,
-      reportType: selectedAstroType,
+      reportType: data.reportType, // Always use the reportType from form data - no guessing
       person_a: personA,
     };
 
