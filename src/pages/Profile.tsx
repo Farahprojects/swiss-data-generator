@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, Heart, Sparkles, MessageCircle, ChevronRight, User, Calendar, MapPin } from 'lucide-react';
+import { Brain, Heart, Sparkles, MessageCircle, ChevronRight, User, Calendar, MapPin, Loader2 } from 'lucide-react';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { ReportProcessingScreen } from '@/components/profile/ReportProcessingScreen';
 import { ReportFormData } from '@/types/public-report';
@@ -11,7 +11,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 
 const Profile: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'intro' | 'astro-form' | 'processing' | 'profile'>('intro');
+  // Default to loading, then decide profile vs onboarding after DB check
+  const [currentStep, setCurrentStep] = useState<'loading' | 'intro' | 'astro-form' | 'processing' | 'profile'>('loading');
   const [profileData, setProfileData] = useState<ReportFormData | null>(null);
   const [preselectedMode, setPreselectedMode] = useState<'self' | null>(null);
   const [reportType, setReportType] = useState<string>('');
@@ -21,7 +22,11 @@ const Profile: React.FC = () => {
   // On mount: if user has completed profile setup, go straight to profile view
   useEffect(() => {
     const checkProfileSetup = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        // Wait for auth to be ready
+        setCurrentStep('loading');
+        return;
+      }
       const { data, error } = await supabase
         .from('profiles')
         .select('has_profile_setup')
@@ -29,6 +34,8 @@ const Profile: React.FC = () => {
         .single();
       if (!error && data?.has_profile_setup) {
         setCurrentStep('profile');
+      } else {
+        setCurrentStep('intro');
       }
     };
     checkProfileSetup();
@@ -151,6 +158,18 @@ const Profile: React.FC = () => {
     );
   }
 
+  if (currentStep === 'loading') {
+    // Minimal branded loader
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex items-center gap-3 text-gray-700">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="font-light">Loading your profile…</span>
+        </div>
+      </div>
+    );
+  }
+
   if (currentStep === 'processing') {
     return (
       <ReportProcessingScreen
@@ -198,7 +217,8 @@ const Profile: React.FC = () => {
     );
   }
 
-  if (currentStep === 'profile' && profileData) {
+  if (currentStep === 'profile') {
+    const displayName = profileData?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Friend';
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -214,16 +234,16 @@ const Profile: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-light text-gray-900 tracking-tight">
-                  {profileData.name}
+                  {displayName}
                 </h1>
                 <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mt-2">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    <span>{profileData.birthDate}</span>
+                    <span>{profileData?.birthDate || '—'}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
-                    <span>{profileData.birthLocation}</span>
+                    <span>{profileData?.birthLocation || '—'}</span>
                   </div>
                 </div>
               </div>
