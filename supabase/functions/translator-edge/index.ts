@@ -24,7 +24,7 @@ const corsHeaders = {
 // Updated schema now allows top‑level `utc` and keeps legacy field names for compatibility
 const baseSchema = z.object({
   request:        z.string(),
-  reportType:     z.string().optional(),
+  reportType:     z.string().nullable().optional(),
   utc:           z.string().optional(),
   local:         z.string().optional(),
   date:          z.string().optional(),
