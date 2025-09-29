@@ -293,8 +293,8 @@ serve(async (req)=>{
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, mode:body.mode });
     
-    // Call context-injector for all successful astro data reports
-    if (body.user_id && swiss.ok) {
+    // Call context-injector for all successful astro data reports (skip if reportType is provided)
+    if (body.user_id && swiss.ok && !parsed.reportType) {
       console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.user_id}`);
       try {
         const { error: injectorError } = await sb.functions.invoke('context-injector', {
@@ -309,6 +309,8 @@ serve(async (req)=>{
       } catch (injectorErr) {
         console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
       }
+    } else if (parsed.reportType) {
+      console.log(`[translator-edge-${reqId}] Skipping context-injector - reportType provided: ${parsed.reportType}`);
     }
 
     // Call report-orchestrator for essence_personal reports (fire-and-forget)
