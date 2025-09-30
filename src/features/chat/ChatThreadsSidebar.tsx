@@ -95,27 +95,37 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Thread loading is now handled by ThreadsProvider
   // No need for manual loadThreads() calls
 
-  // Fetch user reports
+  // Fetch user reports - query insights table to get report_ids for this user
   const fetchUserReports = async (userId: string) => {
     if (!userId) return;
     
     setIsLoadingReports(true);
     try {
-      const { data, error } = await supabase
-        .from('report_logs')
-        .select('*')
+      // Step 1: Get all report_ids from insights table for this user
+      const { data: insights, error: insightsError } = await supabase
+        .from('insights')
+        .select('id, report_type, created_at')
         .eq('user_id', userId)
-        .eq('status', 'success')
         .order('created_at', { ascending: false })
-        .limit(10); // Limit to recent 10 reports
+        .limit(10); // Limit to recent 10 insights
 
-      if (error) {
-        console.error('[ChatThreadsSidebar] Error fetching reports:', error);
+      if (insightsError) {
+        console.error('[ChatThreadsSidebar] Error fetching insights:', insightsError);
         return;
       }
 
-      console.log('[ChatThreadsSidebar] Fetched user reports:', data);
-      setUserReports(data || []);
+      console.log('[ChatThreadsSidebar] Fetched user insights:', insights);
+      
+      // Step 2: Display these in the UI (we'll fetch actual report text later when needed)
+      // Transform insights into a format compatible with the UI
+      const reports = insights?.map(insight => ({
+        id: insight.id, // This is the report_id
+        report_type: insight.report_type,
+        created_at: insight.created_at,
+        // We don't need the full report_text here, just the metadata
+      })) || [];
+      
+      setUserReports(reports);
     } catch (error) {
       console.error('[ChatThreadsSidebar] Failed to fetch reports:', error);
     } finally {
