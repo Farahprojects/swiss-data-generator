@@ -30,8 +30,8 @@ export function withSecurity(handler: EdgeFunctionHandler, functionName: string)
     const requestId = crypto.randomUUID();
 
     // --- 1. IP Allowlist Check ---
-    const { data: allowedIp } = await kv.get(["ip_allowlist", ip]);
-    if (allowedIp) {
+    const allowedIpResult = await kv.get(["ip_allowlist", ip]);
+    if (allowedIpResult.value) {
       console.log(`[${functionName}] ✅ IP ${ip} on allowlist. Bypassing checks.`);
       return handler(request);
     }
@@ -40,8 +40,8 @@ export function withSecurity(handler: EdgeFunctionHandler, functionName: string)
     const hitKey = ["rate_limit", ip, functionName];
     const blockKey = ["rate_limit_block", ip];
 
-    const { data: blockedUntil } = await kv.get<number>(blockKey);
-    if (blockedUntil && Date.now() < blockedUntil) {
+    const blockedUntilResult = await kv.get<number>(blockKey);
+    if (blockedUntilResult.value && Date.now() < blockedUntilResult.value) {
       logRequest({ status_code: 429, is_blocked: true });
       return new Response("You are temporarily blocked.", { status: 429 });
     }
