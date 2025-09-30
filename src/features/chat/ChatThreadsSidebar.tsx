@@ -4,7 +4,7 @@ import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThreads } from '@/contexts/ThreadsContext';
-import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
@@ -22,6 +22,9 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { updateConversationTitle } from '@/services/conversations';
+import { InsightsModal } from '@/components/insights/InsightsModal';
+import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
+import { supabase } from '@/integrations/supabase/client';
 
 
 interface ChatThreadsSidebarProps {
@@ -80,6 +83,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [reportChannel, setReportChannel] = useState<any>(null);
+  const [userReports, setUserReports] = useState<any[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -87,6 +94,101 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Thread loading is now handled by ThreadsProvider
   // No need for manual loadThreads() calls
+
+  // Fetch user reports
+  const fetchUserReports = async (userId: string) => {
+    if (!userId) return;
+    
+    setIsLoadingReports(true);
+    try {
+      const { data, error } = await supabase
+        .from('report_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'success')
+        .order('created_at', { ascending: false })
+        .limit(10); // Limit to recent 10 reports
+
+      if (error) {
+        console.error('[ChatThreadsSidebar] Error fetching reports:', error);
+        return;
+      }
+
+      console.log('[ChatThreadsSidebar] Fetched user reports:', data);
+      setUserReports(data || []);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to fetch reports:', error);
+    } finally {
+      setIsLoadingReports(false);
+    }
+  };
+
+  // Helper function to format report type for display
+  const formatReportType = (reportType: string) => {
+    const typeMap: Record<string, string> = {
+      'essence_personal': 'Personal',
+      'essence_professional': 'Professional', 
+      'essence_relationship': 'Relationship',
+      'sync_personal': 'Compatibility',
+      'sync_professional': 'Co-working'
+    };
+    return typeMap[reportType] || reportType;
+  };
+
+  // Helper function to format date
+  const formatReportDate = (createdAt: string) => {
+    const date = new Date(createdAt);
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const day = date.getDate();
+    return `${month} ${day}`;
+  };
+
+  // Set up report completion listener for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      console.log('[ChatThreadsSidebar] Setting up report completion listener for user:', user.id);
+      
+      const setupReportListener = async () => {
+        try {
+          // Initialize the WebSocket service with report completion callback
+          await unifiedWebSocketService.initializeCallbacks({
+            onReportCompleted: (reportData: any) => {
+              console.log('[ChatThreadsSidebar] Report completed!', reportData);
+              // Refresh the reports list when a new report is completed
+              if (user?.id) {
+                fetchUserReports(user.id);
+              }
+            }
+          });
+          
+          const channel = await unifiedWebSocketService.subscribeToUserReports(user.id);
+          setReportChannel(channel);
+        } catch (error) {
+          console.error('[ChatThreadsSidebar] Failed to setup report listener:', error);
+        }
+      };
+
+      setupReportListener();
+
+      // Cleanup on unmount or user change
+      return () => {
+        if (reportChannel) {
+          console.log('[ChatThreadsSidebar] Cleaning up report listener');
+          // Note: Supabase channels are automatically cleaned up, but we can remove our reference
+          setReportChannel(null);
+        }
+      };
+    }
+  }, [isAuthenticated, user?.id]);
+
+  // Fetch reports when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchUserReports(user.id);
+    } else {
+      setUserReports([]);
+    }
+  }, [isAuthenticated, user?.id]);
 
   // Handle new chat creation - create new chat_id immediately
   const handleNewChat = async () => {
@@ -296,6 +398,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             </button>
           )}
           
+          {/* Insights Button */}
+          <button
+            onClick={() => setShowInsightsModal(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+          >
+            <Sparkles className="w-4 h-4" />
+            Insights
+          </button>
+          
           {uiConfig.showSearchChat && (
             <button
               onClick={() => {
@@ -310,6 +421,38 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           )}
           
           
+          {/* Insight Reports section */}
+          {userReports.length > 0 && (
+            <>
+              {/* Dark gray line separator */}
+              <div className="border-t border-gray-400 my-3"></div>
+              
+              {/* Insight Reports */}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600 font-medium px-3 py-1">Insight Reports</div>
+                <div className="space-y-1">
+                  {userReports.map((report) => (
+                    <div
+                      key={report.id}
+                      onClick={() => openReportModal(report.id)}
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {formatReportType(report.report_type)}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 flex-shrink-0">
+                        {formatReportDate(report.created_at)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Dark gray line separator */}
           <div className="border-t border-gray-400 my-3"></div>
           
@@ -588,6 +731,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         defaultMode="login"
+      />
+
+      {/* Insights Modal */}
+      <InsightsModal
+        isOpen={showInsightsModal}
+        onClose={() => setShowInsightsModal(false)}
       />
     </div>
   );

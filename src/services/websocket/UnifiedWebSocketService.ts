@@ -18,6 +18,9 @@ class UnifiedWebSocketService {
   private onAssistantMessage?: (message: Message) => void;
   private onSystemMessage?: (message: Message) => void;
   private onError?: (error: string) => void;
+  
+  // Callbacks for report completion events
+  private onReportCompleted?: (reportData: any) => void;
 
   constructor() {
     // No content area watching - only message fetching
@@ -34,6 +37,7 @@ class UnifiedWebSocketService {
     onOptimisticMessage?: (message: Message) => void;
     onAssistantMessage?: (message: Message) => void;
     onSystemMessage?: (message: Message) => void;
+    onReportCompleted?: (reportData: any) => void;
   }) {
     
     this.onMessage = callbacks?.onMessageReceived;
@@ -42,6 +46,7 @@ class UnifiedWebSocketService {
     this.onOptimisticMessage = callbacks?.onOptimisticMessage;
     this.onAssistantMessage = callbacks?.onAssistantMessage;
     this.onSystemMessage = callbacks?.onSystemMessage;
+    this.onReportCompleted = callbacks?.onReportCompleted;
     this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
   }
 
@@ -57,6 +62,7 @@ class UnifiedWebSocketService {
       onOptimisticMessage?: (message: Message) => void;
       onAssistantMessage?: (message: Message) => void;
       onSystemMessage?: (message: Message) => void;
+      onReportCompleted?: (reportData: any) => void;
     }
   ) {
     // Initialize callbacks first
@@ -119,6 +125,44 @@ class UnifiedWebSocketService {
   }
 
   /**
+   * Subscribe to report completion events for a specific user
+   */
+  async subscribeToUserReports(user_id: string) {
+    console.log('[UnifiedWebSocket] Subscribing to reports for user:', user_id);
+    
+    const reportChannel = supabase
+      .channel(`user-reports:${user_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'report_logs',
+          filter: `user_id=eq.${user_id}`
+        },
+        (payload) => {
+          console.log('[UnifiedWebSocket] Report log received:', payload);
+          
+          const reportLog = payload.new;
+          
+          // Check if this is a completed report
+          if (reportLog.status === 'success') {
+            console.log('[UnifiedWebSocket] Report completed!', reportLog.report_type);
+            
+            if (this.onReportCompleted && typeof this.onReportCompleted === 'function') {
+              this.onReportCompleted(reportLog);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[UnifiedWebSocket] Report subscription status:', status);
+      });
+
+    return reportChannel;
+  }
+
+  /**
    * Setup realtime subscription for database changes (message fetching only)
    */
   private setupRealtimeSubscription(chat_id: string) {
@@ -128,6 +172,7 @@ class UnifiedWebSocketService {
       // Store callbacks in local variables to preserve context
       const onMessageCallback = this.onMessage;
       const onErrorCallback = this.onError;
+      const onReportCompletedCallback = this.onReportCompleted;
 
       this.realtimeChannel = supabase
         .channel(`unified-messages:${chat_id}`)

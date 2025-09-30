@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, Sparkles, Clock, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useProfileState } from '@/contexts/ProfileContext';
 
 interface ReportProcessingScreenProps {
   userName: string;
@@ -17,6 +18,7 @@ export const ReportProcessingScreen: React.FC<ReportProcessingScreenProps> = ({
   userId,
   onReportReady,
 }) => {
+  const { setProfileSetupCompleted } = useProfileState();
   const [dots, setDots] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [reportStatus, setReportStatus] = useState<'processing' | 'ready'>('processing');
@@ -60,6 +62,7 @@ export const ReportProcessingScreen: React.FC<ReportProcessingScreenProps> = ({
             
             // Small delay before calling onReportReady for smooth transition
             setTimeout(() => {
+              setProfileSetupCompleted(userId);
               onReportReady();
             }, 1500);
           }

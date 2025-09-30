@@ -8,6 +8,7 @@ import { AuthModalProvider } from '@/contexts/AuthModalContext';
 import { ModeProvider } from '@/contexts/ModeContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
+import { ProfileProvider } from '@/contexts/ProfileContext';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -50,6 +51,7 @@ const AuthedAppShell: React.FC = () => {
         <ThreadsProvider>
           <SubscriptionProvider>
             <ModalStateProvider>
+              <ProfileProvider>
               <SettingsModalProvider>
                 <AuthModalProvider>
                   <PricingProvider>
@@ -103,6 +105,7 @@ const AuthedAppShell: React.FC = () => {
                   </PricingProvider>
                 </AuthModalProvider>
               </SettingsModalProvider>
+              </ProfileProvider>
             </ModalStateProvider>
           </SubscriptionProvider>
         </ThreadsProvider>
