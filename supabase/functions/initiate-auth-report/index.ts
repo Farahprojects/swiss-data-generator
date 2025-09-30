@@ -126,7 +126,7 @@ serve(async (req) => {
     // Step 3: Build translator-edge payload
     const translatorPayload = {
       ...report_data,
-      user_id: user.id, // Always use the authenticated user's ID
+      user_id: isInsightsReport ? actualChatId : user.id, // Use report_id for insights, user_id for other flows
       context_id: actualChatId, // Pass report_id, chat_id, or user_id for context
       request_id: crypto.randomUUID().slice(0, 8),
       email: email,
