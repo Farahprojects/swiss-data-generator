@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface AuthReportRequest {
   chat_id: string;
+  report_id?: string; // Optional report_id for insights reports
   report_data: {
     request: string;
     reportType: string;
@@ -45,9 +46,9 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, report_data, email, name, mode } = await req.json() as AuthReportRequest;
+    const { chat_id, report_id, report_data, email, name, mode } = await req.json() as AuthReportRequest;
     
-    console.log(`🔄 [initiate-auth-report] Processing request for chat_id: ${chat_id}`);
+    console.log(`🔄 [initiate-auth-report] Processing request for chat_id: ${chat_id}, report_id: ${report_id}`);
 
     if (!chat_id || !report_data) {
       return new Response(JSON.stringify({ error: "chat_id and report_data are required" }), {
@@ -87,12 +88,19 @@ serve(async (req) => {
     const user = userRes.user;
     console.log(`✅ [initiate-auth-report] JWT verified for user: ${user.id}`);
 
-    // Step 2: Determine if chat_id is a conversation ID or user ID
+    // Step 2: Determine context ID and flow type
     let actualChatId = chat_id;
     let isUserProfile = false;
+    let isInsightsReport = false;
     
+    // Check if this is an insights report with a report_id
+    if (report_id) {
+      console.log(`🔄 [initiate-auth-report] Using report_id for insights report: ${report_id}`);
+      isInsightsReport = true;
+      actualChatId = report_id; // Use report_id as context_id for insights
+    }
     // Check if the chat_id is actually a user_id (from profile page)
-    if (chat_id === user.id) {
+    else if (chat_id === user.id) {
       console.log(`🔄 [initiate-auth-report] chat_id matches user_id - profile page flow`);
       isUserProfile = true;
       actualChatId = user.id; // Use user_id directly for profile reports
@@ -119,7 +127,7 @@ serve(async (req) => {
     const translatorPayload = {
       ...report_data,
       user_id: user.id, // Always use the authenticated user's ID
-      context_id: actualChatId, // Pass the original chat_id for context
+      context_id: actualChatId, // Pass report_id, chat_id, or user_id for context
       request_id: crypto.randomUUID().slice(0, 8),
       email: email,
       name: name,
@@ -137,8 +145,8 @@ serve(async (req) => {
       })
     );
 
-    // Step 5: If profile flow, mark profile setup as completed
-    if (isUserProfile) {
+    // Step 5: If profile flow or insights report, mark profile setup as completed
+    if (isUserProfile || isInsightsReport) {
       const { error: profileErr } = await supabase
         .from('profiles')
         .update({ has_profile_setup: true, updated_at: new Date().toISOString() })
