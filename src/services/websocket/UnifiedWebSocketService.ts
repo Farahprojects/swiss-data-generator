@@ -125,20 +125,20 @@ class UnifiedWebSocketService {
   }
 
   /**
-   * Subscribe to report completion events for a specific user
+   * Subscribe to a specific report by report_id
    */
-  async subscribeToUserReports(user_id: string) {
-    console.log('[UnifiedWebSocket] Subscribing to reports for user:', user_id);
+  async subscribeToReport(report_id: string) {
+    console.log('[UnifiedWebSocket] Subscribing to report:', report_id);
     
     const reportChannel = supabase
-      .channel(`user-reports:${user_id}`)
+      .channel(`report:${report_id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'report_logs',
-          filter: `user_id=eq.${user_id}`
+          filter: `user_id=eq.${report_id}` // user_id field contains report_id
         },
         (payload) => {
           console.log('[UnifiedWebSocket] Report log received:', payload);

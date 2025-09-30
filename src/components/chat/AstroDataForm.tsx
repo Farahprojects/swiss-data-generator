@@ -21,6 +21,7 @@ import { useMode } from '@/contexts/ModeContext';
 import { useLocation } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
+import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -131,6 +132,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       const data = await response.json();
       console.log('[AstroDataForm] Created insight report ID:', data.report_id);
       setReportId(data.report_id);
+      
+      // Subscribe to this specific report_id for completion notifications
+      if (data.report_id) {
+        console.log('[AstroDataForm] Subscribing to report WebSocket:', data.report_id);
+        await unifiedWebSocketService.subscribeToReport(data.report_id);
+      }
+      
       return data.report_id;
     } catch (error) {
       console.error('[AstroDataForm] Error creating report ID:', error);
