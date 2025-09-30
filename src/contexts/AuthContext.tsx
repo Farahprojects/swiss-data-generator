@@ -264,22 +264,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // Set up periodic user validation for deleted accounts
-    const validationInterval = setInterval(async () => {
-      if (user?.id) {
-        const userExists = await validateUserExists(user.id);
-        if (!userExists) {
-          console.warn('[AuthContext] Periodic validation: User no longer exists, clearing auth state');
-          setUser(null);
-          setSession(null);
-        }
-      }
-    }, 30000); // Check every 30 seconds
+    // Removed periodic user validation - unnecessary and resource-intensive
+    // User existence is validated on auth state changes only
 
     return () => {
       log('debug', 'Cleaning up auth subscription', null, 'auth');
       subscription.unsubscribe();
-      clearInterval(validationInterval);
     };
   }, [user?.id]);
 

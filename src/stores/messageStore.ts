@@ -405,12 +405,6 @@ if (typeof window !== 'undefined') {
     }
   });
 
-  // Periodic validation - every 30 seconds (order + count)
-  setInterval(() => {
-    const { chat_id, messages } = useMessageStore.getState();
-    if (chat_id && messages.length > 0) {
-      useMessageStore.getState().validateMessageOrder();
-      useMessageStore.getState().validateMessageCount();
-    }
-  }, 30000);
+  // Removed periodic validation - unnecessary with proper refresh/hydrate logic
+  // Message order and count are validated on refresh and resync events only
 }
