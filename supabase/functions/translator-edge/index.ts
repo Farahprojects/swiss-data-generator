@@ -314,7 +314,7 @@ serve(async (req)=>{
     }
 
     // Call report-orchestrator for all insight reports (fire-and-forget)
-    if (body.user_id && swiss.ok && parsed.reportType && (parsed.reportType.startsWith('essence_') || parsed.reportType.startsWith('sync_'))) {
+    if (body.user_id && swiss.ok && parsed.reportType) {
       console.log(`[translator-edge-${reqId}] Calling report-orchestrator for ${parsed.reportType} report`);
       try {
         const orchestratorPayload = {
