@@ -568,15 +568,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 className="w-full justify-start p-0 h-auto rounded-none bg-transparent hover:bg-gray-100 hover:text-gray-900"
                 onClick={() => handleOpenSettings('general')}
               >
-                <div className="flex items-center gap-3 px-3 py-3 w-full">
-                  <UserAvatar size="sm" />
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="text-sm font-medium text-gray-900 break-all whitespace-normal pr-2">
-                      {user?.email || 'User'}
+                  <div className="flex items-center gap-3 px-3 py-3 w-full">
+                    <UserAvatar size="sm" />
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate pr-2">
+                        {user?.email?.split('@')[0] || 'User'}
+                      </div>
                     </div>
+                    <Settings className="h-4 w-4 text-gray-500" />
                   </div>
-                  <Settings className="h-4 w-4 text-gray-500" />
-                </div>
               </Button>
             ) : (
               /* Desktop: Dropdown Menu */
@@ -588,8 +588,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       <div className="flex items-center gap-3 px-3 py-3 w-full">
                         <UserAvatar size="sm" />
                         <div className="flex-1 text-left min-w-0">
-                          <div className="text-sm font-medium text-gray-900 break-all whitespace-normal pr-2">
-                            {user?.email || 'User'}
+                          <div className="text-sm font-medium text-gray-900 truncate pr-2">
+                            {user?.email?.split('@')[0] || 'User'}
                           </div>
                         </div>
                       </div>
