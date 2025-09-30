@@ -97,6 +97,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Fetch user reports - query insights table to get report_ids for this user
   const fetchUserReports = async (userId: string) => {
+    console.log('[ChatThreadsSidebar] 📊 FETCH USER REPORTS - userId:', userId);
     if (!userId) return;
     
     setIsLoadingReports(true);
@@ -110,11 +111,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         .limit(10); // Limit to recent 10 insights
 
       if (insightsError) {
-        console.error('[ChatThreadsSidebar] Error fetching insights:', insightsError);
+        console.error('[ChatThreadsSidebar] ❌ Error fetching insights:', insightsError);
         return;
       }
 
-      console.log('[ChatThreadsSidebar] Fetched user insights:', insights);
+      console.log('[ChatThreadsSidebar] ✅ Fetched insights from DB:', insights);
+      console.log('[ChatThreadsSidebar] Number of insights:', insights?.length || 0);
       
       // Step 2: Display these in the UI (we'll fetch actual report text later when needed)
       // Transform insights into a format compatible with the UI
@@ -125,9 +127,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         // We don't need the full report_text here, just the metadata
       })) || [];
       
+      console.log('[ChatThreadsSidebar] Setting userReports state to:', reports);
       setUserReports(reports);
+      console.log('[ChatThreadsSidebar] ✅ userReports state updated');
     } catch (error) {
-      console.error('[ChatThreadsSidebar] Failed to fetch reports:', error);
+      console.error('[ChatThreadsSidebar] ❌ Failed to fetch reports:', error);
     } finally {
       setIsLoadingReports(false);
     }
@@ -253,54 +257,78 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
     if (isAuthenticated && conversationToDelete) {
+      console.log('[ChatThreadsSidebar] 🗑️ DELETE FLOW START');
+      console.log('[ChatThreadsSidebar] conversationToDelete:', conversationToDelete);
+      console.log('[ChatThreadsSidebar] Current userReports:', userReports);
+      
       // Check if this is an insight report (exists in userReports)
       const isInsightReport = userReports.some(r => r.id === conversationToDelete);
+      console.log('[ChatThreadsSidebar] Is insight report?', isInsightReport);
       
       if (isInsightReport) {
+        console.log('[ChatThreadsSidebar] 🔍 INSIGHT DELETE - Starting deletion for:', conversationToDelete);
+        
         // Delete insight report - cascade will handle related records
         try {
           // Delete from insights table (report_id)
-          // This should cascade to related records if FK constraints are set up
+          console.log('[ChatThreadsSidebar] Deleting from insights table...');
           const { error: insightsError } = await supabase
             .from('insights')
             .delete()
             .eq('id', conversationToDelete);
           
           if (insightsError) {
-            console.error('[ChatThreadsSidebar] Failed to delete from insights:', insightsError);
+            console.error('[ChatThreadsSidebar] ❌ Failed to delete from insights:', insightsError);
+          } else {
+            console.log('[ChatThreadsSidebar] ✅ Deleted from insights table');
           }
           
           // Also delete from report_logs where user_id = report_id
+          console.log('[ChatThreadsSidebar] Deleting from report_logs where user_id =', conversationToDelete);
           const { error: reportLogsError } = await supabase
             .from('report_logs')
             .delete()
             .eq('user_id', conversationToDelete);
           
           if (reportLogsError) {
-            console.error('[ChatThreadsSidebar] Failed to delete from report_logs:', reportLogsError);
+            console.error('[ChatThreadsSidebar] ❌ Failed to delete from report_logs:', reportLogsError);
+          } else {
+            console.log('[ChatThreadsSidebar] ✅ Deleted from report_logs table');
           }
           
           // Also delete from translator_logs where user_id = report_id
+          console.log('[ChatThreadsSidebar] Deleting from translator_logs where user_id =', conversationToDelete);
           const { error: translatorLogsError } = await supabase
             .from('translator_logs')
             .delete()
             .eq('user_id', conversationToDelete);
           
           if (translatorLogsError) {
-            console.error('[ChatThreadsSidebar] Failed to delete from translator_logs:', translatorLogsError);
+            console.error('[ChatThreadsSidebar] ❌ Failed to delete from translator_logs:', translatorLogsError);
+          } else {
+            console.log('[ChatThreadsSidebar] ✅ Deleted from translator_logs table');
           }
           
+          console.log('[ChatThreadsSidebar] userReports BEFORE filter:', userReports);
+          
           // Update UI immediately - remove from userReports
-          setUserReports(prev => prev.filter(r => r.id !== conversationToDelete));
+          setUserReports(prev => {
+            const filtered = prev.filter(r => r.id !== conversationToDelete);
+            console.log('[ChatThreadsSidebar] userReports AFTER filter:', filtered);
+            return filtered;
+          });
+          
           setShowDeleteConfirm(false);
           setConversationToDelete(null);
           
+          console.log('[ChatThreadsSidebar] Refreshing from DB...');
           // Also refresh from DB to ensure sync
           if (user?.id) {
-            fetchUserReports(user.id);
+            await fetchUserReports(user.id);
+            console.log('[ChatThreadsSidebar] ✅ DB refresh complete');
           }
         } catch (error) {
-          console.error('[ChatThreadsSidebar] Error deleting insight report:', error);
+          console.error('[ChatThreadsSidebar] ❌ Error deleting insight report:', error);
         }
       } else {
         // Regular conversation: Delete specific conversation (fire-and-forget)
