@@ -81,13 +81,35 @@ export default function Beats() {
       if (tone.id !== toneId) return tone;
 
       if (tone.isPlaying && tone.oscillator) {
-        // Stop tone
-        tone.oscillator.stop();
-        tone.oscillator.disconnect();
-        if (tone.gainNode) tone.gainNode.disconnect();
+        // Smooth fade-out to prevent click using scheduled exponential ramp
+        if (tone.gainNode) {
+          const now = audioContext.currentTime;
+          const stopTime = now + 0.035; // ~35ms total fade time
+          const currentGain = Math.max(0.0001, tone.gainNode.gain.value || 0.0001);
+          tone.gainNode.gain.cancelScheduledValues(now);
+          tone.gainNode.gain.setValueAtTime(currentGain, now);
+          // Exponential ramp to near-zero avoids zero-crossing clicks
+          tone.gainNode.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+
+          // Stop exactly at the end of the fade; cleanup on end
+          try {
+            tone.oscillator.onended = () => {
+              try { tone.oscillator!.disconnect(); } catch {}
+              try { tone.gainNode!.disconnect(); } catch {}
+            };
+            tone.oscillator.stop(stopTime);
+          } catch {
+            // Fallback in case stop scheduling fails
+            setTimeout(() => {
+              try { tone.oscillator!.stop(); } catch {}
+              try { tone.oscillator!.disconnect(); } catch {}
+              try { tone.gainNode!.disconnect(); } catch {}
+            }, 40);
+          }
+        }
         return { ...tone, isPlaying: false, oscillator: null, gainNode: null };
       } else {
-        // Start tone with precise frequency
+        // Start tone with precise frequency and smooth fade-in
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
@@ -95,7 +117,10 @@ export default function Beats() {
         // Use setValueAtTime for maximum precision instead of direct assignment
         oscillator.frequency.setValueAtTime(tone.frequency, audioContext.currentTime);
         
-        gainNode.gain.value = tone.isMuted ? 0 : tone.volume;
+        // Smooth fade-in to prevent click/thump
+        const targetVolume = tone.isMuted ? 0 : tone.volume;
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(targetVolume, audioContext.currentTime + 0.05); // 50ms fade-in
         
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
@@ -129,7 +154,9 @@ export default function Beats() {
       if (tone.id !== toneId) return tone;
       
       if (tone.gainNode) {
-        tone.gainNode.gain.setValueAtTime(tone.isMuted ? 0 : newVolume, audioContext!.currentTime);
+        const targetVolume = tone.isMuted ? 0 : newVolume;
+        // Smooth volume change to prevent clicks
+        tone.gainNode.gain.linearRampToValueAtTime(targetVolume, audioContext!.currentTime + 0.02);
       }
       
       return { ...tone, volume: newVolume };
@@ -143,7 +170,9 @@ export default function Beats() {
       
       const newMuted = !tone.isMuted;
       if (tone.gainNode) {
-        tone.gainNode.gain.setValueAtTime(newMuted ? 0 : tone.volume, audioContext!.currentTime);
+        const targetVolume = newMuted ? 0 : tone.volume;
+        // Smooth mute/unmute to prevent clicks
+        tone.gainNode.gain.linearRampToValueAtTime(targetVolume, audioContext!.currentTime + 0.02);
       }
       
       return { ...tone, isMuted: newMuted };
@@ -189,36 +218,60 @@ export default function Beats() {
       if (layer.id !== layerId || !layer.audioElement) return layer;
       
       if (layer.audioElement.paused) {
+        // Smooth fade-in before play to avoid click
+        if (layer.gainNode) {
+          const now = audioContext!.currentTime;
+          const target = layer.isMuted ? 0.0001 : Math.max(0.0001, layer.volume);
+          layer.gainNode.gain.cancelScheduledValues(now);
+          layer.gainNode.gain.setValueAtTime(0.0001, now);
+          layer.gainNode.gain.exponentialRampToValueAtTime(target, now + 0.05);
+        }
         layer.audioElement.play();
       } else {
-        layer.audioElement.pause();
+        // Smooth fade-out then pause to avoid click
+        if (layer.gainNode) {
+          const now = audioContext!.currentTime;
+          layer.gainNode.gain.cancelScheduledValues(now);
+          const current = Math.max(0.0001, layer.gainNode.gain.value);
+          layer.gainNode.gain.setValueAtTime(current, now);
+          layer.gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+          setTimeout(() => {
+            try { layer.audioElement!.pause(); } catch {}
+          }, 35);
+        } else {
+          layer.audioElement.pause();
+        }
       }
       
       return layer;
     }));
   };
 
-  // Update audio layer volume
+  // Update audio layer volume (smooth to avoid zipper noise)
   const updateLayerVolume = (layerId: string, newVolume: number) => {
     setAudioLayers(prev => prev.map(layer => {
       if (layer.id !== layerId) return layer;
       
       if (layer.gainNode) {
-        layer.gainNode.gain.setValueAtTime(layer.isMuted ? 0 : newVolume, audioContext!.currentTime);
+        const now = audioContext!.currentTime;
+        const target = layer.isMuted ? 0 : newVolume;
+        layer.gainNode.gain.linearRampToValueAtTime(target, now + 0.02);
       }
       
       return { ...layer, volume: newVolume };
     }));
   };
 
-  // Toggle audio layer mute
+  // Toggle audio layer mute (smooth)
   const toggleLayerMute = (layerId: string) => {
     setAudioLayers(prev => prev.map(layer => {
       if (layer.id !== layerId) return layer;
       
       const newMuted = !layer.isMuted;
       if (layer.gainNode) {
-        layer.gainNode.gain.setValueAtTime(newMuted ? 0 : layer.volume, audioContext!.currentTime);
+        const now = audioContext!.currentTime;
+        const target = newMuted ? 0 : layer.volume;
+        layer.gainNode.gain.linearRampToValueAtTime(target, now + 0.02);
       }
       
       return { ...layer, isMuted: newMuted };
@@ -284,9 +337,48 @@ export default function Beats() {
     };
   }, []);
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-16 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
+    return (
+      <div className="min-h-screen bg-gray-50 py-16 px-4">
+        <style>{`
+          .slider-vertical {
+            -webkit-appearance: slider-vertical;
+            writing-mode: bt-lr;
+          }
+          .slider-vertical::-webkit-slider-track {
+            background: #e5e7eb;
+            border-radius: 8px;
+          }
+          .slider-vertical::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #374151;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .slider-vertical::-webkit-slider-thumb:hover {
+            background: #111827;
+            transform: scale(1.1);
+          }
+          .slider-vertical::-moz-range-track {
+            background: #e5e7eb;
+            border-radius: 8px;
+            border: none;
+          }
+          .slider-vertical::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #374151;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+        `}</style>
+        <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-light text-gray-900 tracking-tight italic">
@@ -309,199 +401,275 @@ export default function Beats() {
           </div>
         )}
 
-        {/* Tone Generators */}
-        {isInitialized && (
-          <div className="space-y-6">
-            {/* Tone Sources */}
-            <div className="space-y-6">
-              {tones.map((tone) => (
-                <div key={tone.id} className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-light text-gray-900">{tone.label}</h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => toggleMute(tone.id)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        {tone.isMuted ? (
-                          <VolumeX className="w-5 h-5 text-gray-400" />
-                        ) : (
-                          <Volume2 className="w-5 h-5 text-gray-700" />
-                        )}
-                      </button>
-                      <Button
-                        onClick={() => toggleTone(tone.id)}
-                        variant={tone.isPlaying ? "default" : "outline"}
-                        className="rounded-xl"
-                      >
-                        {tone.isPlaying ? (
-                          <>
-                            <Pause className="w-4 h-4 mr-2" />
-                            Stop
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Play
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+         {/* Unified Binaural Mixer */}
+         {isInitialized && (
+           <div className="bg-white rounded-xl p-6 shadow-sm">
+             <div className="text-center mb-6">
+               <h2 className="text-xl font-light italic text-gray-900">
+                 Binaural Tone Mixer
+               </h2>
+             </div>
 
-                  {/* Preset Selector */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-light text-gray-700">Preset</label>
-                    <select
-                      value={tone.frequency}
-                      onChange={(e) => applyPreset(tone.id, parseFloat(e.target.value))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl font-light focus:outline-none focus:ring-2 focus:ring-gray-900"
-                    >
-                      <option value={tone.frequency}>Custom ({tone.frequency.toFixed(2)} Hz)</option>
-                      {PLANETARY_FREQUENCIES.map((preset) => (
-                        <option key={preset.name} value={preset.hz}>
-                          {preset.name} - {preset.hz} Hz
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+             {/* Three-Column Layout: Low | Mix | High */}
+             <div className="grid grid-cols-3 gap-6 items-start">
+               
+               {/* LEFT: Low Tone */}
+               <div className="space-y-4">
+                 <div className="flex items-center justify-center">
+                   <label className="flex items-center space-x-2 cursor-pointer">
+                     <input
+                       type="checkbox"
+                       checked={!tones.find(t => t.id === 'low')?.isMuted}
+                       onChange={() => toggleMute('low')}
+                       className="w-4 h-4 rounded border-gray-300 focus:ring-gray-900"
+                     />
+                     <span className="text-sm font-light text-gray-700">Low Tone</span>
+                   </label>
+                 </div>
 
-                  {/* Manual Frequency Input */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-light text-gray-700">
-                        Frequency (Hz)
-                      </label>
-                      {tone.isPlaying && actualFrequencies[tone.id] && (
-                        <span className="text-xs text-green-600 font-light">
-                          Playing: {actualFrequencies[tone.id].toFixed(2)} Hz
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="20"
-                      max="20000"
-                      value={tone.frequency}
-                      onChange={(e) => updateFrequency(tone.id, parseFloat(e.target.value) || 0)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl font-light focus:outline-none focus:ring-2 focus:ring-gray-900"
-                    />
-                  </div>
+                 {/* Preset */}
+                 <select
+                   value={tones.find(t => t.id === 'low')?.frequency || 136.10}
+                   onChange={(e) => applyPreset('low', parseFloat(e.target.value))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                 >
+                   <option value={136.10}>Custom ({tones.find(t => t.id === 'low')?.frequency.toFixed(1)} Hz)</option>
+                   {PLANETARY_FREQUENCIES.map((preset) => (
+                     <option key={preset.name} value={preset.hz}>
+                       {preset.name} - {preset.hz} Hz
+                     </option>
+                   ))}
+                 </select>
 
-                  {/* Volume Control */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-light text-gray-700">
-                      Volume ({Math.round(tone.volume * 100)}%)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={tone.volume}
-                      onChange={(e) => updateVolume(tone.id, parseFloat(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                 {/* Frequency Input */}
+                 <div className="space-y-1">
+                   <input
+                     type="number"
+                     step="0.1"
+                     min="20"
+                     max="20000"
+                     value={tones.find(t => t.id === 'low')?.frequency || 0}
+                     onChange={(e) => updateFrequency('low', parseFloat(e.target.value) || 0)}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                   />
+                   {tones.find(t => t.id === 'low')?.isPlaying && actualFrequencies['low'] && (
+                     <div className="text-xs text-green-600 font-light text-center">
+                       {actualFrequencies['low'].toFixed(1)} Hz
+                     </div>
+                   )}
+                 </div>
 
-            {/* Audio Layers */}
-            <div className="space-y-6">
-              <div className="border-t border-gray-200 pt-6">
-                <h2 className="text-xl font-light text-gray-900 mb-4 italic">Mix Layers</h2>
-                
-                {audioLayers.map((layer) => (
-                  <div key={layer.id} className="bg-white rounded-xl p-6 shadow-sm space-y-4 mb-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-light text-gray-900">{layer.label}</h3>
-                      <div className="flex items-center gap-2">
-                        {layer.audioElement && (
-                          <>
-                            <button
-                              onClick={() => toggleLayerMute(layer.id)}
-                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                            >
-                              {layer.isMuted ? (
-                                <VolumeX className="w-5 h-5 text-gray-400" />
-                              ) : (
-                                <Volume2 className="w-5 h-5 text-gray-700" />
-                              )}
-                            </button>
-                            <Button
-                              onClick={() => toggleAudioLayer(layer.id)}
-                              variant={layer.audioElement.paused ? "outline" : "default"}
-                              className="rounded-xl"
-                            >
-                              {layer.audioElement.paused ? (
-                                <>
-                                  <Play className="w-4 h-4 mr-2" />
-                                  Play
-                                </>
-                              ) : (
-                                <>
-                                  <Pause className="w-4 h-4 mr-2" />
-                                  Stop
-                                </>
-                              )}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                 {/* Vertical Volume Slider */}
+                 <div className="flex flex-col items-center space-y-2">
+                   <div className="text-xs font-light text-gray-500">
+                     {Math.round((tones.find(t => t.id === 'low')?.volume || 0) * 100)}%
+                   </div>
+                   <input
+                     type="range"
+                     min="0"
+                     max="1"
+                     step="0.01"
+                     value={tones.find(t => t.id === 'low')?.volume || 0}
+                     onChange={(e) => updateVolume('low', parseFloat(e.target.value))}
+                     className="w-6 h-20 slider-vertical"
+                   />
+                 </div>
+               </div>
 
-                    {/* File Upload */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-light text-gray-700">Upload Audio</label>
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleAudioUpload(layer.id, file);
-                        }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-xl font-light focus:outline-none focus:ring-2 focus:ring-gray-900"
-                      />
-                    </div>
+               {/* CENTER: Audio Upload Section */}
+               <div className="space-y-4 text-center">
+                 <div className="text-sm font-light text-gray-700 mb-2">Audio Track</div>
+                 
+                 {/* Audio Upload */}
+                 <div className="space-y-3">
+                   <input
+                     type="file"
+                     accept="audio/*"
+                     onChange={(e) => {
+                       const file = e.target.files?.[0];
+                       if (file && audioLayers[0]) {
+                         handleAudioUpload('layer1', file);
+                       }
+                     }}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                   />
+                   
+                   {/* Audio Controls */}
+                   {audioLayers[0]?.audioElement && (
+                     <div className="space-y-2">
+                       <div className="flex items-center justify-center gap-2">
+                         <button
+                           onClick={() => toggleLayerMute('layer1')}
+                           className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                         >
+                           {audioLayers[0].isMuted ? (
+                             <VolumeX className="w-4 h-4 text-gray-400" />
+                           ) : (
+                             <Volume2 className="w-4 h-4 text-gray-700" />
+                           )}
+                         </button>
+                         <Button
+                           onClick={() => toggleAudioLayer('layer1')}
+                           variant={audioLayers[0].audioElement.paused ? "outline" : "default"}
+                           size="sm"
+                           className="rounded-lg"
+                         >
+                           {audioLayers[0].audioElement.paused ? (
+                             <>
+                               <Play className="w-3 h-3 mr-1" />
+                               Play
+                             </>
+                           ) : (
+                             <>
+                               <Pause className="w-3 h-3 mr-1" />
+                               Stop
+                             </>
+                           )}
+                         </Button>
+                       </div>
+                       
+                       {/* Volume Control */}
+                       <div className="space-y-1">
+                         <div className="text-xs font-light text-gray-500">
+                           Volume ({Math.round((audioLayers[0]?.volume || 0) * 100)}%)
+                         </div>
+                         <input
+                           type="range"
+                           min="0"
+                           max="1"
+                           step="0.01"
+                           value={audioLayers[0]?.volume || 0}
+                           onChange={(e) => updateLayerVolume('layer1', parseFloat(e.target.value))}
+                           className="w-full h-1"
+                         />
+                       </div>
+                     </div>
+                   )}
+                 </div>
 
-                    {/* Volume Control */}
-                    {layer.audioElement && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-light text-gray-700">
-                          Volume ({Math.round(layer.volume * 100)}%)
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={layer.volume}
-                          onChange={(e) => updateLayerVolume(layer.id, parseFloat(e.target.value))}
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+                 {/* Quick Presets */}
+                 <div className="space-y-2">
+                   <div className="text-xs font-light text-gray-600">Quick Presets</div>
+                   <select
+                     onChange={(e) => {
+                       const preset = PLANETARY_FREQUENCIES.find(p => p.name === e.target.value);
+                       if (preset) {
+                         updateFrequency('low', preset.hz);
+                         updateFrequency('high', preset.hz + 8); // 8Hz binaural beat
+                       }
+                     }}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                   >
+                     <option value="">Select Preset</option>
+                     {PLANETARY_FREQUENCIES.map((preset) => (
+                       <option key={preset.name} value={preset.name}>
+                         {preset.name}
+                       </option>
+                     ))}
+                   </select>
+                 </div>
+               </div>
 
-            {/* Binaural Beat Info */}
-            {tones.length >= 2 && (
-              <div className="bg-gray-100 rounded-xl p-6">
-                <h3 className="text-sm font-light text-gray-700 mb-2">Binaural Beat</h3>
-                <p className="text-2xl font-light text-gray-900">
-                  {Math.abs(tones[1].frequency - tones[0].frequency).toFixed(2)} Hz
-                </p>
-                <p className="text-xs text-gray-600 font-light mt-2">
-                  Difference between high and low tones
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+               {/* RIGHT: High Tone */}
+               <div className="space-y-4">
+                 <div className="flex items-center justify-center">
+                   <label className="flex items-center space-x-2 cursor-pointer">
+                     <input
+                       type="checkbox"
+                       checked={!tones.find(t => t.id === 'high')?.isMuted}
+                       onChange={() => toggleMute('high')}
+                       className="w-4 h-4 rounded border-gray-300 focus:ring-gray-900"
+                     />
+                     <span className="text-sm font-light text-gray-700">High Tone</span>
+                   </label>
+                 </div>
+
+                 {/* Preset */}
+                 <select
+                   value={tones.find(t => t.id === 'high')?.frequency || 144.10}
+                   onChange={(e) => applyPreset('high', parseFloat(e.target.value))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                 >
+                   <option value={144.10}>Custom ({tones.find(t => t.id === 'high')?.frequency.toFixed(1)} Hz)</option>
+                   {PLANETARY_FREQUENCIES.map((preset) => (
+                     <option key={preset.name} value={preset.hz}>
+                       {preset.name} - {preset.hz} Hz
+                     </option>
+                   ))}
+                 </select>
+
+                 {/* Frequency Input */}
+                 <div className="space-y-1">
+                   <input
+                     type="number"
+                     step="0.1"
+                     min="20"
+                     max="20000"
+                     value={tones.find(t => t.id === 'high')?.frequency || 0}
+                     onChange={(e) => updateFrequency('high', parseFloat(e.target.value) || 0)}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                   />
+                   {tones.find(t => t.id === 'high')?.isPlaying && actualFrequencies['high'] && (
+                     <div className="text-xs text-green-600 font-light text-center">
+                       {actualFrequencies['high'].toFixed(1)} Hz
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Vertical Volume Slider */}
+                 <div className="flex flex-col items-center space-y-2">
+                   <div className="text-xs font-light text-gray-500">
+                     {Math.round((tones.find(t => t.id === 'high')?.volume || 0) * 100)}%
+                   </div>
+                   <input
+                     type="range"
+                     min="0"
+                     max="1"
+                     step="0.01"
+                     value={tones.find(t => t.id === 'high')?.volume || 0}
+                     onChange={(e) => updateVolume('high', parseFloat(e.target.value))}
+                     className="w-6 h-20 slider-vertical"
+                   />
+                 </div>
+               </div>
+             </div>
+
+             {/* Bottom: Single Play/Stop Button */}
+             <div className="mt-6 flex justify-center">
+               <Button
+                 onClick={() => {
+                   const hasPlaying = tones.some(t => t.isPlaying);
+                   if (hasPlaying) {
+                     // Stop all
+                     tones.forEach(tone => {
+                       if (tone.isPlaying) toggleTone(tone.id);
+                     });
+                   } else {
+                     // Play only selected (unmuted) tones
+                     tones.forEach(tone => {
+                       if (!tone.isMuted) toggleTone(tone.id);
+                     });
+                   }
+                 }}
+                 variant={tones.some(t => t.isPlaying) ? "default" : "outline"}
+                 className="rounded-xl px-8"
+               >
+                 {tones.some(t => t.isPlaying) ? (
+                   <>
+                     <Pause className="w-4 h-4 mr-2" />
+                     Stop All
+                   </>
+                 ) : (
+                   <>
+                     <Play className="w-4 h-4 mr-2" />
+                     Play Selected
+                   </>
+                 )}
+               </Button>
+             </div>
+           </div>
+         )}
+
       </div>
     </div>
   );
