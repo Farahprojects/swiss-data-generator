@@ -272,7 +272,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
 
     return {
-      chat_id: contextId, // Always pass the original context (user_id or chat_id)
+      chat_id: reportId || contextId, // Use report_id for insights, contextId for chat/profile flows
       report_id: reportId, // Pass report_id for insights reports
       report_data: reportData,
       email: user?.email || '',

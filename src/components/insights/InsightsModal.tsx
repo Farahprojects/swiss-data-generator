@@ -70,7 +70,6 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
         onSubmit={handleFormSubmit}
         preselectedType={selectedRequest}
         reportType={selectedReportType}
-        contextId={user?.id}
         isProfileFlow={false}
       />
     );
