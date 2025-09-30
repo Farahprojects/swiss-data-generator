@@ -476,7 +476,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           
           
           {/* Insight Reports section */}
-          {userReports.length > 0 && (
+          {(userReports.length > 0 || isLoadingReports) && (
             <>
               {/* Dark gray line separator */}
               <div className="border-t border-gray-400 my-3"></div>
@@ -485,66 +485,84 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <div className="space-y-1">
                 <div className="text-xs text-gray-600 font-medium px-3 py-1">Insight Reports</div>
                 <div className="space-y-1">
-                  {userReports.map((report) => (
-                    <div
-                      key={report.id}
-                      className="relative group"
-                      onMouseEnter={() => setHoveredThread(report.id)}
-                      onMouseLeave={() => setHoveredThread(null)}
-                    >
-                      <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                        <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                        <div 
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => openReportModal(report.id)}
-                        >
-                          <div className="text-sm font-medium text-gray-900 truncate">
-                            {formatReportType(report.report_type)}
+                  {isLoadingReports ? (
+                    <>
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index} className="p-2 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="h-4 bg-gray-200 rounded animate-pulse mb-1"></div>
+                              <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2"></div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500 flex-shrink-0">
-                          {formatReportDate(report.created_at)}
-                        </div>
-                        
-                        {/* Three dots menu */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button 
-                              className="p-1 hover:bg-gray-200 rounded transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
-                            <DropdownMenuItem
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {userReports.map((report) => (
+                        <div
+                          key={report.id}
+                          className="relative group"
+                          onMouseEnter={() => setHoveredThread(report.id)}
+                          onMouseLeave={() => setHoveredThread(null)}
+                        >
+                          <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                            <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                            <div 
+                              className="flex-1 min-w-0 cursor-pointer"
                               onClick={() => openReportModal(report.id)}
-                              className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                             >
-                              Astro
-                            </DropdownMenuItem>
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {formatReportType(report.report_type)}
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 flex-shrink-0">
+                              {formatReportDate(report.created_at)}
+                            </div>
                             
-                            <DropdownMenuItem
-                              onClick={() => handleEditTitle(report.id, formatReportType(report.report_type))}
-                              className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                            >
-                              Edit
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setConversationToDelete(report.id);
-                                setShowDeleteConfirm(true);
-                              }}
-                              className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
+                            {/* Three dots menu */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button 
+                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
+                                <DropdownMenuItem
+                                  onClick={() => openReportModal(report.id)}
+                                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                                >
+                                  Astro
+                                </DropdownMenuItem>
+                                
+                                <DropdownMenuItem
+                                  onClick={() => handleEditTitle(report.id, formatReportType(report.report_type))}
+                                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                                >
+                                  Edit
+                                </DropdownMenuItem>
+                                
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setConversationToDelete(report.id);
+                                    setShowDeleteConfirm(true);
+                                  }}
+                                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             </>
@@ -556,7 +574,21 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Chat history section */}
           <div className="space-y-1">
             <div className="text-xs text-gray-600 font-medium px-3 py-1">{uiConfig.threadSectionLabel}</div>
-            {threads.length === 0 ? (
+            {isLoadingThreads ? (
+              // Loading skeleton
+              <div className="space-y-1">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="p-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-1"></div>
+                        <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : threads.length === 0 ? (
               <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
             ) : (
               <div className="space-y-1">

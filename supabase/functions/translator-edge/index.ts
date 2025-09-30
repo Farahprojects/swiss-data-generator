@@ -313,13 +313,13 @@ serve(async (req)=>{
       console.log(`[translator-edge-${reqId}] Skipping context-injector - reportType provided: ${parsed.reportType}`);
     }
 
-    // Call report-orchestrator for essence_personal reports (fire-and-forget)
-    if (body.user_id && swiss.ok && parsed.reportType === 'essence_personal') {
-      console.log(`[translator-edge-${reqId}] Calling report-orchestrator for essence_personal report`);
+    // Call report-orchestrator for all insight reports (fire-and-forget)
+    if (body.user_id && swiss.ok && parsed.reportType && (parsed.reportType.startsWith('essence_') || parsed.reportType.startsWith('sync_'))) {
+      console.log(`[translator-edge-${reqId}] Calling report-orchestrator for ${parsed.reportType} report`);
       try {
         const orchestratorPayload = {
           endpoint: 'profile',
-          report_type: 'essence_personal',
+          report_type: parsed.reportType,
           user_id: body.user_id,
           chartData: swissData,
           is_guest: false

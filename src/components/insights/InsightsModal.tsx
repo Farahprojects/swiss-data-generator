@@ -62,19 +62,6 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
     setShowAstroForm(false);
   };
 
-  // Show AstroDataForm if a report type is selected
-  if (showAstroForm) {
-    return (
-      <AstroDataForm
-        onClose={handleFormClose}
-        onSubmit={handleFormSubmit}
-        preselectedType={selectedRequest}
-        reportType={selectedReportType}
-        isProfileFlow={false}
-      />
-    );
-  }
-
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
@@ -94,80 +81,92 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[60vh]">
-          <div className="space-y-3">
-            {/* Solo Reports */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 uppercase tracking-wide">
-                Personal Reports
-              </h3>
-              <div className="space-y-2">
-                <ReportCard
-                  title="Personal"
-                  description="Deep dive into your personality, strengths, and life patterns based on your birth chart."
-                  icon={<User className="w-6 h-6" />}
-                  isDualPerson={false}
-                  onClick={() => handleReportClick('essence_personal', 'essence')}
-                />
-                
-                <ReportCard
-                  title="Professional"
-                  description="Career guidance and professional development insights tailored to your astrological profile."
-                  icon={<Briefcase className="w-6 h-6" />}
-                  isDualPerson={false}
-                  onClick={() => handleReportClick('essence_professional', 'essence')}
-                />
-                
-                <ReportCard
-                  title="Relationship"
-                  description="Understanding your relationship patterns, love language, and romantic compatibility."
-                  icon={<Heart className="w-6 h-6" />}
-                  isDualPerson={false}
-                  onClick={() => handleReportClick('essence_relationship', 'essence')}
-                />
-              </div>
-            </div>
-
-            {/* Dual Reports */}
-            <div className="pt-2">
-              <h3 className="text-sm font-medium text-gray-700 mb-2 uppercase tracking-wide">
-                Comparative Reports
-              </h3>
-              <div className="space-y-2">
-                <ReportCard
-                  title="Compatibility"
-                  description="Analyze romantic compatibility, communication styles, and relationship dynamics between two people."
-                  icon={<Users className="w-6 h-6" />}
-                  isDualPerson={true}
-                  onClick={() => handleReportClick('sync_personal', 'sync')}
-                />
-                
-                <ReportCard
-                  title="Co-working"
-                  description="Team dynamics, collaboration styles, and professional synergy between colleagues or partners."
-                  icon={<Users2 className="w-6 h-6" />}
-                  isDualPerson={true}
-                  onClick={() => handleReportClick('sync_professional', 'sync')}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 pt-4 border-t border-gray-100">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
-                  <UserCheck className="w-3 h-3 text-gray-500" />
-                </div>
+          {showAstroForm ? (
+            <AstroDataForm
+              onClose={handleFormClose}
+              onSubmit={handleFormSubmit}
+              preselectedType={selectedRequest}
+              reportType={selectedReportType}
+              isProfileFlow={false}
+            />
+          ) : (
+            <>
+              <div className="space-y-3">
+                {/* Solo Reports */}
                 <div>
-                  <h4 className="text-xs font-medium text-gray-900 mb-0.5">Need help getting started?</h4>
-                  <p className="text-xs text-gray-600 leading-snug">
-                    Each report requires your birth information. For comparative reports, you'll need birth details for both people.
-                  </p>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 uppercase tracking-wide">
+                    Personal Reports
+                  </h3>
+                  <div className="space-y-2">
+                    <ReportCard
+                      title="Personal"
+                      description="Deep dive into your personality, strengths, and life patterns based on your birth chart."
+                      icon={<User className="w-6 h-6" />}
+                      isDualPerson={false}
+                      onClick={() => handleReportClick('essence_personal', 'essence')}
+                    />
+                    
+                    <ReportCard
+                      title="Professional"
+                      description="Career guidance and professional development insights tailored to your astrological profile."
+                      icon={<Briefcase className="w-6 h-6" />}
+                      isDualPerson={false}
+                      onClick={() => handleReportClick('essence_professional', 'essence')}
+                    />
+                    
+                    <ReportCard
+                      title="Relationship"
+                      description="Understanding your relationship patterns, love language, and romantic compatibility."
+                      icon={<Heart className="w-6 h-6" />}
+                      isDualPerson={false}
+                      onClick={() => handleReportClick('essence_relationship', 'essence')}
+                    />
+                  </div>
+                </div>
+
+                {/* Dual Reports */}
+                <div className="pt-2">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 uppercase tracking-wide">
+                    Comparative Reports
+                  </h3>
+                  <div className="space-y-2">
+                    <ReportCard
+                      title="Compatibility"
+                      description="Analyze romantic compatibility, communication styles, and relationship dynamics between two people."
+                      icon={<Users className="w-6 h-6" />}
+                      isDualPerson={true}
+                      onClick={() => handleReportClick('sync_personal', 'sync')}
+                    />
+                    
+                    <ReportCard
+                      title="Co-working"
+                      description="Team dynamics, collaboration styles, and professional synergy between colleagues or partners."
+                      icon={<Users2 className="w-6 h-6" />}
+                      isDualPerson={true}
+                      onClick={() => handleReportClick('sync_professional', 'sync')}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
+                      <UserCheck className="w-3 h-3 text-gray-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-900 mb-0.5">Need help getting started?</h4>
+                      <p className="text-xs text-gray-600 leading-snug">
+                        Each report requires your birth information. For comparative reports, you'll need birth details for both people.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
