@@ -253,14 +253,65 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
     if (isAuthenticated && conversationToDelete) {
-      // Authenticated user: Delete specific conversation (fire-and-forget)
-      // Update UI immediately, don't wait for API call
-      removeThread(conversationToDelete).catch((error) => {
-        console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
-      });
+      // Check if this is an insight report (exists in userReports)
+      const isInsightReport = userReports.some(r => r.id === conversationToDelete);
       
-      // Navigate back to /therai after deletion (clean React navigation)
-      navigate('/therai', { replace: true });
+      if (isInsightReport) {
+        // Delete insight report - cascade will handle related records
+        try {
+          // Delete from insights table (report_id)
+          // This should cascade to related records if FK constraints are set up
+          const { error: insightsError } = await supabase
+            .from('insights')
+            .delete()
+            .eq('id', conversationToDelete);
+          
+          if (insightsError) {
+            console.error('[ChatThreadsSidebar] Failed to delete from insights:', insightsError);
+          }
+          
+          // Also delete from report_logs where user_id = report_id
+          const { error: reportLogsError } = await supabase
+            .from('report_logs')
+            .delete()
+            .eq('user_id', conversationToDelete);
+          
+          if (reportLogsError) {
+            console.error('[ChatThreadsSidebar] Failed to delete from report_logs:', reportLogsError);
+          }
+          
+          // Also delete from translator_logs where user_id = report_id
+          const { error: translatorLogsError } = await supabase
+            .from('translator_logs')
+            .delete()
+            .eq('user_id', conversationToDelete);
+          
+          if (translatorLogsError) {
+            console.error('[ChatThreadsSidebar] Failed to delete from translator_logs:', translatorLogsError);
+          }
+          
+          // Update UI immediately - remove from userReports
+          setUserReports(prev => prev.filter(r => r.id !== conversationToDelete));
+          setShowDeleteConfirm(false);
+          setConversationToDelete(null);
+          
+          // Also refresh from DB to ensure sync
+          if (user?.id) {
+            fetchUserReports(user.id);
+          }
+        } catch (error) {
+          console.error('[ChatThreadsSidebar] Error deleting insight report:', error);
+        }
+      } else {
+        // Regular conversation: Delete specific conversation (fire-and-forget)
+        // Update UI immediately, don't wait for API call
+        removeThread(conversationToDelete).catch((error) => {
+          console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
+        });
+        
+        // Navigate back to /therai after deletion (clean React navigation)
+        navigate('/therai', { replace: true });
+      }
     } else {
       // Unauthenticated user: Clear session and redirect to main page for clean slate
       try {
@@ -442,17 +493,60 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   {userReports.map((report) => (
                     <div
                       key={report.id}
-                      onClick={() => openReportModal(report.id)}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                      className="relative group"
+                      onMouseEnter={() => setHoveredThread(report.id)}
+                      onMouseLeave={() => setHoveredThread(null)}
                     >
-                      <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {formatReportType(report.report_type)}
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => openReportModal(report.id)}
+                        >
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {formatReportType(report.report_type)}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-xs text-gray-500 flex-shrink-0">
-                        {formatReportDate(report.created_at)}
+                        <div className="text-xs text-gray-500 flex-shrink-0">
+                          {formatReportDate(report.created_at)}
+                        </div>
+                        
+                        {/* Three dots menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button 
+                              className="p-1 hover:bg-gray-200 rounded transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
+                            <DropdownMenuItem
+                              onClick={() => openReportModal(report.id)}
+                              className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                            >
+                              Astro
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem
+                              onClick={() => handleEditTitle(report.id, formatReportType(report.report_type))}
+                              className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setConversationToDelete(report.id);
+                                setShowDeleteConfirm(true);
+                              }}
+                              className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
