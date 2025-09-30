@@ -1,10 +1,10 @@
 // src/integrations/supabase/config.ts
 
 // Centralized Supabase configuration
-// Uses environment variables
+// Uses environment variables with hardcoded fallback for URL only
 
 // Get environment variables
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://api.therai.co";
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Validation helper
