@@ -151,12 +151,10 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[85%] sm:max-w-xs p-0">
                   <div className="h-full flex flex-col bg-gray-50/50">
-                    <div className="p-4 h-full flex flex-col">
-                      <div className="flex-1">
-                        <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                          <ChatSidebarControls onDelete={onDelete} />
-                        </Suspense>
-                      </div>
+                    <div className="p-4 flex flex-col h-full">
+                      <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                        <ChatSidebarControls onDelete={onDelete} />
+                      </Suspense>
                     </div>
                   </div>
                 </SheetContent>
