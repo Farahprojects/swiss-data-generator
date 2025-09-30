@@ -68,8 +68,8 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
-  // Current active chat
-  chat_id: null,
+  // Current active chat (try to restore from cache for instant UI)
+  chat_id: typeof window !== 'undefined' ? localStorage.getItem('last_chat_id') : null,
   // Messages moved to useMessageStore - single source of truth
   status: 'idle',
   error: null,
@@ -100,6 +100,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       isAssistantTyping: false
     });
     
+    // Cache chat_id for instant UI on refresh
+    if (id) {
+      localStorage.setItem('last_chat_id', id);
+    }
   },
 
   startNewConversation: async (user_id?: string) => {
@@ -180,6 +184,8 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       isPaymentFlowStopIcon: false
     });
     
+    // Clear cached chat_id
+    localStorage.removeItem('last_chat_id');
   },
 
   clearAllData: () => {
