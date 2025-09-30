@@ -94,21 +94,23 @@ serve(async (req) => {
       console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB - message_number: ${nextMessageNumber}`);
       
       // Fire-and-forget: Save assistant message to database
-      (async () => {
-        try {
-          const { data: insertData, error: assistantError } = await supabase
-            .from("messages")
-            .insert(assistantMessageData);
-          
+      supabase
+        .from("messages")
+        .insert(assistantMessageData, {
+          onConflict: "client_msg_id",
+          ignoreDuplicates: true,
+          returning: "minimal"
+        })
+        .then(({ data: insertData, error: assistantError }) => {
           if (assistantError) {
             console.error('[chat-send] ❌ FAILED TO SAVE ASSISTANT MESSAGE:', assistantError);
           } else {
             console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, insertData);
           }
-        } catch (err: any) {
+        })
+        .catch((err) => {
           console.error('[chat-send] ❌ ASSISTANT MESSAGE SAVE ERROR:', err);
-        }
-      })();
+        });
       return new Response(JSON.stringify({
         message: "Assistant message saved successfully",
         assistant_message: assistantMessageData
@@ -134,21 +136,23 @@ serve(async (req) => {
     console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB - message_number: ${nextMessageNumber}`);
     
     // Fire-and-forget: Save user message to database
-    (async () => {
-      try {
-        const { data: userInsertData, error: userError } = await supabase
-          .from("messages")
-          .insert(userMessageData);
-        
+    supabase
+      .from("messages")
+      .insert(userMessageData, {
+        onConflict: "client_msg_id",
+        ignoreDuplicates: true,
+        returning: "minimal"
+      })
+      .then(({ data: userInsertData, error: userError }) => {
         if (userError) {
           console.error('[chat-send] ❌ FAILED TO SAVE USER MESSAGE:', userError);
         } else {
           console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, userInsertData);
         }
-      } catch (err: any) {
+      })
+      .catch((err) => {
         console.error('[chat-send] ❌ USER MESSAGE SAVE ERROR:', err);
-      }
-    })();
+      });
 
     // For voice mode, just save user message (STT handles LLM call separately)
     if (chattype === 'voice') {
@@ -190,9 +194,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
-  } catch (error: any) {
+  } catch (error) {
     return new Response(JSON.stringify({
-      error: error?.message || 'Unknown error'
+      error: error.message
     }), {
       status: 500,
       headers: {

@@ -68,10 +68,10 @@ serve(async (req) => {
     let subscriptionData = {
       subscription_active: false,
       subscription_status: "inactive",
-      subscription_plan: null as string | null,
-      subscription_start_date: null as string | null,
-      subscription_next_charge: null as string | null,
-      stripe_subscription_id: null as string | null,
+      subscription_plan: null,
+      subscription_start_date: null,
+      subscription_next_charge: null,
+      stripe_subscription_id: null,
       last_payment_status: "inactive",
     };
 
@@ -128,9 +128,9 @@ serve(async (req) => {
       status: 200,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error checking subscription:", error);
-    return new Response(JSON.stringify({ error: error?.message || 'Unknown error' }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
