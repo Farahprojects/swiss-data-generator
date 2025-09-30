@@ -137,70 +137,10 @@ export function useUserPreferences() {
       }
     };
 
-    const setupRealtimeListener = () => {
-      if (!user?.id) return;
-
-      try {
-        channelRef.current = supabase
-          .channel("user_preferences_changes")
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "user_preferences",
-              filter: `user_id=eq.${user.id}`,
-            },
-            (payload) => {
-              // Skip real-time updates if we're in the middle of saving or if the component is unmounted
-              if (!isMounted() || saving) {
-                return;
-              }
-              
-              // Skip real-time updates that arrive within 2 seconds of a user change
-              const now = Date.now();
-              if (now - lastUpdateTimestampRef.current < 2000) {
-                return;
-              }
-
-              const incoming = payload.new as UserPreferences;
-              
-              // Check if the update matches any of our pending changes
-              let isRedundantUpdate = false;
-              pendingChangesRef.current.forEach((value, key) => {
-                if (incoming[key as keyof UserPreferences] === value) {
-                  isRedundantUpdate = true;
-                  pendingChangesRef.current.delete(key);
-                }
-              });
-              
-              // Skip if this update is redundant (matches our pending change)
-              if (isRedundantUpdate) {
-                return;
-              }
-
-              if (
-                payload.eventType === "UPDATE" ||
-                payload.eventType === "INSERT"
-              ) {
-                setPreferences(incoming);
-              } else if (payload.eventType === "DELETE") {
-                setPreferences(null);
-              }
-            }
-          )
-          .subscribe((status) => {
-            if (status !== "SUBSCRIBED") {
-              console.error("Failed to subscribe to real-time updates:", status);
-            }
-          });
-      } catch (err: any) {
-        console.error("Error setting up real-time listener:", err);
-      }
-    };
-
+    // Removed realtime listener - user_preferences broadcasts are disabled
+    // Preferences are loaded once on mount and saved optimistically
+    
     loadUserPreferences();
-    setupRealtimeListener();
 
     return () => {
       isMountedRef.current = false;
@@ -212,9 +152,7 @@ export function useUserPreferences() {
         retryTimeoutRef.current = null;
       }
       
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
+      // No channel cleanup needed - realtime listener removed
     };
   }, [user, toast, isMounted, retryCount]);
 
