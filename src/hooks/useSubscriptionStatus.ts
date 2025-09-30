@@ -32,44 +32,15 @@ export function useSubscriptionStatus() {
       return;
     }
 
-    try {
-      setSubscriptionStatus(prev => ({ ...prev, loading: true, error: null }));
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_plan, subscription_status, subscription_active')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching subscription status:', error);
-        setSubscriptionStatus(prev => ({
-          ...prev,
-          loading: false,
-          error: error.message
-        }));
-        return;
-      }
-
-      const isActive = data?.subscription_active === true && 
-                      data?.subscription_status === 'active';
-
-      setSubscriptionStatus({
-        isActive,
-        plan: data?.subscription_plan || null,
-        status: data?.subscription_status || null,
-        loading: false,
-        error: null
-      });
-
-    } catch (err) {
-      console.error('Subscription status check failed:', err);
-      setSubscriptionStatus(prev => ({
-        ...prev,
-        loading: false,
-        error: err instanceof Error ? err.message : 'Failed to check subscription status'
-      }));
-    }
+    // Temporarily disabled - will implement smarter caching later
+    // For now, assume all authenticated users have active subscriptions
+    setSubscriptionStatus({
+      isActive: true,
+      plan: 'active',
+      status: 'active',
+      loading: false,
+      error: null
+    });
   }, [user]);
 
   // Check subscription status on mount and when user changes
