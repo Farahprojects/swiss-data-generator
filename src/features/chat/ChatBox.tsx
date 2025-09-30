@@ -120,14 +120,11 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
       >
         <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0 mobile-chat-container" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any }}>
           {/* Left Sidebar (Desktop) */}
-          <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
-            <div className="p-4 h-full flex flex-col">
-              
-              <div className="flex-1">
-                <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                  <ChatSidebarControls onDelete={onDelete} />
-                </Suspense>
-              </div>
+          <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50 h-full">
+            <div className="p-4 flex flex-col h-full">
+              <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                <ChatSidebarControls onDelete={onDelete} />
+              </Suspense>
             </div>
           </div>
 

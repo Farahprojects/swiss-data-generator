@@ -21,7 +21,7 @@ const ChatContainerContent: React.FC = () => {
   
 
   return (
-    <div className="flex min-h-screen pb-safe" style={{ contain: 'size', overscrollBehavior: 'contain' as any }}>
+    <div className="flex h-screen pb-safe" style={{ contain: 'size', overscrollBehavior: 'contain' as any }}>
       <ReportModalProvider>
         <MobileViewportLock active={false}>
           <ChatBox />

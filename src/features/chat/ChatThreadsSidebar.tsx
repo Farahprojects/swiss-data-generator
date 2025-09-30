@@ -390,8 +390,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   return (
     <div className={cn("w-full h-full flex flex-col", className)}>
 
-      {/* Scrollable middle section */}
-      <div className="flex-1 overflow-auto">
+      {/* Scrollable middle section - only threads scroll */}
+      <div className="flex-1 overflow-y-auto min-h-0">
 
       {/* Thread history for authenticated users */}
       {isAuthenticated && uiConfig.showThreadHistory && (
@@ -556,8 +556,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
       </div>
 
-      {/* Clean Footer - No Lines */}
-      <div className="mt-auto pt-6">
+      {/* Clean Footer - Sticky at bottom */}
+      <div className="mt-auto pt-4 px-3 shrink-0">
         {isAuthenticated ? (
           /* Authenticated User - Settings Menu */
           <div className="space-y-2">
