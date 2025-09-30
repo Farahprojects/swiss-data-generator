@@ -151,6 +151,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       const setupReportListener = async () => {
         try {
           // Initialize the WebSocket service with report completion callback
+          // (Actual subscription happens when form is submitted)
           await unifiedWebSocketService.initializeCallbacks({
             onReportCompleted: (reportData: any) => {
               console.log('[ChatThreadsSidebar] Report completed!', reportData);
@@ -160,9 +161,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               }
             }
           });
-          
-          const channel = await unifiedWebSocketService.subscribeToUserReports(user.id);
-          setReportChannel(channel);
         } catch (error) {
           console.error('[ChatThreadsSidebar] Failed to setup report listener:', error);
         }
