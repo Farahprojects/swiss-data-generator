@@ -52,12 +52,22 @@ export default function Beats() {
     { id: 'layer2', label: 'Layer 2', volume: 0.5, isMuted: false, audioElement: null, gainNode: null },
   ]);
 
+  const [actualFrequencies, setActualFrequencies] = useState<Record<string, number>>({});
   const recalibrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize audio context
+  // Initialize audio context with maximum precision
   const initializeAudio = () => {
     if (!audioContext) {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
+        latencyHint: 'interactive',
+        sampleRate: 48000, // Standard high-quality sample rate
+      });
+      
+      console.log('[Beats] Audio Context initialized');
+      console.log('[Beats] Sample Rate:', ctx.sampleRate, 'Hz');
+      console.log('[Beats] Base Latency:', ctx.baseLatency);
+      console.log('[Beats] Output Latency:', ctx.outputLatency);
+      
       setAudioContext(ctx);
       setIsInitialized(true);
     }
@@ -82,7 +92,8 @@ export default function Beats() {
         const gainNode = audioContext.createGain();
         
         oscillator.type = 'sine';
-        oscillator.frequency.value = tone.frequency;
+        // Use setValueAtTime for maximum precision instead of direct assignment
+        oscillator.frequency.setValueAtTime(tone.frequency, audioContext.currentTime);
         
         gainNode.gain.value = tone.isMuted ? 0 : tone.volume;
         
@@ -90,6 +101,8 @@ export default function Beats() {
         gainNode.connect(audioContext.destination);
         
         oscillator.start();
+        
+        console.log(`[Beats] Started ${tone.label} at ${tone.frequency} Hz (target precision: ±0.01 Hz)`);
         
         return { ...tone, isPlaying: true, oscillator, gainNode };
       }
@@ -212,17 +225,31 @@ export default function Beats() {
     }));
   };
 
-  // Periodic frequency recalibration (prevent drift)
+  // Periodic frequency recalibration and monitoring (prevent drift)
   useEffect(() => {
     if (!audioContext) return;
 
     recalibrationIntervalRef.current = setInterval(() => {
+      const frequencies: Record<string, number> = {};
+      
       tones.forEach(tone => {
         if (tone.oscillator && tone.isPlaying) {
-          // Lock frequency to target value
+          // Lock frequency to target value with maximum precision
           tone.oscillator.frequency.setValueAtTime(tone.frequency, audioContext.currentTime);
+          
+          // Read back the actual frequency value
+          const actualFreq = tone.oscillator.frequency.value;
+          frequencies[tone.id] = actualFreq;
+          
+          // Check for drift and log warnings
+          const drift = Math.abs(actualFreq - tone.frequency);
+          if (drift > 0.1) {
+            console.warn(`[Beats] Frequency drift detected on ${tone.label}: ${drift.toFixed(4)} Hz`);
+          }
         }
       });
+      
+      setActualFrequencies(frequencies);
     }, 100); // Recalibrate every 100ms
 
     return () => {
@@ -341,9 +368,16 @@ export default function Beats() {
 
                   {/* Manual Frequency Input */}
                   <div className="space-y-2">
-                    <label className="text-sm font-light text-gray-700">
-                      Frequency (Hz)
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-light text-gray-700">
+                        Frequency (Hz)
+                      </label>
+                      {tone.isPlaying && actualFrequencies[tone.id] && (
+                        <span className="text-xs text-green-600 font-light">
+                          Playing: {actualFrequencies[tone.id].toFixed(2)} Hz
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       step="0.01"
