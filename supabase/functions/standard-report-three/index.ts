@@ -266,6 +266,25 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
         report_type: reportData.reportType || reportData.report_type
       });
   });
+
+  // Fire-and-forget insights table update - mark as ready
+  // For insights reports, user_id contains the report_id (from insights table)
+  if (reportData.user_id) {
+    supabase.from("insights")
+      .update({ 
+        is_ready: true,
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', reportData.user_id) // user_id = report_id for insights
+      .then(null, (error) => {
+        console.error(`${logPrefix} Insights update failed:`, {
+          error: error,
+          report_id: reportData.user_id,
+          report_type: reportData.reportType || reportData.report_type
+        });
+      });
+  }
 }
 
 // Main handler function

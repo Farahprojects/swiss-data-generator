@@ -126,7 +126,7 @@ class UnifiedWebSocketService {
 
   /**
    * Subscribe to a specific report by report_id
-   * Listens to the report_logs table for when a report is completed and logged
+   * Listens to the insights table for when a report is marked as ready
    */
   async subscribeToReport(report_id: string) {
     console.log('[UnifiedWebSocket] Subscribing to report:', report_id);
@@ -136,22 +136,22 @@ class UnifiedWebSocketService {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'report_logs',
-          filter: `user_id=eq.${report_id}` // Listen for inserts where user_id = report_id
+          table: 'insights',
+          filter: `id=eq.${report_id}` // Listen for updates to this specific insight
         },
         (payload) => {
-          console.log('[UnifiedWebSocket] Report log insert received:', payload);
+          console.log('[UnifiedWebSocket] Insight update received:', payload);
           
-          const reportLog = payload.new;
+          const insight = payload.new;
           
-          // Check if this is a successful report completion
-          if (reportLog.status === 'success') {
-            console.log('[UnifiedWebSocket] Report completed!', reportLog.report_type);
+          // Check if the insight is marked as ready
+          if (insight.is_ready === true) {
+            console.log('[UnifiedWebSocket] Report completed!', insight.report_type);
             
             if (this.onReportCompleted && typeof this.onReportCompleted === 'function') {
-              this.onReportCompleted(reportLog);
+              this.onReportCompleted(insight);
             }
           }
         }
