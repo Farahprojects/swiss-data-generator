@@ -132,13 +132,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       const data = await response.json();
       console.log('[AstroDataForm] Created insight report ID:', data.report_id);
       setReportId(data.report_id);
-      
-      // Subscribe to this specific report_id for completion notifications
-      if (data.report_id) {
-        console.log('[AstroDataForm] Subscribing to report WebSocket:', data.report_id);
-        await unifiedWebSocketService.subscribeToReport(data.report_id);
-      }
-      
       return data.report_id;
     } catch (error) {
       console.error('[AstroDataForm] Error creating report ID:', error);
@@ -183,6 +176,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         chatController.initializeConversation(currentChatId);
       }
 
+      // Subscribe to WebSocket for report completion if we have a report_id
+      if (reportId) {
+        console.log('[AstroDataForm] Subscribing to report WebSocket:', reportId);
+        await unifiedWebSocketService.subscribeToReport(reportId);
+      }
+      
       // Build payload for initiate-auth-report
       const payload = buildAuthReportPayload(data, finalContextId);
       
