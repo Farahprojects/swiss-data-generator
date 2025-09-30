@@ -1,21 +1,19 @@
 // src/integrations/supabase/config.ts
 
 // Centralized Supabase configuration
-// Uses environment variables with robust validation
+// Hardcoded values first, env as fallback
 
-// Get environment variables with hardcoded fallbacks
+// Hardcoded values (primary)
+const SUPABASE_URL_HARDCODED = "https://api.therai.co";
+const SUPABASE_ANON_KEY_HARDCODED = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3F0ZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+// Environment variables (fallback only)
 const SUPABASE_URL_ENV = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY_ENV = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Hardcoded fallbacks for preview environments
-const SUPABASE_URL_FALLBACK = "https://api.therai.co";
-const SUPABASE_URL_FALLBACK_ALT = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-const SUPABASE_ANON_KEY_FALLBACK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3F0ZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-
-// Use environment variables if available, otherwise use hardcoded fallbacks
-// Try custom domain first, then fallback to original Supabase URL
-export const SUPABASE_URL = SUPABASE_URL_ENV || SUPABASE_URL_FALLBACK_ALT || SUPABASE_URL_FALLBACK;
-export const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_ENV || SUPABASE_ANON_KEY_FALLBACK;
+// Use hardcoded values first, env as fallback
+export const SUPABASE_URL = SUPABASE_URL_HARDCODED || SUPABASE_URL_ENV;
+export const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_HARDCODED || SUPABASE_ANON_KEY_ENV;
 
 // Validation helper
 export const isSupabaseConfigured = (): boolean => {
