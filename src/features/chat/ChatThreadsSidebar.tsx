@@ -298,11 +298,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
     if (isAuthenticated && conversationToDelete) {
-      // Check if this is an insight report (exists in userReports)
+      // Check if this is an insight report (exists in userReports - Insight Reports section)
       const isInsightReport = userReports.some(r => r.id === conversationToDelete);
       
       if (isInsightReport) {
-        // Delete insight report from all tables
+        // DELETE FROM INSIGHT REPORTS SECTION: Delete insight report from all tables
         try {
           // Delete from insights table (report_id)
           const { error: insightsError } = await supabase
@@ -347,14 +347,60 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           console.error('[ChatThreadsSidebar] Error deleting insight report:', error);
         }
       } else {
-        // Regular conversation: Delete specific conversation (fire-and-forget)
-        // Update UI immediately, don't wait for API call
-        removeThread(conversationToDelete).catch((error) => {
-          console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
-        });
-        
-        // Navigate back to /therai after deletion (clean React navigation)
-        navigate('/therai', { replace: true });
+        // DELETE FROM CHAT HISTORY SECTION: Check if it's an insight chat thread or regular chat
+        try {
+          // Get conversation details to check if it's an insight chat thread
+          const { data: conversation, error: convError } = await supabase
+            .from('conversations')
+            .select('id, meta')
+            .eq('id', conversationToDelete)
+            .single();
+
+          if (convError) {
+            console.error('[ChatThreadsSidebar] Failed to get conversation details:', convError);
+            return;
+          }
+
+          const isInsightChatThread = (conversation?.meta as any)?.type === 'insight_chat';
+
+          if (isInsightChatThread) {
+            // DELETE INSIGHT CHAT THREAD: Only delete from conversations and messages tables
+            console.log('[ChatThreadsSidebar] Deleting insight chat thread (conversations + messages only)');
+            
+            // Delete from conversations table (this will cascade to messages due to foreign key)
+            const { error: convDeleteError } = await supabase
+              .from('conversations')
+              .delete()
+              .eq('id', conversationToDelete);
+            
+            if (convDeleteError) {
+              console.error('[ChatThreadsSidebar] Failed to delete insight chat thread:', convDeleteError);
+            }
+          } else {
+            // DELETE REGULAR CHAT THREAD: Delete from conversations and messages tables
+            console.log('[ChatThreadsSidebar] Deleting regular chat thread (conversations + messages only)');
+            
+            // Delete from conversations table (this will cascade to messages due to foreign key)
+            const { error: convDeleteError } = await supabase
+              .from('conversations')
+              .delete()
+              .eq('id', conversationToDelete);
+            
+            if (convDeleteError) {
+              console.error('[ChatThreadsSidebar] Failed to delete regular chat thread:', convDeleteError);
+            }
+          }
+
+          // Update UI immediately for both insight chat threads and regular chats
+          removeThread(conversationToDelete).catch((error) => {
+            console.error('[ChatThreadsSidebar] Failed to remove thread from local state:', error);
+          });
+          
+          // Navigate back to /therai after deletion (clean React navigation)
+          navigate('/therai', { replace: true });
+        } catch (error) {
+          console.error('[ChatThreadsSidebar] Error deleting chat thread:', error);
+        }
       }
     } else {
       // Unauthenticated user: Clear session and redirect to main page for clean slate
