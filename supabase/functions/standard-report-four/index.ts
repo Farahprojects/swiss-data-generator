@@ -257,27 +257,33 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
     duration_ms: durationMs,
     engine_used: selectedEngine,
     metadata: metadata,
-    is_guest: reportData.is_guest || false,
     created_at: new Date().toISOString(),
   })
   .then(null, (error) => {
       console.error(`${logPrefix} Report log insert failed:`, {
         error: error,
         user_id: reportData.user_id,
-        is_guest: reportData.is_guest,
         report_type: reportData.reportType || reportData.report_type
       });
   });
-  
-  // Fire-and-forget report_ready_signals insert for guest reports
-  if (reportData.is_guest && reportData.user_id) {
-    supabase.from('report_ready_signals').insert({
-      guest_report_id: reportData.user_id,
-      is_ai_report: true,
-    }, { returning: 'minimal' })
-    .then(null, (error) => {
-        console.error(`${logPrefix} Signal insert failed:`, error)
-    });
+
+  // Fire-and-forget insights table update - mark as ready
+  // For insights reports, user_id contains the report_id (from insights table)
+  if (reportData.user_id) {
+    supabase.from("insights")
+      .update({ 
+        is_ready: true,
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', reportData.user_id) // user_id = report_id for insights
+      .then(null, (error) => {
+        console.error(`${logPrefix} Insights update failed:`, {
+          error: error,
+          report_id: reportData.user_id,
+          report_type: reportData.reportType || reportData.report_type
+        });
+      });
   }
 }
 
@@ -378,7 +384,7 @@ serve(async (req) => {
       status: "error",
       error_message: errorMessage,
       duration_ms: durationMs,
-      engine_used: reportData?.selectedEngine || "standard-report-for",
+      engine_used: reportData?.selectedEngine || "standard-report-four",
       created_at: new Date().toISOString(),
     })
     .then(() => console.log(`${logPrefix} Logged error to report_logs.`))
