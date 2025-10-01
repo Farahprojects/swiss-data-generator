@@ -246,6 +246,55 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     navigate(`/c/${conversationId}`, { replace: true });
   };
 
+  // Handle clicking on insight report - create or navigate to dedicated chat thread
+  const handleInsightClick = async (reportId: string, reportType: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // Check if insight chat thread already exists
+      const { data: existingChat } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', reportId) // Use reportId as chat_id
+        .single();
+
+      if (existingChat) {
+        // Navigate to existing insight chat thread
+        await handleSwitchToChat(reportId);
+      } else {
+        // Create new insight chat thread using reportId as chat_id
+        const { error } = await supabase
+          .from('conversations')
+          .insert({
+            id: reportId, // Use report_id as chat_id
+            user_id: user.id,
+            title: `${formatReportType(reportType)} - Discussion`,
+            metadata: {
+              type: 'insight_chat',
+              insight_report_id: reportId,
+              parent_report_type: reportType
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('[ChatThreadsSidebar] Failed to create insight chat thread:', error);
+          return;
+        }
+
+        // Refresh threads to include the new insight chat
+        const { loadThreads } = useChatStore.getState();
+        await loadThreads();
+
+        // Navigate to the new insight chat thread
+        await handleSwitchToChat(reportId);
+      }
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Error handling insight click:', error);
+    }
+  };
+
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
     if (isAuthenticated && conversationToDelete) {
@@ -536,7 +585,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
                             <div 
                               className="flex-1 min-w-0 cursor-pointer"
-                              onClick={() => openReportModal(report.id)}
+                              onClick={() => handleInsightClick(report.id, report.report_type)}
                             >
                               <div className="text-sm font-medium text-gray-900 truncate">
                                 {formatReportType(report.report_type)}
