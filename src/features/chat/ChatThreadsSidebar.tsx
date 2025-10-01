@@ -392,22 +392,46 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     setIsSavingTitle(true);
     
     try {
-      // Fire-and-forget API call - don't wait for it
-      updateConversationTitle(editingConversationId, editTitle.trim()).catch((error) => {
-        console.error('[ChatThreadsSidebar] Failed to update title:', error);
-      });
+      // Check if this is an insight report (exists in userReports)
+      const isInsightReport = userReports.some(r => r.id === editingConversationId);
       
-      // Immediately update the local state for instant UI feedback
-      const { updateConversation, threads } = useChatStore.getState();
-      const existingConversation = threads.find(t => t.id === editingConversationId);
-      
-      if (existingConversation) {
-        const updatedConversation = {
-          ...existingConversation,
-          title: editTitle.trim(),
-          updated_at: new Date().toISOString()
-        };
-        updateConversation(updatedConversation);
+      if (isInsightReport) {
+        // Update insight report_type in the insights table
+        const { error } = await supabase
+          .from('insights')
+          .update({ report_type: editTitle.trim() })
+          .eq('id', editingConversationId);
+        
+        if (error) {
+          console.error('[ChatThreadsSidebar] Failed to update insight report_type:', error);
+          return;
+        }
+        
+        // Update local state for instant UI feedback
+        setUserReports(prev => prev.map(report => 
+          report.id === editingConversationId 
+            ? { ...report, report_type: editTitle.trim() }
+            : report
+        ));
+      } else {
+        // Regular conversation: Update title in conversations table
+        // Fire-and-forget API call - don't wait for it
+        updateConversationTitle(editingConversationId, editTitle.trim()).catch((error) => {
+          console.error('[ChatThreadsSidebar] Failed to update title:', error);
+        });
+        
+        // Immediately update the local state for instant UI feedback
+        const { updateConversation, threads } = useChatStore.getState();
+        const existingConversation = threads.find(t => t.id === editingConversationId);
+        
+        if (existingConversation) {
+          const updatedConversation = {
+            ...existingConversation,
+            title: editTitle.trim(),
+            updated_at: new Date().toISOString()
+          };
+          updateConversation(updatedConversation);
+        }
       }
       
       // Close modal immediately after local update
