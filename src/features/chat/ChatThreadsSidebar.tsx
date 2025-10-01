@@ -465,11 +465,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
       {/* Thread history for authenticated users */}
       {isAuthenticated && uiConfig.showThreadHistory && (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {uiConfig.newChatLabel && (
             <button
               onClick={handleNewChat}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
             >
               <Plus className="w-4 h-4" />
               {uiConfig.newChatLabel}
@@ -479,7 +479,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Insights Button */}
           <button
             onClick={() => setShowInsightsModal(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
           >
             <Sparkles className="w-4 h-4" />
             Insights
@@ -491,7 +491,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 // TODO: Implement search chat functionality
                 console.log('Search chat clicked');
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
             >
               <Search className="w-4 h-4" />
               Search chat
@@ -503,12 +503,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {(userReports.length > 0 || isLoadingReports) && (
             <>
               {/* Dark gray line separator */}
-              <div className="border-t border-gray-400 my-3"></div>
+              <div className="border-t border-gray-400 my-2"></div>
               
               {/* Insight Reports */}
-              <div className="space-y-1">
-                <div className="text-xs text-gray-600 font-medium px-3 py-1">Insight Reports</div>
-                <div className="space-y-1">
+              <div className="space-y-0.5">
+                <div className="text-xs text-gray-600 font-medium px-3 py-0.5">Insight Reports</div>
+                <div className="space-y-0.5">
                   {isLoadingReports ? (
                     <>
                       {Array.from({ length: 3 }).map((_, index) => (
@@ -593,14 +593,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           )}
 
           {/* Dark gray line separator */}
-          <div className="border-t border-gray-400 my-3"></div>
+          <div className="border-t border-gray-400 my-2"></div>
           
           {/* Chat history section */}
-          <div className="space-y-1">
-            <div className="text-xs text-gray-600 font-medium px-3 py-1">{uiConfig.threadSectionLabel}</div>
+          <div className="space-y-0.5">
+            <div className="text-xs text-gray-600 font-medium px-3 py-0.5">{uiConfig.threadSectionLabel}</div>
             {isLoadingThreads ? (
               // Loading skeleton
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {Array.from({ length: 5 }).map((_, index) => (
                   <div key={index} className="p-2 rounded-lg">
                     <div className="flex items-center gap-2">
@@ -613,9 +613,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 ))}
               </div>
             ) : threads.length === 0 ? (
-              <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
+              <div className="text-xs text-gray-500 px-3 py-0.5">No previous chats</div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {visibleThreadsList.map((conversation) => {
                   const isActive = conversation.id === chat_id;
                   
