@@ -84,9 +84,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [editTitle, setEditTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
-  const [reportChannel, setReportChannel] = useState<any>(null);
-  const [userReports, setUserReports] = useState<any[]>([]);
-  const [isLoadingReports, setIsLoadingReports] = useState(false);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -94,40 +91,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Thread loading is now handled by ThreadsProvider
   // No need for manual loadThreads() calls
-
-  // Fetch user reports - query insights table to get report_ids for this user
-  const fetchUserReports = async (userId: string) => {
-    if (!userId) return;
-    
-    setIsLoadingReports(true);
-    try {
-      // Get all report_ids from insights table for this user
-      const { data: insights, error: insightsError } = await supabase
-        .from('insights')
-        .select('id, report_type, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10); // Limit to recent 10 insights
-
-      if (insightsError) {
-        console.error('[ChatThreadsSidebar] Error fetching insights:', insightsError);
-        return;
-      }
-      
-      // Transform insights into UI format (lightweight metadata only)
-      const reports = insights?.map(insight => ({
-        id: insight.id,
-        report_type: insight.report_type,
-        created_at: insight.created_at,
-      })) || [];
-      
-      setUserReports(reports);
-    } catch (error) {
-      console.error('[ChatThreadsSidebar] Failed to fetch reports:', error);
-    } finally {
-      setIsLoadingReports(false);
-    }
-  };
 
   // Helper function to format report type for display
   const formatReportType = (reportType: string) => {
@@ -141,14 +104,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     return typeMap[reportType] || reportType;
   };
 
-  // Helper function to format date
-  const formatReportDate = (createdAt: string) => {
-    const date = new Date(createdAt);
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
-    const day = date.getDate();
-    return `${month} ${day}`;
-  };
-
   // Set up report completion listener for authenticated users
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -157,14 +112,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       const setupReportListener = async () => {
         try {
           // Initialize the WebSocket service with report completion callback
-          // (Actual subscription happens when form is submitted)
           await unifiedWebSocketService.initializeCallbacks({
             onReportCompleted: (reportData: any) => {
               console.log('[ChatThreadsSidebar] Report completed!', reportData);
-              // Refresh the reports list when a new report is completed
-              if (user?.id) {
-                fetchUserReports(user.id);
-              }
+              // Refresh threads list to show new insight chat thread
+              const { loadThreads } = useChatStore.getState();
+              loadThreads();
             }
           });
         } catch (error) {
@@ -173,24 +126,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       };
 
       setupReportListener();
-
-      // Cleanup on unmount or user change
-      return () => {
-        if (reportChannel) {
-          console.log('[ChatThreadsSidebar] Cleaning up report listener');
-          // Note: Supabase channels are automatically cleaned up, but we can remove our reference
-          setReportChannel(null);
-        }
-      };
-    }
-  }, [isAuthenticated, user?.id]);
-
-  // Fetch reports when user is authenticated
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      fetchUserReports(user.id);
-    } else {
-      setUserReports([]);
     }
   }, [isAuthenticated, user?.id]);
 
@@ -331,82 +266,56 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Handle deleting/clearing based on user type
   const handleDeleteOrClearChat = async () => {
     if (isAuthenticated && conversationToDelete) {
-      // Check if this is an insight report (exists in userReports - Insight Reports section)
-      const isInsightReport = userReports.some(r => r.id === conversationToDelete);
-      
-      if (isInsightReport) {
-        // DELETE FROM INSIGHT REPORTS SECTION: Delete insight report from all tables
-        try {
-          // Delete from insights table (report_id)
-          const { error: insightsError } = await supabase
-            .from('insights')
-            .delete()
-            .eq('id', conversationToDelete);
-          
-          if (insightsError) {
-            console.error('[ChatThreadsSidebar] Failed to delete from insights:', insightsError);
-          }
-          
-          // Delete from report_logs where user_id = report_id
-          const { error: reportLogsError } = await supabase
-            .from('report_logs')
-            .delete()
-            .eq('user_id', conversationToDelete);
-          
-          if (reportLogsError) {
-            console.error('[ChatThreadsSidebar] Failed to delete from report_logs:', reportLogsError);
-          }
-          
-          // Delete from translator_logs where user_id = report_id
-          const { error: translatorLogsError } = await supabase
-            .from('translator_logs')
-            .delete()
-            .eq('user_id', conversationToDelete);
-          
-          if (translatorLogsError) {
-            console.error('[ChatThreadsSidebar] Failed to delete from translator_logs:', translatorLogsError);
-          }
-          
-          // Update UI immediately - remove from userReports (no fetch needed)
-          setUserReports(prev => prev.filter(r => r.id !== conversationToDelete));
-          setShowDeleteConfirm(false);
-          setConversationToDelete(null);
-        } catch (error) {
-          console.error('[ChatThreadsSidebar] Error deleting insight report:', error);
-        }
-      } else {
-        // DELETE FROM CHAT HISTORY SECTION: All chats are in conversations table
-        // Delete from conversations table (this will cascade to messages due to foreign key)
-        try {
-          const { error: convDeleteError } = await supabase
-            .from('conversations')
-            .delete()
-            .eq('id', conversationToDelete);
-          
-          if (convDeleteError) {
-            console.error('[ChatThreadsSidebar] Failed to delete chat thread:', convDeleteError);
-            return;
-          }
+      // DELETE CHAT THREAD: Delete from conversations and insights tables
+      try {
+        // Check if this is an insight chat thread (has meta.type === 'insight_chat')
+        const { data: conversation } = await supabase
+          .from('conversations')
+          .select('meta')
+          .eq('id', conversationToDelete)
+          .single();
 
-          // Update UI immediately - remove from local threads state (no DB call needed)
-          const currentState = useChatStore.getState();
-          useChatStore.setState({ 
-            threads: currentState.threads.filter(thread => thread.id !== conversationToDelete) 
-          });
-          
-          setShowDeleteConfirm(false);
-          setConversationToDelete(null);
-          
-          // If this was the current chat, clear the session
-          if (currentState.chat_id === conversationToDelete) {
-            currentState.clearChat();
-          }
-          
-          // Navigate back to /therai after deletion (clean React navigation)
-          navigate('/therai', { replace: true });
-        } catch (error) {
-          console.error('[ChatThreadsSidebar] Error deleting chat thread:', error);
+        const isInsightChat = (conversation?.meta as any)?.type === 'insight_chat';
+
+        // Delete from conversations table (cascades to messages)
+        const { error: convDeleteError } = await supabase
+          .from('conversations')
+          .delete()
+          .eq('id', conversationToDelete);
+        
+        if (convDeleteError) {
+          console.error('[ChatThreadsSidebar] Failed to delete chat thread:', convDeleteError);
+          return;
         }
+
+        // If it's an insight chat, also delete from insights, report_logs, translator_logs
+        if (isInsightChat) {
+          // Delete from insights table
+          await supabase.from('insights').delete().eq('id', conversationToDelete);
+          // Delete from report_logs
+          await supabase.from('report_logs').delete().eq('user_id', conversationToDelete);
+          // Delete from translator_logs
+          await supabase.from('translator_logs').delete().eq('user_id', conversationToDelete);
+        }
+
+        // Update UI immediately - remove from local threads state
+        const currentState = useChatStore.getState();
+        useChatStore.setState({ 
+          threads: currentState.threads.filter(thread => thread.id !== conversationToDelete) 
+        });
+        
+        setShowDeleteConfirm(false);
+        setConversationToDelete(null);
+        
+        // If this was the current chat, clear the session
+        if (currentState.chat_id === conversationToDelete) {
+          currentState.clearChat();
+        }
+        
+        // Navigate back to /therai after deletion (clean React navigation)
+        navigate('/therai', { replace: true });
+      } catch (error) {
+        console.error('[ChatThreadsSidebar] Error deleting chat thread:', error);
       }
     } else {
       // Unauthenticated user: Clear session and redirect to main page for clean slate
@@ -493,46 +402,23 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     setIsSavingTitle(true);
     
     try {
-      // Check if this is an insight report (exists in userReports)
-      const isInsightReport = userReports.some(r => r.id === editingConversationId);
+      // Update conversation title in conversations table
+      // Fire-and-forget API call - don't wait for it
+      updateConversationTitle(editingConversationId, editTitle.trim()).catch((error) => {
+        console.error('[ChatThreadsSidebar] Failed to update title:', error);
+      });
       
-      if (isInsightReport) {
-        // Update insight report_type in the insights table
-        const { error } = await supabase
-          .from('insights')
-          .update({ report_type: editTitle.trim() })
-          .eq('id', editingConversationId);
-        
-        if (error) {
-          console.error('[ChatThreadsSidebar] Failed to update insight report_type:', error);
-          return;
-        }
-        
-        // Update local state for instant UI feedback
-        setUserReports(prev => prev.map(report => 
-          report.id === editingConversationId 
-            ? { ...report, report_type: editTitle.trim() }
-            : report
-        ));
-      } else {
-        // Regular conversation: Update title in conversations table
-        // Fire-and-forget API call - don't wait for it
-        updateConversationTitle(editingConversationId, editTitle.trim()).catch((error) => {
-          console.error('[ChatThreadsSidebar] Failed to update title:', error);
-        });
-        
-        // Immediately update the local state for instant UI feedback
-        const { updateConversation, threads } = useChatStore.getState();
-        const existingConversation = threads.find(t => t.id === editingConversationId);
-        
-        if (existingConversation) {
-          const updatedConversation = {
-            ...existingConversation,
-            title: editTitle.trim(),
-            updated_at: new Date().toISOString()
-          };
-          updateConversation(updatedConversation);
-        }
+      // Immediately update the local state for instant UI feedback
+      const { updateConversation, threads } = useChatStore.getState();
+      const existingConversation = threads.find(t => t.id === editingConversationId);
+      
+      if (existingConversation) {
+        const updatedConversation = {
+          ...existingConversation,
+          title: editTitle.trim(),
+          updated_at: new Date().toISOString()
+        };
+        updateConversation(updatedConversation);
       }
       
       // Close modal immediately after local update
@@ -614,100 +500,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <Search className="w-4 h-4" />
               Search chat
             </button>
-          )}
-          
-          
-          {/* Insight Reports section */}
-          {(userReports.length > 0 || isLoadingReports) && (
-            <>
-              {/* Dark gray line separator */}
-              <div className="border-t border-gray-400 my-2"></div>
-              
-              {/* Insight Reports */}
-              <div className="space-y-0.5">
-                <div className="text-xs text-gray-600 font-medium px-3 py-0.5">Insight Reports</div>
-                <div className="space-y-0.5">
-                  {isLoadingReports ? (
-                    <>
-                      {Array.from({ length: 3 }).map((_, index) => (
-                        <div key={index} className="p-2 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="flex-1 min-w-0">
-                              <div className="h-4 bg-gray-200 rounded animate-pulse mb-1"></div>
-                              <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2"></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {userReports.map((report) => (
-                        <div
-                          key={report.id}
-                          className="relative group"
-                          onMouseEnter={() => setHoveredThread(report.id)}
-                          onMouseLeave={() => setHoveredThread(null)}
-                        >
-                          <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                            <Sparkles className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                            <div 
-                              className="flex-1 min-w-0 cursor-pointer"
-                              onClick={() => handleInsightClick(report.id, report.report_type)}
-                            >
-                              <div className="text-sm font-medium text-gray-900 truncate">
-                                {formatReportType(report.report_type)}
-                              </div>
-                            </div>
-                            <div className="text-xs text-gray-500 flex-shrink-0">
-                              {formatReportDate(report.created_at)}
-                            </div>
-                            
-                            {/* Three dots menu */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button 
-                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreHorizontal className="w-4 h-4 text-gray-600" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
-                                <DropdownMenuItem
-                                  onClick={() => openReportModal(report.id)}
-                                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                                >
-                                  Astro
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuItem
-                                  onClick={() => handleEditTitle(report.id, formatReportType(report.report_type))}
-                                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                                >
-                                  Edit
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setConversationToDelete(report.id);
-                                    setShowDeleteConfirm(true);
-                                  }}
-                                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                                >
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </div>
-            </>
           )}
 
           {/* Dark gray line separator */}
