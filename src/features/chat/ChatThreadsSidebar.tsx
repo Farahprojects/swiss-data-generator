@@ -367,15 +367,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             console.error('[ChatThreadsSidebar] Failed to delete from translator_logs:', translatorLogsError);
           }
           
-          // Update UI immediately - remove from userReports
+          // Update UI immediately - remove from userReports (no fetch needed)
           setUserReports(prev => prev.filter(r => r.id !== conversationToDelete));
           setShowDeleteConfirm(false);
           setConversationToDelete(null);
-          
-          // Refresh from DB to ensure sync
-          if (user?.id) {
-            await fetchUserReports(user.id);
-          }
         } catch (error) {
           console.error('[ChatThreadsSidebar] Error deleting insight report:', error);
         }
@@ -393,10 +388,19 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             return;
           }
 
-          // Update UI immediately
-          removeThread(conversationToDelete).catch((error) => {
-            console.error('[ChatThreadsSidebar] Failed to remove thread from local state:', error);
+          // Update UI immediately - remove from local threads state (no DB call needed)
+          const currentState = useChatStore.getState();
+          useChatStore.setState({ 
+            threads: currentState.threads.filter(thread => thread.id !== conversationToDelete) 
           });
+          
+          setShowDeleteConfirm(false);
+          setConversationToDelete(null);
+          
+          // If this was the current chat, clear the session
+          if (currentState.chat_id === conversationToDelete) {
+            currentState.clearChat();
+          }
           
           // Navigate back to /therai after deletion (clean React navigation)
           navigate('/therai', { replace: true });
