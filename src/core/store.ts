@@ -60,6 +60,7 @@ interface ChatState {
   clearThreadsError: () => void;
   addPendingInsightThread: (reportId: string, reportType: string) => void;
   completePendingInsightThread: (reportId: string) => Promise<void>;
+  reconcileInsightThreads: (userId: string) => Promise<void>;
   
   // Real-time sync methods
   addConversation: (conversation: Conversation) => void;
@@ -393,6 +394,76 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       console.log('[Store] Insight thread completed and conversation created:', reportId);
     } catch (error) {
       console.error('[Store] Error completing pending insight thread:', error);
+    }
+  },
+
+  reconcileInsightThreads: async (userId: string) => {
+    if (!userId) return;
+
+    try {
+      console.log('[Store] Reconciling insight threads...');
+
+      // Get all ready insights for this user
+      const { data: insights, error: insightsError } = await supabase
+        .from('insights')
+        .select('id, report_type, created_at')
+        .eq('user_id', userId)
+        .eq('is_ready', true)
+        .order('created_at', { ascending: false });
+
+      if (insightsError) {
+        console.error('[Store] Failed to fetch insights for reconciliation:', insightsError);
+        return;
+      }
+
+      if (!insights || insights.length === 0) {
+        console.log('[Store] No insights to reconcile');
+        return;
+      }
+
+      // Get all existing conversation IDs
+      const { data: conversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (convError) {
+        console.error('[Store] Failed to fetch conversations:', convError);
+        return;
+      }
+
+      const existingConvIds = new Set(conversations?.map(c => c.id) || []);
+
+      // Find insights that don't have conversations
+      const missingConversations = insights.filter(insight => !existingConvIds.has(insight.id));
+
+      if (missingConversations.length === 0) {
+        console.log('[Store] All insights have matching conversations');
+        return;
+      }
+
+      console.log(`[Store] Found ${missingConversations.length} insights without conversations, creating them...`);
+
+      // Create missing conversations
+      for (const insight of missingConversations) {
+        await supabase.from('conversations').insert({
+          id: insight.id,
+          user_id: userId,
+          title: `${insight.report_type} - Insight`,
+          meta: {
+            type: 'insight_chat',
+            insight_report_id: insight.id,
+            parent_report_type: insight.report_type
+          }
+        });
+      }
+
+      // Reload threads to include newly created conversations
+      await get().loadThreads();
+
+      console.log(`[Store] Reconciliation complete. Created ${missingConversations.length} missing conversations.`);
+    } catch (error) {
+      console.error('[Store] Error during insight reconciliation:', error);
     }
   },
 

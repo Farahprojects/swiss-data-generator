@@ -28,8 +28,12 @@ export const useChatInitialization = () => {
 
     // Load threads when user signs in (useChatStore needs this for ChatThreadsSidebar)
     if (user) {
-      const { loadThreads } = useChatStore.getState();
+      const { loadThreads, reconcileInsightThreads } = useChatStore.getState();
       loadThreads(); // Initial load on page refresh/mount
+      
+      // Reconcile insights - create missing chat threads for completed insights
+      reconcileInsightThreads(user.id);
+      
       // No persistence - always start fresh from URL
     }
   }, [user]);
