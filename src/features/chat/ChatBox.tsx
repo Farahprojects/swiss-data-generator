@@ -14,7 +14,6 @@ import { useConversationUIStore } from './conversation-ui-store';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
 import { useNavigate, useSearchParams } from 'react-router-dom';
  
-import { ModeDropdown } from '@/components/chat/ModeDropdown';
 
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
@@ -130,13 +129,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
           {/* Main Chat Area */}
           <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
-            {/* Top Header with Mode Dropdown - Desktop Only */}
-            <div className="hidden md:flex items-center justify-between p-3 bg-white border-b border-gray-100">
-              <div className="flex items-center">
-                <ModeDropdown />
-              </div>
-              <div className="flex-1" />
-            </div>
 
             {/* Mobile Header */}
             <div className="md:hidden flex items-center gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
@@ -159,9 +151,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                   </div>
                 </SheetContent>
               </Sheet>
-              
-              {/* Mode Dropdown next to burger menu */}
-              <ModeDropdown />
               
               <div className="flex-1" />
               
