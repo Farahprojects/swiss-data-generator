@@ -16,7 +16,7 @@ interface ReportSlideOverProps {
   onClose: () => void;
   onLoad?: (error?: string | null) => void;
   shouldFetch?: boolean;
-  guestReportId?: string;
+  reportId?: string;
 }
 
 
@@ -26,7 +26,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   onClose, 
   onLoad, 
   shouldFetch = false,
-  guestReportId 
+  reportId 
 }) => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -56,7 +56,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     try {
       const { data, error: functionError } = await supabase.functions.invoke(
         'get-report-data',
-        { body: { guest_report_id: reportId } }
+        { body: { report_id: reportId } }
       );
 
       if (functionError) {
@@ -74,12 +74,12 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
 
   // Fetch when explicitly told to via shouldFetch prop
   useEffect(() => {
-    if (shouldFetch && guestReportId && guestReportId !== 'new') {
-      fetchReport(guestReportId);
-    } else if (shouldFetch && !guestReportId) {
-      console.warn('[ReportSlideOver] No guest report ID provided');
+    if (shouldFetch && reportId && reportId !== 'new') {
+      fetchReport(reportId);
+    } else if (shouldFetch && !reportId) {
+      console.warn('[ReportSlideOver] No report ID provided');
     }
-  }, [shouldFetch, guestReportId]);
+  }, [shouldFetch, reportId]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -117,7 +117,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
           <div className="flex items-center justify-center h-full p-6">
             <div className="text-center">
               <p className="text-red-600 mb-4">Error loading report: {error}</p>
-              <Button onClick={() => guestReportId && fetchReport(guestReportId)}>
+              <Button onClick={() => reportId && fetchReport(reportId)}>
                 Try Again
               </Button>
             </div>
@@ -128,7 +128,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   }
 
   // Show astro data form for new users
-  if (guestReportId === 'new') {
+  if (reportId === 'new') {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0">

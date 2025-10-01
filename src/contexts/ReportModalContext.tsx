@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ReportSlideOver } from '@/components/public-report/ReportSlideOver';
 
 interface ModalContext {
-  open: (guestReportId: string, onLoad?: (error?: string | null) => void) => void;
+  open: (reportId: string, onLoad?: (error?: string | null) => void) => void;
   close: () => void;
   isOpen: boolean;
 }
@@ -16,19 +16,19 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   
   // Get modal state from URL parameters - this automatically persists across refreshes
   const isOpen = searchParams.get('modal') === 'astro';
-  const guestReportId = searchParams.get('report_id') || '';
-  const shouldFetch = isOpen && guestReportId && guestReportId !== 'new';
+  const reportId = searchParams.get('report_id') || '';
+  const shouldFetch = isOpen && reportId && reportId !== 'new';
 
-  const open = useCallback((guestReportId: string, onLoad?: (error?: string | null) => void) => {
-    if (!guestReportId) {
-      console.warn('[ReportModal] No guest report ID provided');
+  const open = useCallback((reportId: string, onLoad?: (error?: string | null) => void) => {
+    if (!reportId) {
+      console.warn('[ReportModal] No report ID provided');
       return;
     }
     
     // Update URL parameters to open modal
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.set('modal', 'astro');
-    newSearchParams.set('report_id', guestReportId);
+    newSearchParams.set('report_id', reportId);
     setSearchParams(newSearchParams);
     
     if (onLoad) {
@@ -54,7 +54,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
         onClose={close}
         onLoad={onLoadCallback || undefined}
         shouldFetch={shouldFetch}
-        guestReportId={guestReportId}
+        reportId={reportId}
       />
     </ReportModalContext.Provider>
   );
