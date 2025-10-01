@@ -39,6 +39,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ title, description, icon, isDua
 
 export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose }) => {
   const [showAstroForm, setShowAstroForm] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState<string>('');
   const [selectedRequest, setSelectedRequest] = useState<string>('');
   const { user } = useAuth();
@@ -53,9 +54,15 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
 
   const handleFormSubmit = (data: ReportFormData) => {
     console.log('Form submitted with data:', data);
-    // TODO: Handle form submission logic
+    // Show success screen
     setShowAstroForm(false);
-    onClose();
+    setShowSuccess(true);
+    
+    // Auto-close after 3 seconds
+    setTimeout(() => {
+      setShowSuccess(false);
+      onClose();
+    }, 3000);
   };
 
   const handleFormClose = () => {
@@ -91,7 +98,19 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[60vh]">
-          {showAstroForm ? (
+          {showSuccess ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-light text-gray-900 mb-2">Report Submitted</h3>
+              <p className="text-sm text-gray-600 text-center max-w-sm">
+                Your insight report is being generated. It will appear in your chat history soon.
+              </p>
+            </div>
+          ) : showAstroForm ? (
             <AstroDataForm
               onClose={handleFormClose}
               onSubmit={handleFormSubmit}

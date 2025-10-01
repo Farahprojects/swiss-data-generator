@@ -30,7 +30,7 @@ import Index from './pages/Index';
 import MobileLanding from './pages/MobileLanding';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
-import EmbeddedCheckout from './pages/EmbeddedCheckout';
+const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
 import Profile from './pages/Profile';
 import Beats from './pages/Beats';
 
