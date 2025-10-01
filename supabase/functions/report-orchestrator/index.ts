@@ -17,7 +17,8 @@ const sb = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSessio
 interface ReportPayload {
   endpoint: string;
   report_type: string;
-  user_id?: string;
+  chat_id?: string;  // Changed from user_id to chat_id
+  user_id?: string;  // Keep for backward compatibility
   chartData: any;
   is_guest?: boolean;
   [k: string]: any;
@@ -62,7 +63,8 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   const edgeUrl = `${supabaseUrl}/functions/v1/${engine}`;
   // Explicitly build the payload to prevent passing through an api_key
   const requestPayload = { 
-    user_id: payload.user_id,
+    chat_id: payload.chat_id || payload.user_id,  // Use chat_id first, fallback to user_id
+    user_id: payload.chat_id || payload.user_id,  // Keep user_id for backward compatibility
     endpoint: payload.endpoint,
     report_type: payload.report_type,
     chartData: payload.chartData,
@@ -121,12 +123,13 @@ serve(async (req) => {
     let systemPromptType = 'adult';
 
     // Age check for child-specific prompt
-    if (payload.is_guest && payload.user_id) {
+    const targetId = payload.chat_id || payload.user_id;
+    if (payload.is_guest && targetId) {
       try {
         const { data: guestReport, error: guestError } = await sb
           .from('guest_reports')
           .select('report_data')
-          .eq('id', payload.user_id)
+          .eq('id', targetId)
           .single();
 
         if (guestError) {

@@ -314,13 +314,13 @@ serve(async (req)=>{
     }
 
     // Call report-orchestrator for all insight reports (fire-and-forget)
-    if (body.user_id && swiss.ok && parsed.reportType) {
-      console.log(`[translator-edge-${reqId}] Calling report-orchestrator for ${parsed.reportType} report`);
+    if (body.chat_id && swiss.ok && parsed.reportType) {
+      console.log(`[translator-edge-${reqId}] Calling report-orchestrator for ${parsed.reportType} report with chat_id: ${body.chat_id}`);
       try {
         const orchestratorPayload = {
           endpoint: 'profile',
           report_type: parsed.reportType,
-          user_id: body.user_id,
+          chat_id: body.chat_id,  // Use chat_id instead of user_id
           chartData: swissData,
           is_guest: false
         };
