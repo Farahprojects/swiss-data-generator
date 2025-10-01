@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useModalState } from '@/contexts/ModalStateProvider';
 import { useTabVisibility } from '@/hooks/useTabVisibility';
 import { Client, JournalEntry } from '@/types/database';
-import { transformReportForDrawer, transformInsightForDrawer, ClientReport } from '@/utils/clientsFormatters';
+import { transformReportForDrawer, ClientReport } from '@/utils/clientsFormatters';
 import { ClientWithJournal } from '@/types/clients-page';
 
 interface UseClientsModalsProps {
@@ -18,9 +18,7 @@ export const useClientsModals = ({ refreshClientsData }: UseClientsModalsProps) 
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [selectedClientJournalEntries, setSelectedClientJournalEntries] = useState<JournalEntry[]>([]);
   const [selectedReportData, setSelectedReportData] = useState<any>(null);
-  const [selectedInsightData, setSelectedInsightData] = useState<any>(null);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
-  const [showInsightDrawer, setShowInsightDrawer] = useState(false);
 
   // Preserve modal state when tab becomes hidden
   useEffect(() => {
@@ -69,14 +67,6 @@ export const useClientsModals = ({ refreshClientsData }: UseClientsModalsProps) 
     }
   }, []);
 
-  const handleViewInsight = useCallback((client: ClientWithJournal) => {
-    if (client.latestInsight) {
-      const transformedData = transformInsightForDrawer(client.latestInsight);
-      setSelectedInsightData(transformedData);
-      setShowInsightDrawer(true);
-    }
-  }, []);
-
   return {
     modalState,
     setModalState,
@@ -87,17 +77,13 @@ export const useClientsModals = ({ refreshClientsData }: UseClientsModalsProps) 
     selectedClientJournalEntries,
     setSelectedClientJournalEntries,
     selectedReportData,
-    selectedInsightData,
     showReportDrawer,
     setShowReportDrawer,
-    showInsightDrawer,
-    setShowInsightDrawer,
     handleClientCreated,
     handleClientUpdated,
     handleJournalCreated,
     handleInsightGenerated,
     handleReportGenerated,
-    handleViewReport,
-    handleViewInsight
+    handleViewReport
   };
 };

@@ -1,5 +1,5 @@
 
-import { Client, JournalEntry, InsightEntry } from '@/types/database';
+import { Client, JournalEntry } from '@/types/database';
 import { ClientReport } from '@/utils/clientsFormatters';
 
 export type ViewMode = 'grid' | 'list';
@@ -10,5 +10,4 @@ export type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_n
 export interface ClientWithJournal extends Client {
   latestJournalEntry?: JournalEntry;
   latestReport?: ClientReport;
-  latestInsight?: InsightEntry;
 }

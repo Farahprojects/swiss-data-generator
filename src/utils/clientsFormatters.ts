@@ -1,6 +1,4 @@
 
-import { InsightEntry } from '@/types/database';
-
 export interface ClientReport {
   id: string;
   request_type: string;
@@ -45,24 +43,6 @@ export const transformReportForDrawer = (report: ClientReport) => {
     total_cost_usd: 0,
     processing_time_ms: null,
     response_payload: report.swiss_data,
-    request_payload: null,
-    error_message: undefined,
-    google_geo: false
-  };
-};
-
-export const transformInsightForDrawer = (insight: InsightEntry) => {
-  return {
-    id: insight.id,
-    created_at: insight.created_at,
-    response_status: 200,
-    request_type: 'insight',
-    report_tier: 'insight',
-    total_cost_usd: 0,
-    processing_time_ms: null,
-    response_payload: {
-      report: insight.content
-    },
     request_payload: null,
     error_message: undefined,
     google_geo: false

@@ -44,9 +44,10 @@ export const cleanupAuthState = async () => {
     if ('indexedDB' in window) {
       const dbNames = ['supabase', 'supabase-auth-token'];
       dbNames.forEach(dbName => {
-        indexedDB.deleteDatabase(dbName).catch(() => {
+        const request = indexedDB.deleteDatabase(dbName);
+        request.onerror = () => {
           // Expected if database doesn't exist
-        });
+        };
       });
     }
   } catch (error) {
