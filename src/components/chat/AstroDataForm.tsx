@@ -211,11 +211,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
 
       console.log('[AstroDataForm] Edge function succeeded');
       
-      // Only call onSubmit for profile flow (triggers processing screen)
-      if (isProfileFlow) {
-        console.log('[AstroDataForm] Profile flow detected, calling onSubmit');
+      // Call onSubmit for profile flow and insights variant
+      if (isProfileFlow || variant === 'insights') {
+        console.log(`[AstroDataForm] ${isProfileFlow ? 'Profile' : 'Insights'} flow detected, calling onSubmit`);
         onSubmit(data);
-        // Do NOT close the modal here; parent will transition to processing screen
+        // Do NOT close the modal here; parent will handle next step
       } else {
         console.log('[AstroDataForm] Chat flow detected, just closing modal');
         // Chat flow - just close the modal
