@@ -154,27 +154,25 @@ serve(async (req) => {
         is_ready: true,
         report_type: formData?.reportType || formData?.request || 'unknown'
       },
-      // Include form data for the formatter (matching legacy structure)
-      guest_report: formData ? {
-        report_data: {
-          birthDate: formData.person_a?.birth_date,
-          birthTime: formData.person_a?.birth_time,
-          birthLocation: formData.person_a?.location,
-          latitude: formData.person_a?.latitude,
-          longitude: formData.person_a?.longitude,
-          name: formData.person_a?.name || formData.name,
-          request: formData.request,
-          reportType: formData.reportType,
-          // Include person_b for synastry reports
-          ...(formData.person_b && {
-            secondPersonName: formData.person_b.name,
-            secondPersonBirthDate: formData.person_b.birth_date,
-            secondPersonBirthTime: formData.person_b.birth_time,
-            secondPersonBirthLocation: formData.person_b.location,
-            secondPersonLatitude: formData.person_b.latitude,
-            secondPersonLongitude: formData.person_b.longitude
-          })
-        }
+      // Include clean form data structure
+      form_data: formData ? {
+        name: formData.person_a?.name || formData.name,
+        birthDate: formData.person_a?.birth_date,
+        birthTime: formData.person_a?.birth_time,
+        birthLocation: formData.person_a?.location,
+        latitude: formData.person_a?.latitude,
+        longitude: formData.person_a?.longitude,
+        request: formData.request,
+        reportType: formData.reportType,
+        // Include person_b for synastry reports
+        ...(formData.person_b && {
+          secondPersonName: formData.person_b.name,
+          secondPersonBirthDate: formData.person_b.birth_date,
+          secondPersonBirthTime: formData.person_b.birth_time,
+          secondPersonBirthLocation: formData.person_b.location,
+          secondPersonLatitude: formData.person_b.latitude,
+          secondPersonLongitude: formData.person_b.longitude
+        })
       } : null
     };
 
