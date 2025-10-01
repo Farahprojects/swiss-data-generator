@@ -268,7 +268,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           .insert({
             id: reportId, // Use report_id as chat_id
             user_id: user.id,
-            title: `${formatReportType(reportType)} - Discussion`,
+            title: `${formatReportType(reportType)} - Insight`,
             meta: {
               type: 'insight_chat',
               insight_report_id: reportId,
