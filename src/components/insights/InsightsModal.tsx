@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Users, Briefcase, Heart, UserCheck, Users2 } from 'lucide-react';
+import { X, User, Users, Briefcase, Heart, UserCheck, Users2, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { ReportFormData } from '@/types/public-report';
@@ -67,9 +67,19 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div>
-            <h2 className="text-2xl font-light text-gray-900">Insights</h2>
-            <p className="text-sm text-gray-500 mt-1">Generate personalized astrological reports</p>
+          <div className="flex items-center gap-3">
+            {showAstroForm && (
+              <button
+                onClick={() => setShowAstroForm(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-2xl font-light text-gray-900">Insights</h2>
+              <p className="text-sm text-gray-500 mt-1">Generate personalized astrological reports</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -88,6 +98,7 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
               preselectedType={selectedRequest}
               reportType={selectedReportType}
               isProfileFlow={false}
+              variant="insights"
             />
           ) : (
             <>

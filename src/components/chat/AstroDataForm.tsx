@@ -32,6 +32,8 @@ interface AstroDataFormProps {
   contextId?: string;
   // Whether this form is being used in profile flow (should trigger onSubmit)
   isProfileFlow?: boolean;
+  // UI variant: when 'insights', suppress internal header/type step
+  variant?: 'standalone' | 'insights';
 }
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
@@ -41,9 +43,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   reportType,
   contextId,
   isProfileFlow = false,
+  variant = 'standalone',
 }) => {
+  const isInsights = variant === 'insights';
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
-    preselectedType ? 'details' : 'type'
+    isInsights ? 'details' : (preselectedType ? 'details' : 'type')
   );
   const [selectedAstroType, setSelectedAstroType] = useState<string>(preselectedType || '');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
@@ -367,44 +371,46 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             : 'rounded-2xl'
         }`}
       >
-      {/* Header */}
-      <div className={`flex items-center justify-between border-b border-gray-200 ${
-        isMobile ? 'p-4 pt-safe' : 'p-4'
-      }`}>
-        <div className="flex items-center gap-3">
-          {(currentStep === 'details' || currentStep === 'secondPerson') && (
+      {/* Header (hidden for insights flow; InsightsModal provides header/stepper) */}
+      {isInsights ? null : (
+        <div className={`flex items-center justify-between border-b border-gray-200 ${
+          isMobile ? 'p-4 pt-safe' : 'p-4'
+        }`}>
+          <div className="flex items-center gap-3">
+            {(currentStep === 'details' || currentStep === 'secondPerson') && (
+              <button
+                onClick={() => {
+                  if (currentStep === 'details') goBackToType();
+                  else if (currentStep === 'secondPerson') setCurrentStep('details');
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <h2 className="text-xl font-medium text-gray-900">
+              {currentStep === 'type' 
+                ? 'Choose Discovery Type' 
+                : currentStep === 'details'
+                ? 'Your Details'
+                : 'Second Person Details'}
+            </h2>
+          </div>
+          <div className="flex items-center space-x-2">
             <button
-              onClick={() => {
-                if (currentStep === 'details') goBackToType();
-                else if (currentStep === 'secondPerson') setCurrentStep('details');
-              }}
+              onClick={handleClose}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
-          )}
-          <h2 className="text-xl font-medium text-gray-900">
-            {currentStep === 'type' 
-              ? 'Choose Discovery Type' 
-              : currentStep === 'details'
-              ? 'Your Details'
-              : 'Second Person Details'}
-          </h2>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Content */}
       <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'}`}>
         <AnimatePresence mode="wait">
-          {currentStep === 'type' ? (
+          {currentStep === 'type' && !isInsights ? (
             <motion.div
               key="type"
               initial={{ opacity: 0, x: 20 }}
@@ -555,14 +561,16 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               </div>
 
               <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={goBackToType}
-                  className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
-                >
-                  Back
-                </Button>
+                {isInsights ? null : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={goBackToType}
+                    className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
+                  >
+                    Back
+                  </Button>
+                )}
                 <Button
                   type="submit"
                   disabled={isProcessing}
