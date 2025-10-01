@@ -181,6 +181,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         chatController.initializeConversation(currentChatId);
       }
 
+      // Add pending insight thread to UI if this is an insight report
+      if (reportId && reportType) {
+        console.log('[AstroDataForm] Adding pending insight thread to UI:', reportId, reportType);
+        const { addPendingInsightThread } = useChatStore.getState();
+        addPendingInsightThread(reportId, reportType);
+      }
+
       // Subscribe to WebSocket for report completion if we have a report_id
       if (reportId) {
         console.log('[AstroDataForm] Subscribing to report WebSocket:', reportId);
