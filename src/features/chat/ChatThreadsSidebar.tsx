@@ -222,9 +222,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
       const newChatId = conversation.id;
       
-      // Add to local threads state
-      const { addThread } = useChatStore.getState();
-      await addThread(user.id, mode === 'insight' ? 'New Insight Chat' : 'New Chat');
+      // Add to local threads state directly (no DB call needed)
+      const newThread = {
+        id: newChatId,
+        user_id: user.id,
+        title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
+        meta: { mode },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const currentState = useChatStore.getState();
+      useChatStore.setState({ threads: [newThread, ...currentState.threads] });
       
       // DIRECT FLOW: Immediately set chat_id and fetch messages
       const { setChatId } = useMessageStore.getState();
