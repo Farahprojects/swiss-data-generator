@@ -3,7 +3,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
-export type ChatMode = 'chat' | 'astro';
+export type ChatMode = 'chat' | 'astro' | 'insight';
 
 interface ModeContextType {
   mode: ChatMode;
@@ -62,7 +62,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
           // If mode exists in meta, use it; otherwise default to 'chat'
           const metaData = data?.meta as { mode?: ChatMode } | null;
           const savedMode = metaData?.mode;
-          if (savedMode && (savedMode === 'chat' || savedMode === 'astro')) {
+          if (savedMode && (savedMode === 'chat' || savedMode === 'astro' || savedMode === 'insight')) {
             setMode(savedMode);
           } else {
             setMode('chat'); // Default mode for new chats

@@ -14,6 +14,7 @@ export const ModeDropdown: React.FC = () => {
   const modes = [
     { value: 'chat' as const, label: 'Chat' },
     { value: 'astro' as const, label: 'Astro' },
+    { value: 'insight' as const, label: 'Insight' },
   ];
 
   return (
