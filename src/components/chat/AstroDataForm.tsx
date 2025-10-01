@@ -14,6 +14,7 @@ import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
+import { SUPABASE_URL } from '@/integrations/supabase/config';
 import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
@@ -117,7 +118,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     
     setIsCreatingReportId(true);
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-insight-id`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-insight-id`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
