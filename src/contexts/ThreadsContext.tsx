@@ -134,11 +134,9 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
 
   const clearThreadsError = () => setError(null);
 
-  // Load threads when user becomes authenticated
+  // Clear threads when user logs out (loading handled by useChatInitialization)
   useEffect(() => {
-    if (isAuthenticated && user) {
-      loadThreads();
-    } else {
+    if (!isAuthenticated || !user) {
       // Clear threads when user logs out
       setThreads([]);
       setError(null);

@@ -13,11 +13,7 @@ const ThreadSelectionPage: React.FC = () => {
   const { threads, loadThreads, addThread, isLoadingThreads } = useChatStore();
   const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadThreads();
-    }
-  }, [user, loadThreads]);
+  // Thread loading is handled by useChatInitialization on page mount
 
   const handleCreateNewThread = async () => {
     if (!user) return;

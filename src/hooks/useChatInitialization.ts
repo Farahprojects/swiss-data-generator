@@ -29,7 +29,7 @@ export const useChatInitialization = () => {
     // Load threads when user signs in (useChatStore needs this for ChatThreadsSidebar)
     if (user) {
       const { loadThreads } = useChatStore.getState();
-      loadThreads();
+      loadThreads(); // Initial load on page refresh/mount
       // No persistence - always start fresh from URL
     }
   }, [user]);
@@ -40,15 +40,9 @@ export const useChatInitialization = () => {
       // Validate threadId exists in DB before using it
       const validateAndLoadThread = async () => {
         try {
-          // Ensure threads are loaded first
-          const { threads, loadThreads } = useChatStore.getState();
-          if (threads.length === 0) {
-            await loadThreads();
-          }
-          
-          // Re-check after loading threads
-          const { threads: updatedThreads } = useChatStore.getState();
-          const threadExists = updatedThreads.some(thread => thread.id === threadId);
+          // Check if thread exists in current threads
+          const { threads } = useChatStore.getState();
+          const threadExists = threads.some(thread => thread.id === threadId);
           
           if (threadExists) {
             // Use the same direct flow as handleSwitchToChat
