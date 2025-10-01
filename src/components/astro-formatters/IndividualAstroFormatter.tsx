@@ -31,21 +31,16 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
   const astroData = parseAstroData(swissData);
   const { subject, natal, transits } = astroData;
 
-  // Get data from form_data (clean structure) with fallbacks to swiss data
-  const name = reportData.form_data?.name || subject?.name || natal?.name || 'Unknown';
-  const birthDate = reportData.form_data?.birthDate;
-  const birthLocation = reportData.form_data?.birthLocation || subject?.location;
-  const latitude = reportData.form_data?.latitude || subject?.lat;
-  const longitude = reportData.form_data?.longitude || subject?.lon;
+  const birthDate = reportData.guest_report?.report_data?.birthDate;
   
   return (
     <div className={`font-inter max-w-4xl mx-auto py-4 md:py-8 px-4 md:px-0 ${className}`}>
       <ChartHeader
-        name={name}
+        name={subject?.name || natal?.name || 'Unknown'}
         birthDate={birthDate}
-        birthLocation={birthLocation}
-        latitude={latitude}
-        longitude={longitude}
+        birthLocation={subject?.location}
+        latitude={subject?.lat}
+        longitude={subject?.lon}
       />
 
       <div className="space-y-4 md:space-y-8 mt-4 md:mt-8">

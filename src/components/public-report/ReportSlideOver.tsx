@@ -63,11 +63,6 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
         throw new Error(functionError.message);
       }
 
-      console.log('[ReportSlideOver] Received data from get-report-data:', data);
-      console.log('[ReportSlideOver] Metadata:', data?.data?.metadata);
-      console.log('[ReportSlideOver] Has swiss_data:', !!data?.data?.swiss_data);
-      console.log('[ReportSlideOver] Has report_content:', !!data?.data?.report_content);
-      
       setReportData(data.data as ReportData);
     } catch (err: any) {
       setError(err.message);

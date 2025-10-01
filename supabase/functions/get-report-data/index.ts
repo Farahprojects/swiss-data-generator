@@ -110,22 +110,6 @@ serve(async (req) => {
       console.warn(`[get-report-data] Could not fetch translator_logs:`, translatorLogsError);
     }
 
-    // Fetch conversation meta to get the original form data (for authenticated users)
-    console.log(`[get-report-data][${requestId}] 🔍 Fetching conversation meta for form data...`);
-    const { data: conversation, error: convError } = await supabase
-      .from("conversations")
-      .select("meta")
-      .eq("id", guest_report_id)
-      .single();
-    
-    let formData: any = null;
-    if (!convError && conversation?.meta?.last_report_form) {
-      formData = conversation.meta.last_report_form;
-      console.log(`[get-report-data][${requestId}] ✅ Found form data in conversation meta`);
-    } else {
-      console.log(`[get-report-data][${requestId}] ℹ️ No form data found in conversation meta`);
-    }
-
     // Check if we have any data (either report text OR Swiss data)
     const hasReportText = !!reportLogData?.report_text;
     const hasSwissData = !!translatorLogData?.swiss_data;
@@ -152,28 +136,8 @@ serve(async (req) => {
         has_ai_report: hasReportText,
         has_swiss_data: hasSwissData,
         is_ready: true,
-        report_type: formData?.reportType || formData?.request || 'unknown'
-      },
-      // Include clean form data structure
-      form_data: formData ? {
-        name: formData.person_a?.name || formData.name,
-        birthDate: formData.person_a?.birth_date,
-        birthTime: formData.person_a?.birth_time,
-        birthLocation: formData.person_a?.location,
-        latitude: formData.person_a?.latitude,
-        longitude: formData.person_a?.longitude,
-        request: formData.request,
-        reportType: formData.reportType,
-        // Include person_b for synastry reports
-        ...(formData.person_b && {
-          secondPersonName: formData.person_b.name,
-          secondPersonBirthDate: formData.person_b.birth_date,
-          secondPersonBirthTime: formData.person_b.birth_time,
-          secondPersonBirthLocation: formData.person_b.location,
-          secondPersonLatitude: formData.person_b.latitude,
-          secondPersonLongitude: formData.person_b.longitude
-        })
-      } : null
+        report_type: 'unknown' // No longer available from guest_reports
+      }
     };
 
     const processingTime = Date.now() - startTime;
