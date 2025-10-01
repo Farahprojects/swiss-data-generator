@@ -21,6 +21,15 @@ export const ReportContent: React.FC<ReportContentProps> = ({
   const hasAstroContent = !!reportData.swiss_data;
   const astroReportType = hasAstroContent ? getAstroReportType(reportData.swiss_data) : null;
 
+  console.log('[ReportContent] Rendering with:', {
+    hasAiContent,
+    hasAstroContent,
+    activeView,
+    astroReportType,
+    reportDataKeys: Object.keys(reportData),
+    swissDataType: typeof reportData.swiss_data
+  });
+
   const renderAstroContent = () => {
     if (!hasAstroContent) return null;
     return <AstroDataRenderer swissData={reportData.swiss_data} reportData={reportData} />;
