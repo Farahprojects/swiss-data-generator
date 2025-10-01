@@ -347,51 +347,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           console.error('[ChatThreadsSidebar] Error deleting insight report:', error);
         }
       } else {
-        // DELETE FROM CHAT HISTORY SECTION: Check if it's an insight chat thread or regular chat
+        // DELETE FROM CHAT HISTORY SECTION: All chats are in conversations table
+        // Delete from conversations table (this will cascade to messages due to foreign key)
         try {
-          // Get conversation details to check if it's an insight chat thread
-          const { data: conversation, error: convError } = await supabase
+          const { error: convDeleteError } = await supabase
             .from('conversations')
-            .select('id, meta')
-            .eq('id', conversationToDelete)
-            .single();
-
-          if (convError) {
-            console.error('[ChatThreadsSidebar] Failed to get conversation details:', convError);
+            .delete()
+            .eq('id', conversationToDelete);
+          
+          if (convDeleteError) {
+            console.error('[ChatThreadsSidebar] Failed to delete chat thread:', convDeleteError);
             return;
           }
 
-          const isInsightChatThread = (conversation?.meta as any)?.type === 'insight_chat';
-
-          if (isInsightChatThread) {
-            // DELETE INSIGHT CHAT THREAD: Only delete from conversations and messages tables
-            console.log('[ChatThreadsSidebar] Deleting insight chat thread (conversations + messages only)');
-            
-            // Delete from conversations table (this will cascade to messages due to foreign key)
-            const { error: convDeleteError } = await supabase
-              .from('conversations')
-              .delete()
-              .eq('id', conversationToDelete);
-            
-            if (convDeleteError) {
-              console.error('[ChatThreadsSidebar] Failed to delete insight chat thread:', convDeleteError);
-            }
-          } else {
-            // DELETE REGULAR CHAT THREAD: Delete from conversations and messages tables
-            console.log('[ChatThreadsSidebar] Deleting regular chat thread (conversations + messages only)');
-            
-            // Delete from conversations table (this will cascade to messages due to foreign key)
-            const { error: convDeleteError } = await supabase
-              .from('conversations')
-              .delete()
-              .eq('id', conversationToDelete);
-            
-            if (convDeleteError) {
-              console.error('[ChatThreadsSidebar] Failed to delete regular chat thread:', convDeleteError);
-            }
-          }
-
-          // Update UI immediately for both insight chat threads and regular chats
+          // Update UI immediately
           removeThread(conversationToDelete).catch((error) => {
             console.error('[ChatThreadsSidebar] Failed to remove thread from local state:', error);
           });
