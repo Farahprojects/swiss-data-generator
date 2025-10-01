@@ -238,7 +238,7 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 function logAndSignalCompletion(logPrefix: string, reportData: any, report: string, metadata: any, durationMs: number, selectedEngine: string) {
   // Fire-and-forget report_logs insert
   supabase.from("report_logs").insert({
-    user_id: reportData.user_id || null,
+    chat_id: reportData.chat_id || reportData.user_id || null,
     report_type: reportData.reportType || reportData.report_type || "standard",
     endpoint: reportData.endpoint,
     report_text: report,

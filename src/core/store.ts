@@ -421,10 +421,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         return;
       }
 
-      // Get all existing conversation IDs
+      // Get all existing conversations for the user (id + meta to identify insight chats)
       const { data: conversations, error: convError } = await supabase
         .from('conversations')
-        .select('id')
+        .select('id, meta')
         .eq('user_id', userId);
 
       if (convError) {
@@ -433,35 +433,47 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       }
 
       const existingConvIds = new Set(conversations?.map(c => c.id) || []);
+      const readyInsightIds = new Set(insights.map(i => i.id));
 
       // Find insights that don't have conversations
       const missingConversations = insights.filter(insight => !existingConvIds.has(insight.id));
 
-      if (missingConversations.length === 0) {
-        console.log('[Store] All insights have matching conversations');
-        return;
+      // Identify orphan conversations (insight chat whose id no longer exists in insights)
+      const insightConversations = (conversations || []).filter(c => (c as any).meta?.type === 'insight_chat');
+      const orphanConversations = insightConversations.filter(c => !readyInsightIds.has(c.id));
+
+      const createdCount = missingConversations.length;
+      const deletedCount = orphanConversations.length;
+
+      if (createdCount > 0) {
+        console.log(`[Store] Found ${createdCount} insights without conversations, creating them...`);
+        for (const insight of missingConversations) {
+          await supabase.from('conversations').insert({
+            id: insight.id,
+            user_id: userId,
+            title: `${insight.report_type} - Insight`,
+            meta: {
+              type: 'insight_chat',
+              insight_report_id: insight.id,
+              parent_report_type: insight.report_type
+            }
+          });
+        }
       }
 
-      console.log(`[Store] Found ${missingConversations.length} insights without conversations, creating them...`);
-
-      // Create missing conversations
-      for (const insight of missingConversations) {
-        await supabase.from('conversations').insert({
-          id: insight.id,
-          user_id: userId,
-          title: `${insight.report_type} - Insight`,
-          meta: {
-            type: 'insight_chat',
-            insight_report_id: insight.id,
-            parent_report_type: insight.report_type
-          }
-        });
+      if (deletedCount > 0) {
+        console.log(`[Store] Found ${deletedCount} orphan insight conversations, deleting them...`);
+        for (const conv of orphanConversations) {
+          await supabase.from('conversations').delete().eq('id', conv.id).eq('user_id', userId);
+          // Also remove locally to keep UI in sync immediately
+          get().removeConversation(conv.id);
+        }
       }
 
-      // Reload threads to include newly created conversations
+      // Reload threads to reflect reconciliation changes
       await get().loadThreads();
 
-      console.log(`[Store] Reconciliation complete. Created ${missingConversations.length} missing conversations.`);
+      console.log(`[Store] Reconciliation complete. Created ${createdCount}, deleted ${deletedCount}.`);
     } catch (error) {
       console.error('[Store] Error during insight reconciliation:', error);
     }

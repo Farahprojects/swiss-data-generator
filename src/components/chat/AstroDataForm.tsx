@@ -195,7 +195,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
       
       // Build payload for initiate-auth-report
-      const payload = buildAuthReportPayload(data, finalContextId);
+      const payload = buildAuthReportPayload(data, currentChatId);
       
       // Invoke initiate-auth-report edge function
       const { data: result, error } = await supabase.functions.invoke('initiate-auth-report', {

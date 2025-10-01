@@ -76,7 +76,7 @@ serve(async (req) => {
     const { data: translatorLogs } = await supabase
       .from("translator_logs")
       .select("swiss_data")
-      .eq("user_id", chat_id)
+      .eq("chat_id", chat_id)
       .single();
 
     // Build context content

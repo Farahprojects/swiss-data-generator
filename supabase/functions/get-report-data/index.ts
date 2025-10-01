@@ -80,12 +80,12 @@ serve(async (req) => {
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch report data from report_logs where user_id = guest_report_id
+    // Fetch report data from report_logs where chat_id = guest_report_id
     console.log(`[get-report-data][${requestId}] 🔍 Fetching report_logs data...`);
     const { data: reportLogs, error: reportLogsError } = await supabase
       .from("report_logs")
       .select("report_text, created_at")
-      .eq("user_id", guest_report_id)
+      .eq("chat_id", guest_report_id)
       .single();
     
     let reportLogData: { report_text: string } | null = null;
@@ -95,12 +95,12 @@ serve(async (req) => {
       console.warn(`[get-report-data] Could not fetch report_logs:`, reportLogsError);
     }
 
-    // Fetch translator data from translator_logs where user_id = guest_report_id
+    // Fetch translator data from translator_logs where chat_id = guest_report_id
     console.log(`[get-report-data][${requestId}] 🔍 Fetching translator_logs data...`);
     const { data: translatorLogs, error: translatorLogsError } = await supabase
       .from("translator_logs")
       .select("swiss_data, created_at")
-      .eq("user_id", guest_report_id)
+      .eq("chat_id", guest_report_id)
       .single();
     
     let translatorLogData: { swiss_data: any } | null = null;
