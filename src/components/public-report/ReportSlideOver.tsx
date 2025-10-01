@@ -56,7 +56,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     try {
       const { data, error: functionError } = await supabase.functions.invoke(
         'get-report-data',
-        { body: { report_id: reportId } }
+        { body: { chat_id: reportId } }
       );
 
       if (functionError) {

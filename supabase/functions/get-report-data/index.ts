@@ -60,32 +60,32 @@ serve(async (req) => {
       );
     }
 
-    const { report_id } = requestBody;
+    const { chat_id } = requestBody;
 
-    // Validate report_id
-    if (!report_id || typeof report_id !== 'string' || !isValidUUID(report_id)) {
-      console.error("[get-report-data] Invalid report_id format:", report_id);
+    // Validate chat_id
+    if (!chat_id || typeof chat_id !== 'string' || !isValidUUID(chat_id)) {
+      console.error("[get-report-data] Invalid chat_id format:", chat_id);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "report_id must be a valid UUID",
+          error: "chat_id must be a valid UUID",
           timestamp: new Date().toISOString()
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[get-report-data][${requestId}] 📋 Fetching report data: ${report_id}`);
+    console.log(`[get-report-data][${requestId}] 📋 Fetching report data: ${chat_id}`);
 
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch report data from report_logs where chat_id = report_id
+    // Fetch report data from report_logs where chat_id = chat_id
     console.log(`[get-report-data][${requestId}] 🔍 Fetching report_logs data...`);
     const { data: reportLogs, error: reportLogsError } = await supabase
       .from("report_logs")
       .select("report_text, created_at")
-      .eq("chat_id", report_id)
+      .eq("chat_id", chat_id)
       .single();
     
     let reportLogData: { report_text: string } | null = null;
@@ -95,12 +95,12 @@ serve(async (req) => {
       console.warn(`[get-report-data] Could not fetch report_logs:`, reportLogsError);
     }
 
-    // Fetch translator data from translator_logs where chat_id = report_id
+    // Fetch translator data from translator_logs where chat_id = chat_id
     console.log(`[get-report-data][${requestId}] 🔍 Fetching translator_logs data...`);
     const { data: translatorLogs, error: translatorLogsError } = await supabase
       .from("translator_logs")
       .select("swiss_data, created_at")
-      .eq("chat_id", report_id)
+      .eq("chat_id", chat_id)
       .single();
     
     let translatorLogData: { swiss_data: any } | null = null;
@@ -116,7 +116,7 @@ serve(async (req) => {
     const hasAnyData = hasReportText || hasSwissData;
     
     if (!hasAnyData) {
-      console.warn(`[get-report-data] No data found - no report_text or swiss_data: ${report_id}`);
+      console.warn(`[get-report-data] No data found - no report_text or swiss_data: ${chat_id}`);
       return new Response(
         JSON.stringify({ 
           ready: false, 
@@ -141,7 +141,7 @@ serve(async (req) => {
     };
 
     const processingTime = Date.now() - startTime;
-    console.log(`[get-report-data][${requestId}] ✅ Report data retrieved in ${processingTime}ms: ${report_id}`);
+    console.log(`[get-report-data][${requestId}] ✅ Report data retrieved in ${processingTime}ms: ${chat_id}`);
     
     // Return report data
     return new Response(
