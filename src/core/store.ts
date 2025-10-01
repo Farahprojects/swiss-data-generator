@@ -349,13 +349,40 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Fetch person names from translator_logs
+      const { data: translatorLog } = await supabase
+        .from('translator_logs')
+        .select('request_payload')
+        .eq('user_id', reportId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Extract names from request_payload
+      let threadTitle = `${pendingData.reportType} - Insight`;
+      if (translatorLog?.request_payload) {
+        const payload = translatorLog.request_payload as any;
+        const personAName = payload?.person_a?.name || payload?.name;
+        const personBName = payload?.person_b?.name;
+
+        if (personAName && personBName) {
+          // Two people: "Peter / Olivia"
+          const firstNameA = personAName.split(' ')[0];
+          const firstNameB = personBName.split(' ')[0];
+          threadTitle = `${firstNameA} / ${firstNameB}`;
+        } else if (personAName) {
+          // One person: "Peter"
+          threadTitle = personAName.split(' ')[0];
+        }
+      }
+
       // Create the actual conversation in DB
       const { error } = await supabase
         .from('conversations')
         .insert({
           id: reportId,
           user_id: user.id,
-          title: `${pendingData.reportType} - Insight`,
+          title: threadTitle,
           meta: {
             type: 'insight_chat',
             insight_report_id: reportId,
@@ -375,7 +402,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
             ? {
                 ...thread,
                 user_id: user.id,
-                title: `${pendingData.reportType} - Insight`,
+                title: threadTitle,
                 meta: {
                   type: 'insight_chat',
                   insight_report_id: reportId,
@@ -391,7 +418,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       newPendingMap.delete(reportId);
       set({ pendingInsightThreads: newPendingMap });
 
-      console.log('[Store] Insight thread completed and conversation created:', reportId);
+      console.log('[Store] Insight thread completed and conversation created:', reportId, threadTitle);
     } catch (error) {
       console.error('[Store] Error completing pending insight thread:', error);
     }
@@ -446,10 +473,37 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
       // Create missing conversations
       for (const insight of missingConversations) {
+        // Fetch person names from translator_logs
+        const { data: translatorLog } = await supabase
+          .from('translator_logs')
+          .select('request_payload')
+          .eq('user_id', insight.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Extract names from request_payload
+        let threadTitle = `${insight.report_type} - Insight`;
+        if (translatorLog?.request_payload) {
+          const payload = translatorLog.request_payload as any;
+          const personAName = payload?.person_a?.name || payload?.name;
+          const personBName = payload?.person_b?.name;
+
+          if (personAName && personBName) {
+            // Two people: "Peter / Olivia"
+            const firstNameA = personAName.split(' ')[0];
+            const firstNameB = personBName.split(' ')[0];
+            threadTitle = `${firstNameA} / ${firstNameB}`;
+          } else if (personAName) {
+            // One person: "Peter"
+            threadTitle = personAName.split(' ')[0];
+          }
+        }
+
         await supabase.from('conversations').insert({
           id: insight.id,
           user_id: userId,
-          title: `${insight.report_type} - Insight`,
+          title: threadTitle,
           meta: {
             type: 'insight_chat',
             insight_report_id: insight.id,
