@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/Navbar";
+import PublicHeader from "@/components/PublicHeader";
 import Footer from "@/components/Footer";
 // Markdown support removed to reduce bundle size
 
@@ -51,7 +51,7 @@ const Legal = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col">
-        <Navbar />
+        <PublicHeader />
         <main className="flex-grow flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
@@ -62,7 +62,7 @@ const Legal = () => {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar />
+      <PublicHeader />
       <main className="flex-grow">
         <section className="relative overflow-hidden bg-white py-24">
           <div className="container relative z-10 mx-auto px-4">

@@ -20,6 +20,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { updateConversationTitle } from '@/services/conversations';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
@@ -64,7 +67,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Get messages from message store
   const { messages } = useMessageStore();
 
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
@@ -580,9 +583,25 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                     <Bell className="mr-2 h-4 w-4" />
                     Notifications
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
-                    <LifeBuoy className="mr-2 h-4 w-4" />
-                    Support
+                  
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <LifeBuoy className="mr-2 h-4 w-4" />
+                      Help
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => window.open('/legal', '_blank')}>
+                        Legal & Terms
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
+                        Contact Support
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  
+                  <DropdownMenuItem onClick={() => signOut()} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -6,25 +6,16 @@ import { Loader, RefreshCw } from "lucide-react";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 
-// Define the specific notification toggle keys type
-type NotificationToggleKey = 'password_change_notifications' | 'security_alert_notifications';
 
 export const NotificationsPanel = () => {
   const {
     preferences,
     saving,
     error,
-    updateMainNotificationsToggle,
-    updateNotificationToggle
+    updateMainNotificationsToggle
   } = useUserPreferences();
 
 
-  // Helper function to determine if individual notification is enabled
-  const isNotificationEnabled = (type: string): boolean => {
-    if (!preferences) return true; // Default to true
-    return preferences[type as keyof typeof preferences] === true;
-  };
-  
   // Handle refresh on timeout errors
   const handleRefresh = () => {
     window.location.reload();
@@ -33,15 +24,6 @@ export const NotificationsPanel = () => {
   // Optimistically handle toggle changes without waiting for backend response
   const handleMainToggleChange = (checked: boolean) => {
     updateMainNotificationsToggle(checked, { showToast: false });
-  };
-
-  // Optimistically handle individual notification toggle changes
-  const handleNotificationToggleChange = (type: NotificationToggleKey, checked: boolean) => {
-    updateNotificationToggle(
-      type,
-      checked,
-      { showToast: false }
-    );
   };
 
   return (
@@ -93,57 +75,9 @@ export const NotificationsPanel = () => {
           )}
         </div>
         
-        {preferences?.email_notifications_enabled && (
-          <div className="space-y-4 pt-2">
-            <h4 className="font-medium text-gray-700">Notification Types</h4>
-            
-            <div className="space-y-4">
-              {/* Password Change Notifications */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">Password Changes</p>
-                  <p className="text-xs text-gray-500">
-                    Get notified when your password is changed
-                  </p>
-                </div>
-                <Switch 
-                  id="password-change-notifications"
-                  checked={isNotificationEnabled('password_change_notifications')}
-                  onCheckedChange={(checked) => 
-                    handleNotificationToggleChange('password_change_notifications', checked)
-                  }
-                  disabled={saving || !preferences?.email_notifications_enabled}
-                  className="focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              
-              {/* Email Change Notifications - Removed - no longer needed */}
-              
-              {/* Security Alert Notifications */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">Security Alerts</p>
-                  <p className="text-xs text-gray-500">
-                    Get notified about important security events
-                  </p>
-                </div>
-                <Switch 
-                  id="security-alert-notifications"
-                  checked={isNotificationEnabled('security_alert_notifications')}
-                  onCheckedChange={(checked) => 
-                    handleNotificationToggleChange('security_alert_notifications', checked)
-                  }
-                  disabled={saving || !preferences?.email_notifications_enabled}
-                  className="focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-        
         {preferences && !preferences.email_notifications_enabled && (
           <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-sm">
-            Email notifications are currently disabled. Enable the master switch to manage individual notification settings.
+            Email notifications are currently disabled.
           </div>
         )}
       </div>

@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useChatStore } from '@/core/store';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Volume2 } from 'lucide-react';
+import { Play, Pause, Volume2, ChevronDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export const VoiceSelectionPanel: React.FC = () => {
   const ttsVoice = useChatStore((s) => s.ttsVoice);
@@ -93,86 +99,52 @@ export const VoiceSelectionPanel: React.FC = () => {
           Choose the voice for your AI assistant. Click the play button to preview each voice.
         </p>
         
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Male Voices</h4>
-            <div className="space-y-2">
-              {voices.filter(v => v.gender === 'Male').map((voice) => (
-                <div key={voice.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      id={voice.name}
-                      name="voice"
-                      value={voice.name}
-                      checked={ttsVoice === voice.name}
-                      onChange={(e) => handleVoiceChange(e.target.value)}
-                      className="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300"
-                    />
-                    <label htmlFor={voice.name} className="text-sm font-medium text-gray-900 cursor-pointer">
-                      {voice.name}
-                    </label>
+        {/* Elegant Voice Selection Dropdown */}
+        <div className="flex items-center gap-3">
+          {/* Play Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handlePlayPreview(ttsVoice)}
+            disabled={isLoading === ttsVoice}
+            className="h-10 w-10 p-0 border-gray-300 hover:bg-gray-50"
+          >
+            {isLoading === ttsVoice ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+            ) : playingVoice === ttsVoice ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
+          
+          {/* Voice Name Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="h-10 px-3 justify-between min-w-[140px] border-gray-300 hover:bg-gray-50"
+              >
+                <span className="text-sm font-medium">{ttsVoice}</span>
+                <ChevronDown className="h-4 w-4 text-gray-500" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {voices.map((voice) => (
+                <DropdownMenuItem
+                  key={voice.name}
+                  onClick={() => handleVoiceChange(voice.name)}
+                  className={`cursor-pointer ${ttsVoice === voice.name ? 'bg-gray-100' : ''}`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm">{voice.name}</span>
+                    <span className="text-xs text-gray-500">{voice.gender}</span>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handlePlayPreview(voice.name)}
-                    disabled={isLoading === voice.name}
-                    className="h-8 w-8 p-0"
-                  >
-                    {isLoading === voice.name ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-                    ) : playingVoice === voice.name ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                </DropdownMenuItem>
               ))}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Female Voices</h4>
-            <div className="space-y-2">
-              {voices.filter(v => v.gender === 'Female').map((voice) => (
-                <div key={voice.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      id={voice.name}
-                      name="voice"
-                      value={voice.name}
-                      checked={ttsVoice === voice.name}
-                      onChange={(e) => handleVoiceChange(e.target.value)}
-                      className="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300"
-                    />
-                    <label htmlFor={voice.name} className="text-sm font-medium text-gray-900 cursor-pointer">
-                      {voice.name}
-                    </label>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handlePlayPreview(voice.name)}
-                    disabled={isLoading === voice.name}
-                    className="h-8 w-8 p-0"
-                  >
-                    {isLoading === voice.name ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-                    ) : playingVoice === voice.name ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>
