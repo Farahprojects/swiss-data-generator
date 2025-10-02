@@ -109,8 +109,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Set up report completion listener for authenticated users
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      console.log('[ChatThreadsSidebar] Setting up report completion listener for user:', user.id);
-      
       const setupReportListener = async () => {
         try {
           // Initialize the WebSocket service with report completion callback

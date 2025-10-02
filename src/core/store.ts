@@ -409,8 +409,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (!userId) return;
 
     try {
-      console.log('[Store] Reconciling insight threads...');
-
       // Get all ready insights for this user
       const { data: insights, error: insightsError } = await supabase
         .from('insights')
@@ -480,8 +478,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
       // Reload threads to reflect reconciliation changes
       await get().loadThreads();
-
-      console.log(`[Store] Reconciliation complete. Created ${createdCount}, deleted ${deletedCount}.`);
     } catch (error) {
       console.error('[Store] Error during insight reconciliation:', error);
     }
