@@ -76,7 +76,6 @@ class UnifiedWebSocketService {
    * Pause realtime subscription (stub for compatibility)
    */
   pauseRealtimeSubscription() {
-    console.log('[UnifiedWebSocket] pauseRealtimeSubscription: Pausing subscription');
     if (this.realtimeChannel) {
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
@@ -87,7 +86,6 @@ class UnifiedWebSocketService {
    * Resume realtime subscription (stub for compatibility)
    */
   resumeRealtimeSubscription() {
-    console.log('[UnifiedWebSocket] resumeRealtimeSubscription: Resuming subscription');
     if (this.currentChatId) {
       this.setupRealtimeSubscription(this.currentChatId);
     }
@@ -97,7 +95,6 @@ class UnifiedWebSocketService {
    * Send message directly (stub for compatibility)
    */
   sendMessageDirect(text: string, mode?: string) {
-    console.log('[UnifiedWebSocket] sendMessageDirect: This is a stub method');
     console.warn('[UnifiedWebSocket] sendMessageDirect should be implemented by the actual message sending service');
   }
 
@@ -274,7 +271,6 @@ class UnifiedWebSocketService {
       this.realtimeChannel = null;
     }
     this.currentChatId = null;
-    console.log('[UnifiedWebSocket] Cleaned up WebSocket connection');
   }
 }
 

@@ -114,7 +114,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           // Initialize the WebSocket service with report completion callback
           await unifiedWebSocketService.initializeCallbacks({
             onReportCompleted: async (reportData: any) => {
-              console.log('[ChatThreadsSidebar] Report completed!', reportData);
               // Complete the pending insight thread (creates conversation in DB)
               const { completePendingInsightThread } = useChatStore.getState();
               await completePendingInsightThread(reportData.id);

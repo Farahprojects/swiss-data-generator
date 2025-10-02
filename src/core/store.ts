@@ -391,7 +391,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       newPendingMap.delete(reportId);
       set({ pendingInsightThreads: newPendingMap });
 
-      console.log('[Store] Insight thread completed and conversation created:', reportId);
     } catch (error) {
       console.error('[Store] Error completing pending insight thread:', error);
     }
