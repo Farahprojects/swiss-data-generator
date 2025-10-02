@@ -30,9 +30,10 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { user_id, conversation_id, title } = requestBody;
+    const { user_id, conversation_id, title, share_token } = requestBody;
 
-    if (!user_id) {
+    // Most actions require user_id, except get_shared_conversation which is public
+    if (!user_id && action !== 'get_shared_conversation') {
       return new Response('user_id is required', { 
         status: 400, 
         headers: corsHeaders 
@@ -182,6 +183,81 @@ serve(async (req) => {
 
         if (titleUpdateError) throw titleUpdateError;
         result = { success: true, conversation_id };
+        break;
+
+      case 'share_conversation':
+        // Share a conversation publicly by generating a share token
+        if (!conversation_id) {
+          return new Response('conversation_id is required for sharing', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Generate a unique share token
+        const shareToken = crypto.randomUUID();
+
+        const { error: shareError } = await supabaseClient
+          .from('conversations')
+          .update({ 
+            is_public: true,
+            share_token: shareToken,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (shareError) throw shareError;
+        result = { share_token: shareToken, conversation_id };
+        break;
+
+      case 'unshare_conversation':
+        // Stop sharing a conversation
+        if (!conversation_id) {
+          return new Response('conversation_id is required for unsharing', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { error: unshareError } = await supabaseClient
+          .from('conversations')
+          .update({ 
+            is_public: false,
+            share_token: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (unshareError) throw unshareError;
+        result = { success: true, conversation_id };
+        break;
+
+      case 'get_shared_conversation':
+        // Get a shared conversation by share token (public access)
+        if (!share_token) {
+          return new Response('share_token is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { data: sharedConversation, error: getSharedError } = await supabaseClient
+          .from('conversations')
+          .select('id, user_id, title, created_at, updated_at, meta')
+          .eq('share_token', share_token)
+          .eq('is_public', true)
+          .single();
+
+        if (getSharedError || !sharedConversation) {
+          return new Response('Shared conversation not found', { 
+            status: 404, 
+            headers: corsHeaders 
+          });
+        }
+
+        result = sharedConversation;
         break;
 
       default:
