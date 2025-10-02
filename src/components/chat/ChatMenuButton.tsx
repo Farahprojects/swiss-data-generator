@@ -54,7 +54,7 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
   const handleShareSuccess = (token: string) => {
     setIsShared(true);
     setShareToken(token);
-    setShowShareModal(false);
+    // Don't close modal - let user see the link and copy it
   };
 
   const handleUnshare = () => {
