@@ -136,8 +136,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
 
     try {
-      console.log('[ChatThreadsSidebar] Creating new conversation for authenticated user with mode:', mode);
-      
       // Create new conversation with mode in meta
       const { data: conversation, error } = await supabase
         .from('conversations')
@@ -183,8 +181,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       
       // Navigate to the new conversation
       navigate(`/c/${newChatId}`, { replace: true });
-      
-      console.log('[ChatThreadsSidebar] New conversation created and navigated to:', newChatId);
     } catch (error) {
       console.error('[ChatThreadsSidebar] Failed to create new conversation:', error);
     }
