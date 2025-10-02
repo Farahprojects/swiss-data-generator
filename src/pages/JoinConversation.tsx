@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { joinConversationByToken, getSharedConversation } from '@/services/conversations';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthModal } from '@/contexts/AuthModalContext';
 
 const JoinConversation: React.FC = () => {
   const { shareToken } = useParams<{ shareToken: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const openedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,9 +23,12 @@ const JoinConversation: React.FC = () => {
 
         // If not authed, redirect to auth preserving join intent
         if (!user) {
-          // Store pending join token and send user to /therai to sign in
-          localStorage.setItem('pending_join_token', shareToken);
-          navigate('/therai');
+          // Store pending join token and open auth modal in-place
+          if (!openedRef.current) {
+            localStorage.setItem('pending_join_token', shareToken);
+            openAuthModal('login');
+            openedRef.current = true;
+          }
           return;
         }
 
