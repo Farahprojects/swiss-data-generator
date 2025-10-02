@@ -94,7 +94,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     },
   });
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
+  const { register, handleSubmit, setValue, setError, watch, formState: { errors } } = form;
   const formValues = watch();
 
   // Create insight report ID when we have reportType and user
@@ -151,6 +151,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (place.longitude) setValue('birthLongitude', place.longitude);
     if (place.placeId) setValue('birthPlaceId', place.placeId);
   };
+
+  // Lightweight guards to ensure lat/lng are present before progressing
+  const isPrimaryLocationPending = Boolean(
+    (formValues.birthLocation && formValues.birthLocation.trim().length > 0) &&
+    (formValues.birthLatitude === undefined || formValues.birthLongitude === undefined)
+  );
 
   // Handle form submission for authenticated users
   const handleAuthenticatedSubmit = async (data: ReportFormData) => {
@@ -292,6 +298,29 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   const handleFormSubmit = (data: ReportFormData) => {
+    // Ensure required fields are set before moving on
+    if (!data.name?.trim()) {
+      setError('name', { type: 'manual', message: 'Name is required' });
+      return;
+    }
+    if (!data.birthDate) {
+      setError('birthDate' as any, { type: 'manual', message: 'Date of birth is required' });
+      return;
+    }
+    if (!data.birthTime) {
+      setError('birthTime' as any, { type: 'manual', message: 'Time of birth is required' });
+      return;
+    }
+    if (!data.birthLocation?.trim()) {
+      setError('birthLocation', { type: 'manual', message: 'Location is required' });
+      return;
+    }
+    // Require coordinates from a confirmed selection
+    if (data.birthLatitude === undefined || data.birthLongitude === undefined) {
+      setError('birthLocation', { type: 'manual', message: 'Please select a suggestion to confirm coordinates' });
+      toast.error('Please select a location from suggestions to add latitude and longitude.');
+      return;
+    }
     // If compatibility type is selected, go to second person form
     if (selectedAstroType === 'sync') {
       setCurrentStep('secondPerson');
@@ -302,6 +331,28 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   const handleSecondPersonSubmit = (data: ReportFormData) => {
+    // Require second person fields when on compatibility flow
+    if (!data.secondPersonName?.trim()) {
+      setError('secondPersonName', { type: 'manual', message: 'Second person name is required' });
+      return;
+    }
+    if (!data.secondPersonBirthDate) {
+      setError('secondPersonBirthDate' as any, { type: 'manual', message: 'Date of birth is required' });
+      return;
+    }
+    if (!data.secondPersonBirthTime) {
+      setError('secondPersonBirthTime' as any, { type: 'manual', message: 'Time of birth is required' });
+      return;
+    }
+    if (!data.secondPersonBirthLocation?.trim()) {
+      setError('secondPersonBirthLocation', { type: 'manual', message: 'Location is required' });
+      return;
+    }
+    if (data.secondPersonLatitude === undefined || data.secondPersonLongitude === undefined) {
+      setError('secondPersonBirthLocation', { type: 'manual', message: 'Please select a suggestion to confirm coordinates' });
+      toast.error('Please select a location for the second person to add latitude and longitude.');
+      return;
+    }
     // Submit directly for authenticated users
     handleAuthenticatedSubmit(data);
   };
