@@ -107,8 +107,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     
     // Update both session and local storage for persistence
     if (id) {
-      const { setLastChatId } = require('@/services/auth/chatTokens');
-      setLastChatId(id);
+      import('@/services/auth/chatTokens').then(({ setLastChatId }) => {
+        setLastChatId(id);
+      });
     }
   },
 
@@ -191,8 +192,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     });
     
     // Clear session storage but keep localStorage for cross-session persistence
-    const { clearLastChatId } = require('@/services/auth/chatTokens');
-    clearLastChatId();
+    import('@/services/auth/chatTokens').then(({ clearLastChatId }) => {
+      clearLastChatId();
+    });
   },
 
   clearAllData: () => {
@@ -203,8 +205,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     get().clearChat();
     
     // Clear all persistence on logout
-    const { clearAllChatPersistence } = require('@/services/auth/chatTokens');
-    clearAllChatPersistence();
+    import('@/services/auth/chatTokens').then(({ clearAllChatPersistence }) => {
+      clearAllChatPersistence();
+    });
     
     // Clear threads
     set({ 
