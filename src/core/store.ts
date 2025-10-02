@@ -72,8 +72,8 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
-  // Current active chat (try to restore from cache for instant UI)
-  chat_id: typeof window !== 'undefined' ? localStorage.getItem('last_chat_id') : null,
+  // Current active chat (will be set via URL navigation)
+  chat_id: null,
   // Messages moved to useMessageStore - single source of truth
   status: 'idle',
   error: null,
@@ -105,9 +105,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       isAssistantTyping: false
     });
     
-    // Cache chat_id for instant UI on refresh
+    // Update both session and local storage for persistence
     if (id) {
-      localStorage.setItem('last_chat_id', id);
+      const { setLastChatId } = require('@/services/auth/chatTokens');
+      setLastChatId(id);
     }
   },
 
@@ -189,8 +190,9 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       isPaymentFlowStopIcon: false
     });
     
-    // Clear cached chat_id
-    localStorage.removeItem('last_chat_id');
+    // Clear session storage but keep localStorage for cross-session persistence
+    const { clearLastChatId } = require('@/services/auth/chatTokens');
+    clearLastChatId();
   },
 
   clearAllData: () => {
@@ -199,6 +201,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     
     // Clear all chat data
     get().clearChat();
+    
+    // Clear all persistence on logout
+    const { clearAllChatPersistence } = require('@/services/auth/chatTokens');
+    clearAllChatPersistence();
     
     // Clear threads
     set({ 

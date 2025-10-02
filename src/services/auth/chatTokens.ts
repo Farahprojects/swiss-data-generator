@@ -95,3 +95,74 @@ export function clearHasReportFlag(): void {
   try { ss?.removeItem(HAS_REPORT_KEY); } catch (_e) {}
   try { ls?.removeItem(HAS_REPORT_KEY); } catch (_e) {}
 }
+
+// Last chat persistence utilities
+const LAST_CHAT_ID_KEY = 'therai_last_chat_id';
+const LAST_CHAT_TIMESTAMP_KEY = 'therai_last_chat_timestamp';
+
+export function setLastChatId(chatId: string): void {
+  const ss = getSessionStorage();
+  const ls = getLocalStorage();
+  const timestamp = Date.now().toString();
+  
+  try { 
+    ss?.setItem(LAST_CHAT_ID_KEY, chatId); 
+    ss?.setItem(LAST_CHAT_TIMESTAMP_KEY, timestamp);
+  } catch (_e) {}
+  
+  try { 
+    ls?.setItem(LAST_CHAT_ID_KEY, chatId); 
+    ls?.setItem(LAST_CHAT_TIMESTAMP_KEY, timestamp);
+  } catch (_e) {}
+}
+
+export function getLastChatId(): { chatId: string | null; timestamp: number | null } {
+  const ss = getSessionStorage();
+  const ls = getLocalStorage();
+  
+  try {
+    // Prefer sessionStorage (tab-scoped)
+    let chatId = ss?.getItem(LAST_CHAT_ID_KEY) ?? null;
+    let timestampStr = ss?.getItem(LAST_CHAT_TIMESTAMP_KEY) ?? null;
+    
+    // Fallback to localStorage for cross-session persistence
+    if (!chatId) {
+      chatId = ls?.getItem(LAST_CHAT_ID_KEY) ?? null;
+      timestampStr = ls?.getItem(LAST_CHAT_TIMESTAMP_KEY) ?? null;
+    }
+    
+    const timestamp = timestampStr ? parseInt(timestampStr, 10) : null;
+    
+    return { chatId, timestamp };
+  } catch (_e) {
+    return { chatId: null, timestamp: null };
+  }
+}
+
+export function clearLastChatId(): void {
+  const ss = getSessionStorage();
+  const ls = getLocalStorage();
+  
+  try { 
+    ss?.removeItem(LAST_CHAT_ID_KEY); 
+    ss?.removeItem(LAST_CHAT_TIMESTAMP_KEY);
+  } catch (_e) {}
+  
+  // Keep localStorage for cross-session persistence
+  // Only clear on explicit logout
+}
+
+export function clearAllChatPersistence(): void {
+  const ss = getSessionStorage();
+  const ls = getLocalStorage();
+  
+  try { 
+    ss?.removeItem(LAST_CHAT_ID_KEY); 
+    ss?.removeItem(LAST_CHAT_TIMESTAMP_KEY);
+  } catch (_e) {}
+  
+  try { 
+    ls?.removeItem(LAST_CHAT_ID_KEY); 
+    ls?.removeItem(LAST_CHAT_TIMESTAMP_KEY);
+  } catch (_e) {}
+}
