@@ -1,4 +1,4 @@
-# TheRAI - Celestial Nexus
+# Therai - Celestial Nexus
 
 Auto-sync enabled! 🚀
 

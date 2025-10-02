@@ -1,7 +1,7 @@
 # Email Configuration Documentation
 
 ## Overview
-This document outlines the complete email system configuration for TheRAI email infrastructure, including VPS setup, Postfix configuration, OpenDKIM signing, and Supabase edge functions.
+This document outlines the complete email system configuration for Therai email infrastructure, including VPS setup, Postfix configuration, OpenDKIM signing, and Supabase edge functions.
 
 ## VPS Email Infrastructure
 
@@ -430,4 +430,4 @@ WHERE domain = 'therai.co';
 
 **Last Updated**: 2025-09-17
 **Version**: 1.0
-**Maintainer**: TheRAI Development Team
+**Maintainer**: Therai Development Team
