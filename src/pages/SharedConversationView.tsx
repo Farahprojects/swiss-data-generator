@@ -77,7 +77,7 @@ const SharedConversationView: React.FC = () => {
       <div className="border-t border-gray-100 px-4 py-3">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-sm text-gray-500">
-            Powered by <span className="font-medium">TheRAI</span>
+            Powered by <span className="font-medium">therai</span>
           </p>
         </div>
       </div>
