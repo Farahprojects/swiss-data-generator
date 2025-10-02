@@ -267,6 +267,28 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
       });
   });
 
+  // Call context-injector to inject report text into messages (fire-and-forget)
+  const chatId = reportData.chat_id || reportData.user_id;
+  if (chatId) {
+    console.log(`${logPrefix} Calling context-injector for report injection with chat_id: ${chatId}`);
+    supabase.functions.invoke('context-injector', {
+      body: { 
+        chat_id: chatId, 
+        mode: reportData.mode || 'chat',
+        report_text: report,
+        injection_type: 'report'
+      }
+    }).then(({ error }) => {
+      if (error) {
+        console.error(`${logPrefix} Context-injector failed:`, error);
+      } else {
+        console.log(`${logPrefix} Context-injector completed successfully`);
+      }
+    }).catch((err) => {
+      console.error(`${logPrefix} Context-injector error:`, err);
+    });
+  }
+
   // Fire-and-forget insights table update - mark as ready
   // For insights reports, user_id contains the report_id (from insights table)
   if (reportData.user_id) {

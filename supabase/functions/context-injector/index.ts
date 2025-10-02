@@ -27,7 +27,7 @@ serve(async (req) => {
       return new Response("Warm-up", { status: 200, headers: corsHeaders });
     }
 
-        const { chat_id, mode } = requestBody;
+        const { chat_id, mode, report_text, injection_type } = requestBody;
 
     // Basic chat_id validation
     if (!chat_id || typeof chat_id !== 'string') {
@@ -42,53 +42,62 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[context-injector][${requestId}] 📋 Processing context injection for chat_id: ${chat_id}`);
+    console.log(`[context-injector][${requestId}] 📋 Processing context injection for chat_id: ${chat_id}, injection_type: ${injection_type || 'swiss_data'}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Check if context has already been injected for this chat_id
-    console.log(`[context-injector][${requestId}] 🔍 Checking if context already injected...`);
+    // Determine injection type and build appropriate context
+    let contextContent = "";
+    let contextType = injection_type || 'swiss_data';
+    
+    if (injection_type === 'report' && report_text) {
+      // Called from standard-report engines - inject report text
+      console.log(`[context-injector][${requestId}] 📄 Injecting report text (${report_text.length} chars)...`);
+      contextContent = `AI Report generated for this conversation:\n\n${report_text}`;
+    } else {
+      // Called from translator-edge - inject Swiss data (original behavior)
+      console.log(`[context-injector][${requestId}] 🔍 Fetching Swiss data...`);
+      const { data: translatorLogs } = await supabase
+        .from("translator_logs")
+        .select("swiss_data")
+        .eq("chat_id", chat_id)
+        .single();
+
+      if (translatorLogs?.swiss_data) {
+        contextContent = `Astro data available for this conversation:\n${JSON.stringify(translatorLogs.swiss_data, null, 2)}`;
+      } else {
+        contextContent = "Astro data context injected for this conversation.";
+      }
+    }
+
+    // Check if this specific context type has already been injected
+    console.log(`[context-injector][${requestId}] 🔍 Checking if ${contextType} context already injected...`);
     const { data: existingContext } = await supabase
       .from("messages")
       .select("id")
       .eq("chat_id", chat_id)
       .eq("context_injected", true)
+      .eq("meta->>injection_type", contextType)
       .limit(1);
 
     if (existingContext && existingContext.length > 0) {
-      console.log(`[context-injector][${requestId}] ✅ Context already injected for chat_id: ${chat_id}`);
+      console.log(`[context-injector][${requestId}] ✅ ${contextType} context already injected for chat_id: ${chat_id}`);
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Context already injected",
+          message: `${contextType} context already injected`,
           chat_id,
+          injection_type: contextType,
           timestamp: new Date().toISOString()
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get Swiss data if it exists
-    console.log(`[context-injector][${requestId}] 🔍 Fetching Swiss data...`);
-    const { data: translatorLogs } = await supabase
-      .from("translator_logs")
-      .select("swiss_data")
-      .eq("chat_id", chat_id)
-      .single();
-
-    // Build context content
-    let contextContent = "";
-    
-    if (translatorLogs?.swiss_data) {
-      contextContent = `Astro data available for this conversation:\n${JSON.stringify(translatorLogs.swiss_data, null, 2)}`;
-    } else {
-      contextContent = "Astro data context injected for this conversation.";
-    }
-
-    console.log(`[context-injector][${requestId}] 💉 Injecting context message (${contextContent.length} chars)...`);
+    console.log(`[context-injector][${requestId}] 💉 Injecting ${contextType} context message (${contextContent.length} chars)...`);
 
     // Insert the context message as a system message (invisible to UI)
     const { data: contextMessage, error: insertError } = await supabase
@@ -101,7 +110,9 @@ serve(async (req) => {
         context_injected: true,
         mode: mode || 'chat',
         meta: {
-          has_swiss_data: !!translatorLogs?.swiss_data,
+          injection_type: contextType,
+          has_swiss_data: contextType === 'swiss_data',
+          has_report_text: contextType === 'report',
           injection_timestamp: new Date().toISOString()
         }
       })
@@ -122,18 +133,20 @@ serve(async (req) => {
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`[context-injector][${requestId}] ✅ Context injected successfully in ${processingTime}ms`);
+    console.log(`[context-injector][${requestId}] ✅ ${contextType} context injected successfully in ${processingTime}ms`);
     console.log(`[context-injector][${requestId}] 📝 Message ID: ${contextMessage.id}, Chat ID: ${chat_id}`);
     
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: "Context successfully injected",
+        message: `${contextType} context successfully injected`,
         data: {
           message_id: contextMessage.id,
           chat_id,
+          injection_type: contextType,
           content_length: contextContent.length,
-          has_swiss_data: !!translatorLogs?.swiss_data,
+          has_swiss_data: contextType === 'swiss_data',
+          has_report_text: contextType === 'report',
           processing_time_ms: processingTime
         },
         timestamp: new Date().toISOString()
