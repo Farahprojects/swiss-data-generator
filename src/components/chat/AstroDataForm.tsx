@@ -376,6 +376,35 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
       document.body.classList.remove('astro-form-open');
     } catch {}
+    // Auto-delete empty conversation if user exits without processing
+    (async () => {
+      try {
+        // Only for authenticated chat flow
+        if (!isAuthenticated || !user?.id) return;
+        const currentChatId = chat_id;
+        if (!currentChatId) return;
+
+        // Check if chat has any messages
+        const { count, error: countError } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('chat_id', currentChatId);
+        if (countError) return;
+
+        // If empty, delete conversation (owned by user)
+        if ((count ?? 0) === 0) {
+          await supabase
+            .from('conversations')
+            .delete()
+            .eq('id', currentChatId)
+            .eq('user_id', user.id);
+          // Remove from UI store immediately
+          const { removeThread, clearChat } = useChatStore.getState();
+          removeThread(currentChatId);
+          clearChat();
+        }
+      } catch {}
+    })();
     onClose();
   };
 
