@@ -44,29 +44,23 @@ export const useChatInitialization = () => {
   useEffect(() => {
     // Handle direct URL navigation (typing /c/123 in browser)
     if (threadId && threadId !== "1" && user) {
-      // Validate threadId exists in DB before using it
-      const validateAndLoadThread = async () => {
+      // Load the chat directly - let the message store handle validation
+      const loadThread = async () => {
         try {
-          // Check if thread exists in current threads
-          const { threads } = useChatStore.getState();
-          const threadExists = threads.some(thread => thread.id === threadId);
-          
-          if (threadExists) {
-            // Use the same direct flow as handleSwitchToChat
-            const { useMessageStore } = await import('@/stores/messageStore');
-            useMessageStore.getState().setChatId(threadId);
-            startConversation(threadId);
-            await chatController.switchToChat(threadId);
-          } else {
-            useChatStore.getState().clearChat();
-          }
+          console.log('[useChatInitialization] Loading thread:', threadId);
+          // Use the same direct flow as handleSwitchToChat
+          const { useMessageStore } = await import('@/stores/messageStore');
+          useMessageStore.getState().setChatId(threadId);
+          startConversation(threadId);
+          await chatController.switchToChat(threadId);
+          console.log('[useChatInitialization] Thread loaded successfully:', threadId);
         } catch (error) {
-          console.error('[useChatInitialization] Error validating thread:', error);
+          console.error('[useChatInitialization] Error loading thread:', error);
           useChatStore.getState().clearChat();
         }
       };
       
-      validateAndLoadThread();
+      loadThread();
     } else if (threadId === "1") {
       useChatStore.getState().clearChat();
     }
@@ -82,10 +76,12 @@ export const useChatInitialization = () => {
           
           if (isRootUrl) {
             const { chatId } = getLastChatId();
+            console.log('[useChatInitialization] Found last chat ID:', chatId);
             
             if (chatId) {
               // Validate the chat exists in current threads
               const { threads, isLoadingThreads } = useChatStore.getState();
+              console.log('[useChatInitialization] Threads state:', { threadsCount: threads.length, isLoadingThreads });
               
               // Wait for threads to load if they're still loading
               if (isLoadingThreads) {
@@ -94,8 +90,10 @@ export const useChatInitialization = () => {
                   const currentState = useChatStore.getState();
                   if (!currentState.isLoadingThreads) {
                     const threadExists = currentState.threads.some(thread => thread.id === chatId);
+                    console.log('[useChatInitialization] Thread exists check:', threadExists);
                     if (threadExists) {
                       // Redirect to the last chat
+                      console.log('[useChatInitialization] Redirecting to last chat:', chatId);
                       navigate(`/chat/${chatId}`, { replace: true });
                     }
                   }
@@ -105,8 +103,10 @@ export const useChatInitialization = () => {
                 setTimeout(checkThreadsLoaded, 100);
               } else {
                 const threadExists = threads.some(thread => thread.id === chatId);
+                console.log('[useChatInitialization] Thread exists check (immediate):', threadExists);
                 if (threadExists) {
                   // Redirect to the last chat
+                  console.log('[useChatInitialization] Redirecting to last chat (immediate):', chatId);
                   navigate(`/chat/${chatId}`, { replace: true });
                 }
               }
