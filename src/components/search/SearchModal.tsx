@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Search, MessageSquare, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
