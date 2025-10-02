@@ -190,7 +190,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (event === 'SIGNED_IN' && supaSession) {
-        // Removed email change check - no longer needed for signed user email changes
+        // Handle pending join after user signs in
+        try {
+          const pendingToken = typeof window !== 'undefined' ? localStorage.getItem('pending_join_token') : null;
+          if (pendingToken) {
+            localStorage.removeItem('pending_join_token');
+            // Call edge to join and then route to conversation
+            const { joinConversationByToken } = await import('@/services/conversations');
+            const { conversation_id } = await joinConversationByToken(pendingToken);
+            const { useNavigate } = await import('react-router-dom');
+            // Fallback navigation if useNavigate is unavailable here
+            try {
+              window.location.replace(`/c/${conversation_id}`);
+            } catch (_) {}
+          }
+        } catch (e) {
+          console.error('[AuthContext] Pending join failed:', e);
+        }
       }
 
       if (event === 'SIGNED_OUT') {

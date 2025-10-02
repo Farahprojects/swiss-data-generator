@@ -20,9 +20,9 @@ const JoinConversation: React.FC = () => {
 
         // If not authed, redirect to auth preserving join intent
         if (!user) {
-          // Optional: store pending join token in localStorage
+          // Store pending join token and send user to /therai to sign in
           localStorage.setItem('pending_join_token', shareToken);
-          navigate('/auth');
+          navigate('/therai');
           return;
         }
 
