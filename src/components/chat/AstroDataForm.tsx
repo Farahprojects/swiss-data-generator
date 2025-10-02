@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMode } from '@/contexts/ModeContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
@@ -60,6 +60,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Auth detection - use route-based logic
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Route-based authentication: /c routes are authenticated
   const isAuthenticated = location.pathname.startsWith('/c/');
@@ -402,6 +403,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           const { removeThread, clearChat } = useChatStore.getState();
           removeThread(currentChatId);
           clearChat();
+          
+          // Redirect away from deleted chat URL
+          if (location.pathname.includes(currentChatId)) {
+            navigate('/therai', { replace: true });
+          }
         }
       } catch {}
     })();

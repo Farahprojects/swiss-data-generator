@@ -22,10 +22,10 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { updateConversationTitle } from '@/services/conversations';
-import { InsightsModal } from '@/components/insights/InsightsModal';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { supabase } from '@/integrations/supabase/client';
 import { SearchModal } from '@/components/search/SearchModal';
+import { NewChatDropdown } from '@/components/chat/NewChatDropdown';
 
 
 interface ChatThreadsSidebarProps {
@@ -84,7 +84,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
-  const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   
   // Lazy loading state
@@ -128,68 +127,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
   }, [isAuthenticated, user?.id]);
 
-  // Handle new chat creation with mode selection
-  const handleNewChat = async (mode: 'chat' | 'astro' | 'insight' = 'chat') => {
-    if (!user) {
-      console.error('[ChatThreadsSidebar] Cannot create new chat: user not authenticated');
-      return;
-    }
-
-    try {
-      // Create new conversation with mode in meta
-      const { data: conversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-          meta: { mode }
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('[ChatThreadsSidebar] Failed to create conversation:', error);
-        return;
-      }
-
-      const newChatId = conversation.id;
-      
-      // Add to local threads state directly (no DB call needed)
-      const newThread = {
-        id: newChatId,
-        user_id: user.id,
-        title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-        meta: { mode },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      const currentState = useChatStore.getState();
-      useChatStore.setState({ threads: [newThread, ...currentState.threads] });
-      
-      // DIRECT FLOW: Immediately set chat_id and fetch messages
-      const { setChatId } = useMessageStore.getState();
-      setChatId(newChatId);
-      
-      // Also update the main chat store
-      const { startConversation } = useChatStore.getState();
-      startConversation(newChatId);
-      
-      // Switch WebSocket subscription to new chat_id
-      const { chatController } = await import('@/features/chat/ChatController');
-      await chatController.switchToChat(newChatId);
-      
-      // Navigate to the new conversation
-      navigate(`/c/${newChatId}`, { replace: true });
-    } catch (error) {
-      console.error('[ChatThreadsSidebar] Failed to create new conversation:', error);
-    }
-  };
-
-  // Handle opening insights modal
-  const handleOpenInsights = () => {
-    setShowInsightsModal(true);
-  };
 
   // Handle switching to a different conversation
   const handleSwitchToChat = async (conversationId: string) => {
@@ -449,39 +386,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       {isAuthenticated && uiConfig.showThreadHistory && (
         <div className="space-y-1">
           {uiConfig.newChatLabel && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light">
-                  <Plus className="w-4 h-4" />
-                  {uiConfig.newChatLabel}
-                  <ChevronDown className="w-3 h-3 ml-auto" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => handleNewChat('chat')}
-                  className="cursor-pointer"
-                >
-                  Chat
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleNewChat('astro')}
-                  className="cursor-pointer"
-                >
-                  Astro
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleOpenInsights}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Generate Insight</span>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <NewChatDropdown className="w-full font-light" />
           )}
           
           {uiConfig.showSearchChat && (
@@ -798,11 +703,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         defaultMode="login"
       />
 
-      {/* Insights Modal */}
-      <InsightsModal
-        isOpen={showInsightsModal}
-        onClose={() => setShowInsightsModal(false)}
-      />
 
       {/* Search Modal */}
       <SearchModal

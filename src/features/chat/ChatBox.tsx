@@ -19,6 +19,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
 const ConversationOverlay = lazy(() => import('./ConversationOverlay/ConversationOverlay').then(module => ({ default: module.ConversationOverlay })));
 const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
+const ChatHeader = lazy(() => import('@/components/chat/ChatHeader').then(module => ({ default: module.ChatHeader })));
 
 // Check if report is already generated for a chat_id (authenticated users only)
 async function checkReportGeneratedStatus(chatId: string): Promise<boolean> {
@@ -155,6 +156,11 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
               <div className="flex-1" />
               
             </div>
+
+            {/* Chat Header - Always visible */}
+            <Suspense fallback={<div className="h-12 bg-white border-b border-gray-100" />}>
+              <ChatHeader />
+            </Suspense>
 
             {/* Message List - Lazy Loaded */}
             <div className="flex-1 min-h-0 mobile-messages-area" style={{ overflowAnchor: 'none' as any }}>
