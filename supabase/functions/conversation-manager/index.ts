@@ -30,7 +30,7 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { user_id, conversation_id, title, share_token } = requestBody;
+    const { user_id, conversation_id, title, share_token, share_mode, notes } = requestBody;
 
     // Most actions require user_id, except get_shared_conversation which is public
     if (!user_id && action !== 'get_shared_conversation') {
@@ -196,19 +196,22 @@ serve(async (req) => {
 
         // Generate a unique share token
         const shareToken = crypto.randomUUID();
+        // Default to view_only if not specified
+        const effectiveShareMode = share_mode || 'view_only';
 
         const { error: shareError } = await supabaseClient
           .from('conversations')
           .update({ 
             is_public: true,
             share_token: shareToken,
+            share_mode: effectiveShareMode,
             updated_at: new Date().toISOString()
           })
           .eq('id', conversation_id)
           .eq('user_id', user_id);
 
         if (shareError) throw shareError;
-        result = { share_token: shareToken, conversation_id };
+        result = { share_token: shareToken, conversation_id, share_mode: effectiveShareMode };
         break;
 
       case 'unshare_conversation':
@@ -245,7 +248,7 @@ serve(async (req) => {
 
         const { data: sharedConversation, error: getSharedError } = await supabaseClient
           .from('conversations')
-          .select('id, user_id, title, created_at, updated_at, meta')
+          .select('id, user_id, title, created_at, updated_at, meta, share_mode')
           .eq('share_token', share_token)
           .eq('is_public', true)
           .single();
@@ -258,6 +261,129 @@ serve(async (req) => {
         }
 
         result = sharedConversation;
+        break;
+
+      case 'join_conversation':
+        // Join a shared conversation as a participant (requires auth)
+        if (!share_token) {
+          return new Response('share_token is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Verify the conversation exists and is shared with join_conversation mode
+        const { data: convToJoin, error: joinCheckError } = await supabaseClient
+          .from('conversations')
+          .select('id, share_mode')
+          .eq('share_token', share_token)
+          .eq('is_public', true)
+          .single();
+
+        if (joinCheckError || !convToJoin) {
+          return new Response('Shared conversation not found', { 
+            status: 404, 
+            headers: corsHeaders 
+          });
+        }
+
+        if (convToJoin.share_mode !== 'join_conversation') {
+          return new Response('This conversation is not accepting participants', { 
+            status: 403, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Check if user is already a participant
+        const { data: existingParticipant } = await supabaseClient
+          .from('conversation_participants')
+          .select('id')
+          .eq('conversation_id', convToJoin.id)
+          .eq('user_id', user_id)
+          .single();
+
+        if (!existingParticipant) {
+          // Add user as participant
+          const { error: joinError } = await supabaseClient
+            .from('conversation_participants')
+            .insert({
+              conversation_id: convToJoin.id,
+              user_id,
+              role: 'participant',
+              notes: {}
+            });
+
+          if (joinError) throw joinError;
+        }
+
+        result = { conversation_id: convToJoin.id, success: true };
+        break;
+
+      case 'leave_conversation':
+        // Leave a conversation as a participant
+        if (!conversation_id) {
+          return new Response('conversation_id is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { error: leaveError } = await supabaseClient
+          .from('conversation_participants')
+          .delete()
+          .eq('conversation_id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (leaveError) throw leaveError;
+        result = { success: true, conversation_id };
+        break;
+
+      case 'get_conversation_participants':
+        // Get all participants in a conversation
+        if (!conversation_id) {
+          return new Response('conversation_id is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { data: participants, error: participantsError } = await supabaseClient
+          .from('conversation_participants')
+          .select('id, user_id, role, joined_at, last_seen_at')
+          .eq('conversation_id', conversation_id)
+          .order('joined_at', { ascending: true });
+
+        if (participantsError) throw participantsError;
+        result = participants || [];
+        break;
+
+      case 'update_participant_notes':
+        // Update coach notes for a participant (private to the coach)
+        if (!conversation_id) {
+          return new Response('conversation_id is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        if (notes === undefined) {
+          return new Response('notes is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { error: notesError } = await supabaseClient
+          .from('conversation_participants')
+          .update({ 
+            notes,
+            last_seen_at: new Date().toISOString()
+          })
+          .eq('conversation_id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (notesError) throw notesError;
+        result = { success: true, conversation_id };
         break;
 
       default:
