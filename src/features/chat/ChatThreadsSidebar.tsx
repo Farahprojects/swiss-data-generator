@@ -25,6 +25,7 @@ import { updateConversationTitle } from '@/services/conversations';
 import { InsightsModal } from '@/components/insights/InsightsModal';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { supabase } from '@/integrations/supabase/client';
+import { SearchModal } from '@/components/search/SearchModal';
 
 
 interface ChatThreadsSidebarProps {
@@ -84,6 +85,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [editTitle, setEditTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -490,10 +492,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           
           {uiConfig.showSearchChat && (
             <button
-              onClick={() => {
-                // TODO: Implement search chat functionality
-                console.log('Search chat clicked');
-              }}
+              onClick={() => setShowSearchModal(true)}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
             >
               <Search className="w-4 h-4" />
@@ -809,6 +808,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       <InsightsModal
         isOpen={showInsightsModal}
         onClose={() => setShowInsightsModal(false)}
+      />
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onSelectMessage={(chatId, messageId) => {
+          // Navigate to the selected conversation and scroll to the message
+          navigate(`/chat/${chatId}`);
+          // TODO: Implement scroll to specific message
+        }}
       />
     </div>
   );
