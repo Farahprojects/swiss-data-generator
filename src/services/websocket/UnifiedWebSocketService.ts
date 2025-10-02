@@ -129,8 +129,6 @@ class UnifiedWebSocketService {
    * Listens to the insights table for when a report is marked as ready
    */
   async subscribeToReport(report_id: string) {
-    console.log('[UnifiedWebSocket] Subscribing to report:', report_id);
-    
     const reportChannel = supabase
       .channel(`report:${report_id}`)
       .on(
@@ -142,13 +140,10 @@ class UnifiedWebSocketService {
           filter: `id=eq.${report_id}` // Listen for updates to this specific insight
         },
         (payload) => {
-          console.log('[UnifiedWebSocket] Insight update received:', payload);
-          
           const insight = payload.new;
           
           // Check if the insight is marked as ready
           if (insight.is_ready === true) {
-            console.log('[UnifiedWebSocket] Report completed!', insight.report_type);
             
             if (this.onReportCompleted && typeof this.onReportCompleted === 'function') {
               this.onReportCompleted(insight);
@@ -156,9 +151,7 @@ class UnifiedWebSocketService {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[UnifiedWebSocket] Report subscription status:', status);
-      });
+      .subscribe();
 
     return reportChannel;
   }
@@ -190,7 +183,6 @@ class UnifiedWebSocketService {
             
             // Filter out system messages at WebSocket level (don't touch store)
             if (newMessage.role === 'system') {
-              console.log('[UnifiedWebSocket] System message filtered out from UI');
               
               // Handle system message business logic via callback
               if (this.onSystemMessage && typeof this.onSystemMessage === 'function') {
@@ -217,7 +209,6 @@ class UnifiedWebSocketService {
           },
           (payload) => {
             const updatedMessage = this.transformDatabaseMessage(payload.new);
-            console.log('[UnifiedWebSocket] Message updated:', updatedMessage.id);
             if (onMessageCallback && typeof onMessageCallback === 'function') {
               onMessageCallback(updatedMessage);
             } else {

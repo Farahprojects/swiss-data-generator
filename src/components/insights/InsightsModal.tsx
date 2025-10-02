@@ -53,7 +53,6 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
   };
 
   const handleFormSubmit = (data: ReportFormData) => {
-    console.log('Form submitted with data:', data);
     // Show success screen
     setShowAstroForm(false);
     setShowSuccess(true);

@@ -100,7 +100,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Create insight report ID when we have reportType and user
   useEffect(() => {
     if (reportType && user?.id && currentStep === 'details' && !reportId && !isCreatingReportId) {
-      console.log('[AstroDataForm] Creating insight report ID for:', { reportType, userId: user.id });
       createInsightReportId(user.id, reportType);
     }
   }, [reportType, user?.id, currentStep, reportId, isCreatingReportId]);
@@ -135,7 +134,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
 
       const data = await response.json();
-      console.log('[AstroDataForm] Created insight report ID:', data.report_id);
       setReportId(data.report_id);
       return data.report_id;
     } catch (error) {
@@ -160,7 +158,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     
     // If we have a reportType but no reportId yet, wait for it to be created
     if (reportType && !reportId) {
-      console.log('[AstroDataForm] Waiting for report ID to be created...');
       // Wait a bit for the report ID to be created
       await new Promise(resolve => setTimeout(resolve, 1000));
       if (!reportId) {
@@ -183,14 +180,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
 
       // Add pending insight thread to UI if this is an insight report
       if (reportId && reportType) {
-        console.log('[AstroDataForm] Adding pending insight thread to UI:', reportId, reportType);
         const { addPendingInsightThread } = useChatStore.getState();
         addPendingInsightThread(reportId, reportType);
       }
 
       // Subscribe to WebSocket for report completion if we have a report_id
       if (reportId) {
-        console.log('[AstroDataForm] Subscribing to report WebSocket:', reportId);
         await unifiedWebSocketService.subscribeToReport(reportId);
       }
       
@@ -208,16 +203,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         setIsProcessing(false);
         return;
       }
-
-      console.log('[AstroDataForm] Edge function succeeded');
       
       // Call onSubmit for profile flow and insights variant
       if (isProfileFlow || variant === 'insights') {
-        console.log(`[AstroDataForm] ${isProfileFlow ? 'Profile' : 'Insights'} flow detected, calling onSubmit`);
         onSubmit(data);
         // Do NOT close the modal here; parent will handle next step
       } else {
-        console.log('[AstroDataForm] Chat flow detected, just closing modal');
         // Chat flow - just close the modal
         onClose();
       }
