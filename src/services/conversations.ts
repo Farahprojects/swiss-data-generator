@@ -9,6 +9,17 @@ export interface Conversation {
   meta?: Record<string, any> | null;
   is_public?: boolean;
   share_token?: string;
+  share_mode?: 'view_only' | 'join_conversation';
+}
+
+export interface ConversationParticipant {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: 'owner' | 'participant' | 'observer';
+  joined_at: string;
+  last_seen_at: string;
+  notes?: Record<string, any>;
 }
 
 /**
@@ -106,7 +117,7 @@ export const updateConversationTitle = async (conversationId: string, title: str
 /**
  * Share a conversation publicly using edge function
  */
-export const shareConversation = async (conversationId: string): Promise<string> => {
+export const shareConversation = async (conversationId: string, mode: 'view_only' | 'join_conversation' = 'view_only'): Promise<string> => {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -116,7 +127,8 @@ export const shareConversation = async (conversationId: string): Promise<string>
   const { data, error } = await supabase.functions.invoke('conversation-manager?action=share_conversation', {
     body: {
       user_id: user.id,
-      conversation_id: conversationId
+      conversation_id: conversationId,
+      share_mode: mode
     }
   });
 
@@ -167,4 +179,56 @@ export const getSharedConversation = async (shareToken: string): Promise<Convers
   }
 
   return data;
+};
+
+// Collaborative actions
+export const joinConversationByToken = async (shareToken: string): Promise<{ conversation_id: string }> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=join_conversation', {
+    body: { user_id: user.id, share_token: shareToken }
+  });
+  if (error) {
+    console.error('[Conversations] Error joining conversation:', error);
+    throw new Error('Failed to join conversation');
+  }
+  return data;
+};
+
+export const leaveConversation = async (conversationId: string): Promise<void> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase.functions.invoke('conversation-manager?action=leave_conversation', {
+    body: { user_id: user.id, conversation_id: conversationId }
+  });
+  if (error) {
+    console.error('[Conversations] Error leaving conversation:', error);
+    throw new Error('Failed to leave conversation');
+  }
+};
+
+export const listParticipants = async (conversationId: string): Promise<ConversationParticipant[]> => {
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=get_conversation_participants', {
+    body: { conversation_id: conversationId }
+  });
+  if (error) {
+    console.error('[Conversations] Error listing participants:', error);
+    throw new Error('Failed to list participants');
+  }
+  return data || [];
+};
+
+export const updateMyParticipantNotes = async (conversationId: string, notes: Record<string, any>): Promise<void> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase.functions.invoke('conversation-manager?action=update_participant_notes', {
+    body: { user_id: user.id, conversation_id: conversationId, notes }
+  });
+  if (error) {
+    console.error('[Conversations] Error updating notes:', error);
+    throw new Error('Failed to update notes');
+  }
 };

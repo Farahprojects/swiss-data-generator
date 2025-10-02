@@ -19,6 +19,7 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
   const [showShareModal, setShowShareModal] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareMode, setShareMode] = useState<'view_only' | 'join_conversation'>('view_only');
 
   // Check if conversation is shared
   useEffect(() => {
@@ -28,7 +29,7 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
       try {
         const { data, error } = await supabase
           .from('conversations')
-          .select('is_public, share_token')
+          .select('is_public, share_token, share_mode')
           .eq('id', chat_id)
           .single();
         
@@ -39,6 +40,11 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
         
         setIsShared(data?.is_public || false);
         setShareToken(data?.share_token || null);
+        if (data?.share_mode === 'join_conversation') {
+          setShareMode('join_conversation');
+        } else {
+          setShareMode('view_only');
+        }
       } catch (error) {
         console.error('Error checking sharing status:', error);
       }
@@ -93,6 +99,7 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
           conversationId={chat_id}
           isShared={isShared}
           shareToken={shareToken}
+          initialMode={shareMode}
           onSuccess={handleShareSuccess}
           onUnshare={handleUnshare}
           onClose={() => setShowShareModal(false)}

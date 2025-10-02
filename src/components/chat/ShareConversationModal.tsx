@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Copy, Check, X } from 'lucide-react';
 import { shareConversation, unshareConversation } from '@/services/conversations';
 
@@ -6,6 +6,7 @@ interface ShareConversationModalProps {
   conversationId: string | null;
   isShared: boolean;
   shareToken: string | null;
+  initialMode?: 'view_only' | 'join_conversation';
   onSuccess: (token: string) => void;
   onUnshare: () => void;
   onClose: () => void;
@@ -15,33 +16,29 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
   conversationId,
   isShared,
   shareToken,
+  initialMode,
   onSuccess,
   onUnshare,
   onClose,
 }) => {
-  const [isLoading, setIsLoading] = useState(!isShared && !shareToken);
+  const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [localShareToken, setLocalShareToken] = useState<string | null>(shareToken);
+  const [mode, setMode] = useState<'view_only' | 'join_conversation'>(initialMode || 'view_only');
 
-  // Auto-create link when modal opens if not already shared
-  useEffect(() => {
-    const createShareLink = async () => {
-      if (!conversationId || isShared || shareToken) return;
-      
-      setIsLoading(true);
-      try {
-        const token = await shareConversation(conversationId);
-        setLocalShareToken(token);
-        onSuccess(token);
-      } catch (error) {
-        console.error('Error sharing conversation:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    createShareLink();
-  }, [conversationId, isShared, shareToken, onSuccess]);
+  const handleCreate = async () => {
+    if (!conversationId) return;
+    setIsLoading(true);
+    try {
+      const token = await shareConversation(conversationId, mode);
+      setLocalShareToken(token);
+      onSuccess(token);
+    } catch (error) {
+      console.error('Error sharing conversation:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleUnshare = async () => {
     if (!conversationId) return;
@@ -60,10 +57,8 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
   };
 
   const handleCopyLink = async () => {
-    if (!localShareToken) return;
-    
-    const shareUrl = `https://therai.co/shared/${localShareToken}`;
-    
+    // Use the computed shareUrl so it respects the selected mode
+    if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
@@ -73,7 +68,11 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
     }
   };
 
-  const shareUrl = localShareToken ? `https://therai.co/shared/${localShareToken}` : '';
+  const shareUrl = localShareToken
+    ? mode === 'join_conversation'
+      ? `https://therai.co/join/${localShareToken}`
+      : `https://therai.co/shared/${localShareToken}`
+    : '';
   const hasLink = !!localShareToken;
 
   return (
@@ -101,7 +100,9 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
           ) : hasLink ? (
             <div className="space-y-6">
               <p className="text-[15px] text-gray-600 leading-relaxed">
-                Messages you send after creating your link won't be shared. Anyone with the URL will be able to view the shared chat.
+                {mode === 'join_conversation'
+                  ? 'Anyone with this link (signed in) can join and participate in this conversation.'
+                  : "Anyone with the URL can view this conversation. Messages you send after creating the link won't be shared."}
               </p>
               
               {/* Link Input with Copy Button */}
@@ -141,7 +142,40 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
                 {isLoading ? 'Removing link...' : 'Delete link'}
               </button>
             </div>
-          ) : null}
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div
+                  className={`rounded-lg border ${mode === 'view_only' ? 'border-gray-900' : 'border-gray-200'} p-4 cursor-pointer hover:border-gray-900 transition-colors`}
+                  onClick={() => setMode('view_only')}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full border ${mode === 'view_only' ? 'bg-gray-900 border-gray-900' : 'border-gray-300'}`} />
+                    <div className="text-[15px] text-gray-900">Share for viewing only</div>
+                  </div>
+                  <div className="text-[13px] text-gray-600 mt-1">Others can read the chat</div>
+                </div>
+
+                <div
+                  className={`rounded-lg border ${mode === 'join_conversation' ? 'border-gray-900' : 'border-gray-200'} p-4 cursor-pointer hover:border-gray-900 transition-colors`}
+                  onClick={() => setMode('join_conversation')}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full border ${mode === 'join_conversation' ? 'bg-gray-900 border-gray-900' : 'border-gray-300'}`} />
+                    <div className="text-[15px] text-gray-900">Share to join conversation</div>
+                  </div>
+                  <div className="text-[13px] text-gray-600 mt-1">Others can participate (requires sign-in)</div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCreate}
+                className="w-full px-4 py-3 text-[15px] font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                Create share link
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
