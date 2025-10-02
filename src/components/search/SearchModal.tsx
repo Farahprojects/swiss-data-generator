@@ -66,59 +66,71 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const performSearch = async (searchQuery: string) => {
     setIsLoading(true);
     try {
-      // Search across all user's conversations and messages
-      const { data, error } = await supabase
+      // First, get all user's conversations
+      const { data: conversations, error: convError } = await supabase
         .from('conversations')
-        .select(`
-          id,
-          title,
-          created_at,
-          messages!inner (
-            id,
-            text,
-            role,
-            created_at
-          )
-        `)
+        .select('id, title, created_at')
         .eq('user_id', user?.id)
-        .ilike('messages.text', `%${searchQuery}%`)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Search error:', error);
+      if (convError) {
+        console.error('Conversations fetch error:', convError);
+        return;
+      }
+
+      if (!conversations || conversations.length === 0) {
+        setResults([]);
+        return;
+      }
+
+      // Get conversation IDs
+      const conversationIds = conversations.map(conv => conv.id);
+      
+      // Search messages in those conversations
+      const { data: messages, error: msgError } = await supabase
+        .from('messages')
+        .select('id, chat_id, text, role, created_at')
+        .in('chat_id', conversationIds)
+        .ilike('text', `%${searchQuery}%`)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (msgError) {
+        console.error('Messages search error:', msgError);
         return;
       }
 
       // Group results by conversation
       const groupedResults = new Map<string, ConversationGroup>();
 
-      data?.forEach((conv: any) => {
-        const chatId = conv.id;
-        
-        conv.messages?.forEach((msg: any) => {
-          if (msg.text.toLowerCase().includes(searchQuery.toLowerCase())) {
-            if (!groupedResults.has(chatId)) {
-              groupedResults.set(chatId, {
-                chat_id: chatId,
-                title: conv.title,
-                messages: [],
-                latest_message: conv.created_at
-              });
-            }
+      // Create a map of conversations for quick lookup
+      const conversationMap = new Map(conversations.map(conv => [conv.id, conv]));
 
-            const snippet = createSnippet(msg.text, searchQuery);
-            groupedResults.get(chatId)!.messages.push({
-              id: msg.id,
+      messages?.forEach((msg: any) => {
+        const chatId = msg.chat_id;
+        const conversation = conversationMap.get(chatId);
+        
+        if (conversation && msg.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+          if (!groupedResults.has(chatId)) {
+            groupedResults.set(chatId, {
               chat_id: chatId,
-              conversation_title: conv.title,
-              text: msg.text,
-              role: msg.role,
-              created_at: msg.created_at,
-              snippet
+              title: conversation.title,
+              messages: [],
+              latest_message: conversation.created_at
             });
           }
-        });
+
+          const snippet = createSnippet(msg.text, searchQuery);
+          groupedResults.get(chatId)!.messages.push({
+            id: msg.id,
+            chat_id: chatId,
+            conversation_title: conversation.title,
+            text: msg.text,
+            role: msg.role,
+            created_at: msg.created_at,
+            snippet
+          });
+        }
       });
 
       // Convert to array and sort by latest message
@@ -212,7 +224,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/20 flex items-start justify-center pt-16 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 h-[600px] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 p-4 border-b border-gray-100">
           <div className="relative flex-1">
@@ -238,23 +250,23 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         {/* Results */}
         <div 
           ref={resultsRef}
-          className="flex-1 overflow-y-auto max-h-[60vh]"
+          className="flex-1 overflow-y-auto"
         >
           {isLoading ? (
             <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <p className="mt-2 text-sm text-gray-500">Searching...</p>
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
+              <p className="mt-2 text-sm text-black">Searching...</p>
             </div>
           ) : query.trim() && results.length === 0 ? (
             <div className="p-8 text-center">
               <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No messages found</p>
+              <p className="text-black">No messages found</p>
               <p className="text-sm text-gray-400 mt-1">Try different keywords</p>
             </div>
           ) : !query.trim() ? (
             <div className="p-8 text-center">
               <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Search your conversations</p>
+              <p className="text-black">Search your conversations</p>
               <p className="text-sm text-gray-400 mt-1">Type to find messages across all your chats</p>
             </div>
           ) : (
@@ -262,8 +274,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               {results.map((group) => (
                 <div key={group.chat_id} className="mb-4">
                   <div className="flex items-center gap-2 px-3 py-2 mb-1">
-                    <MessageSquare className="w-4 h-4 text-blue-500" />
-                    <span className="font-medium text-gray-900">{group.title}</span>
+                    <MessageSquare className="w-4 h-4 text-gray-400" />
+                    <span className="font-medium text-black">{group.title}</span>
                     <span className="text-xs text-gray-500">•</span>
                     <span className="text-xs text-gray-500">{group.messages.length} result{group.messages.length !== 1 ? 's' : ''}</span>
                   </div>
@@ -289,19 +301,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                           )}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={cn(
-                              "w-2 h-2 rounded-full mt-2 flex-shrink-0",
-                              message.role === 'user' ? "bg-blue-500" : 
-                              message.role === 'assistant' ? "bg-green-500" : "bg-gray-400"
-                            )} />
-                            
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className={cn(
-                                  "text-xs font-medium",
-                                  message.role === 'user' ? "text-blue-600" : 
-                                  message.role === 'assistant' ? "text-green-600" : "text-gray-500"
-                                )}>
+                                <span className="text-xs font-medium text-black">
                                   {message.role === 'user' ? 'You' : 
                                    message.role === 'assistant' ? 'AI' : 'System'}
                                 </span>
@@ -313,7 +315,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                               </div>
                               
                               <p 
-                                className="text-sm text-gray-700 leading-relaxed"
+                                className="text-sm text-black leading-relaxed"
                                 dangerouslySetInnerHTML={{ __html: message.snippet }}
                               />
                             </div>
