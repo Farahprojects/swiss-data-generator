@@ -7,6 +7,8 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   meta?: Record<string, any> | null;
+  is_public?: boolean;
+  share_token?: string;
 }
 
 /**
@@ -99,4 +101,70 @@ export const updateConversationTitle = async (conversationId: string, title: str
     console.error('[Conversations] Error updating conversation title:', error);
     throw new Error('Failed to update conversation title');
   }
+};
+
+/**
+ * Share a conversation publicly using edge function
+ */
+export const shareConversation = async (conversationId: string): Promise<string> => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=share_conversation', {
+    body: {
+      user_id: user.id,
+      conversation_id: conversationId
+    }
+  });
+
+  if (error) {
+    console.error('[Conversations] Error sharing conversation:', error);
+    throw new Error('Failed to share conversation');
+  }
+
+  return data.share_token;
+};
+
+/**
+ * Stop sharing a conversation using edge function
+ */
+export const unshareConversation = async (conversationId: string): Promise<void> => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { error } = await supabase.functions.invoke('conversation-manager?action=unshare_conversation', {
+    body: {
+      user_id: user.id,
+      conversation_id: conversationId
+    }
+  });
+
+  if (error) {
+    console.error('[Conversations] Error unsharing conversation:', error);
+    throw new Error('Failed to unshare conversation');
+  }
+};
+
+/**
+ * Get a shared conversation by share token (public access)
+ */
+export const getSharedConversation = async (shareToken: string): Promise<Conversation> => {
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=get_shared_conversation', {
+    body: {
+      share_token: shareToken
+    }
+  });
+
+  if (error) {
+    console.error('[Conversations] Error getting shared conversation:', error);
+    throw new Error('Failed to get shared conversation');
+  }
+
+  return data;
 };

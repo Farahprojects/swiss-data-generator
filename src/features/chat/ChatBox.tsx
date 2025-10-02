@@ -20,6 +20,8 @@ const MessageList = lazy(() => import('./MessageList').then(module => ({ default
 const ConversationOverlay = lazy(() => import('./ConversationOverlay/ConversationOverlay').then(module => ({ default: module.ConversationOverlay })));
 const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
 const ChatHeader = lazy(() => import('@/components/chat/ChatHeader').then(module => ({ default: module.ChatHeader })));
+const NewChatButton = lazy(() => import('@/components/chat/NewChatButton').then(module => ({ default: module.NewChatButton })));
+const ChatMenuButton = lazy(() => import('@/components/chat/ChatMenuButton').then(module => ({ default: module.ChatMenuButton })));
 
 // Check if report is already generated for a chat_id (authenticated users only)
 async function checkReportGeneratedStatus(chatId: string): Promise<boolean> {
@@ -132,7 +134,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
 
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
+            <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
               <Sheet>
                 <SheetTrigger asChild>
                   <button
@@ -153,14 +155,25 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                 </SheetContent>
               </Sheet>
               
-              <div className="flex-1" />
-              
+              <div className="flex items-center gap-2">
+                {/* Sexy New Chat Button */}
+                <Suspense fallback={<div className="h-8 w-20 bg-gray-200 rounded-lg animate-pulse" />}>
+                  <NewChatButton />
+                </Suspense>
+                
+                {/* 3 Dots Menu */}
+                <Suspense fallback={<div className="h-8 w-8 bg-gray-200 rounded-lg animate-pulse" />}>
+                  <ChatMenuButton />
+                </Suspense>
+              </div>
             </div>
 
-            {/* Chat Header - Always visible */}
-            <Suspense fallback={<div className="h-12 bg-white border-b border-gray-100" />}>
-              <ChatHeader />
-            </Suspense>
+            {/* Chat Header - Desktop only */}
+            <div className="hidden md:block">
+              <Suspense fallback={<div className="h-12 bg-white border-b border-gray-100" />}>
+                <ChatHeader />
+              </Suspense>
+            </div>
 
             {/* Message List - Lazy Loaded */}
             <div className="flex-1 min-h-0 mobile-messages-area" style={{ overflowAnchor: 'none' as any }}>

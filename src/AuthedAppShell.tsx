@@ -33,6 +33,7 @@ import NavigationStateProvider from '@/contexts/NavigationStateContext';
 const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
 import Profile from './pages/Profile';
 import Beats from './pages/Beats';
+import SharedConversationView from './pages/SharedConversationView';
 
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
@@ -88,6 +89,9 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/success" element={<SubscriptionSuccess />} />
               <Route path="/cancel" element={<SubscriptionPaywall />} />
               <Route path="/stripe" element={<EmbeddedCheckout />} />
+              
+              {/* Public shared conversation route */}
+              <Route path="/shared/:shareToken" element={<SharedConversationView />} />
               
               {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
               <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />

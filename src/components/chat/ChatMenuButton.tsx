@@ -6,12 +6,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { NewChatButton } from './NewChatButton';
 import { ShareConversationModal } from './ShareConversationModal';
 import { useChatStore } from '@/core/store';
 import { supabase } from '@/integrations/supabase/client';
 
-export const ChatHeader: React.FC = () => {
+interface ChatMenuButtonProps {
+  className?: string;
+}
+
+export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }) => {
   const { chat_id } = useChatStore();
   const [showShareModal, setShowShareModal] = useState(false);
   const [isShared, setIsShared] = useState(false);
@@ -60,14 +63,10 @@ export const ChatHeader: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-      {/* Sexy New Chat Button */}
-      <NewChatButton />
-
-      {/* 3 Dots Menu */}
+    <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center justify-center w-8 h-8 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className={`flex items-center justify-center w-8 h-8 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors ${className}`}>
             <MoreHorizontal className="w-4 h-4" />
           </button>
         </DropdownMenuTrigger>
@@ -99,6 +98,6 @@ export const ChatHeader: React.FC = () => {
           onClose={() => setShowShareModal(false)}
         />
       )}
-    </div>
+    </>
   );
 };
