@@ -1,7 +1,6 @@
 // src/services/voice/stt.ts
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
-import { useChatStore } from '@/core/store';
 
 class SttService {
   async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, chattype?: string, mode?: string): Promise<{ transcript: string }> {
@@ -29,11 +28,9 @@ class SttService {
     const form = new FormData();
     const selectedVoice = useChatStore.getState().ttsVoice || 'Puck';
     // Pass selected voice from store to backend for voice mode
-    const selectedVoice = useChatStore.getState().ttsVoice || 'Puck';
     form.append('file', audioBlob, 'audio');
     if (chat_id) form.append('chat_id', chat_id);
     if (chattype) form.append('chattype', chattype);
-    if (selectedVoice) form.append('voice', selectedVoice);
     if (selectedVoice) form.append('voice', selectedVoice);
     if (mode) form.append('mode', mode);
     form.append('language', 'en');
