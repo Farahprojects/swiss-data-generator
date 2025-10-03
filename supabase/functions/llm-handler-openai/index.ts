@@ -167,6 +167,20 @@ Content Rules:
     if (chattype === 'voice') {
       console.log(`[llm-handler-openai] 🎤 VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
       
+      // Get user's preferred TTS voice from database
+      const { data: preferences, error: prefsError } = await supabase
+        .from('user_preferences')
+        .select('tts_voice')
+        .eq('user_id', user_id)
+        .single();
+      
+      if (prefsError) {
+        console.error('[llm-handler-openai] ❌ Failed to fetch user preferences:', prefsError);
+      }
+      
+      const selectedVoice = preferences?.tts_voice || 'Puck'; // Fallback to Puck if not found
+      console.log(`[llm-handler-openai] 🎵 Using TTS voice: ${selectedVoice}`);
+      
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers: {
@@ -175,7 +189,7 @@ Content Rules:
         },
         body: JSON.stringify({
           text: sanitizedText,
-          voice: 'Puck',
+          voice: selectedVoice,
           chat_id: chat_id
         })
       }).catch((err) => {
