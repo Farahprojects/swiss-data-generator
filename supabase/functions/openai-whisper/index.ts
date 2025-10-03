@@ -23,13 +23,14 @@ serve(async (req) => {
       });
     }
 
-    // Expect multipart/form-data with: file, chat_id, chattype, mode, language
+    // Expect multipart/form-data with: file, chat_id, chattype, mode, language, voice
     const form = await req.formData();
     const file = form.get('file') as File | null;
     const chat_id = (form.get('chat_id') as string) || undefined;
     const chattype = (form.get('chattype') as string) || undefined;
     const mode = (form.get('mode') as string) || undefined;
     const language = (form.get('language') as string) || 'en';
+    const voice = (form.get('voice') as string) || undefined;
 
     if (!file) {
       throw new Error('Missing file in form-data');
@@ -43,7 +44,8 @@ serve(async (req) => {
       audioSize: audioBuffer.length,
       mode,
       chat_id,
-      mimeType
+      mimeType,
+      voice
     });
     
     // Validate audio data
@@ -158,7 +160,8 @@ serve(async (req) => {
           chat_id,
           text: transcript,
           chattype: 'voice',
-          mode: mode
+          mode: mode,
+          voice
         })
       }).catch((error) => {
         console.error('[openai-whisper] ❌ LLM call failed:', error);

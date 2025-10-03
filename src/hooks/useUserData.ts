@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChatStore } from "@/core/store";
 
 // ============================================================================
 // INTERFACES
@@ -153,6 +154,12 @@ export function useUserData() {
         saving: false,
         error: null,
       });
+
+      // Sync TTS voice into chat store for conversation mode
+      try {
+        const voice = (preferencesResult.data as any)?.tts_voice || getDefaultPreferences(user.id).tts_voice;
+        useChatStore.getState().setTtsVoice(voice);
+      } catch {}
 
       setRetryCount(0);
     } catch (err) {
@@ -309,6 +316,9 @@ export function useUserData() {
         preferences: prev.preferences ? { ...prev.preferences, tts_voice: voice } : null,
         saving: false,
       }));
+
+      // Update chat store immediately so conversation mode picks it up
+      try { useChatStore.getState().setTtsVoice(voice); } catch {}
 
       if (options.showToast !== false) {
         toast({

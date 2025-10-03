@@ -36,7 +36,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, mode, chattype } = body;
+    const { chat_id, text, mode, chattype, voice } = body;
 
     console.log(`[llm-handler-openai] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, mode: ${mode || 'default'}, text: ${text.substring(0, 50)}...`);
 
@@ -167,6 +167,10 @@ Content Rules:
     if (chattype === 'voice') {
       console.log(`[llm-handler-openai] 🎤 VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
       
+      // Use voice provided by caller (frontend via openai-whisper). Fallback to 'Puck'.
+      const selectedVoice = (typeof voice === 'string' && voice.trim().length > 0) ? voice : 'Puck';
+      console.log(`[llm-handler-openai] 🎵 Using TTS voice: ${selectedVoice}`);
+
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers: {
@@ -175,7 +179,7 @@ Content Rules:
         },
         body: JSON.stringify({
           text: sanitizedText,
-          voice: 'Puck',
+          voice: selectedVoice,
           chat_id: chat_id
         })
       }).catch((err) => {
