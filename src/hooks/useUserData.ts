@@ -11,7 +11,7 @@ export interface UserProfile {
   id: string;
   email: string;
   email_verified: boolean;
-  display_name: string | null;
+  display_name?: string | null; // Optional until DB schema is updated
   subscription_active: boolean;
   subscription_plan: string;
   subscription_status: string;
@@ -25,45 +25,16 @@ export interface UserPreferences {
   user_id: string;
   email_notifications_enabled: boolean;
   client_view_mode: 'grid' | 'list';
-  tts_voice: string;
+  tts_voice?: string; // Optional until DB schema is updated
   created_at: string;
   updated_at: string;
 }
 
-export interface PaymentMethod {
-  id: string;
-  card_brand: string;
-  card_last4: string;
-  exp_month: number;
-  exp_year: number;
-  active: boolean;
-  last_charge_at?: string;
-  last_charge_status?: string;
-  last_invoice_amount_cents?: number;
-  last_invoice_currency?: string;
-  last_receipt_url?: string;
-  next_billing_at?: string;
-  invoice_history?: Array<{
-    id: string;
-    number: string;
-    amount_cents: number;
-    currency: string;
-    status: string;
-    charge_date: string;
-    receipt_url?: string;
-  }>;
-}
-
-export interface UserCredits {
-  balance_usd: number;
-  last_updated: string;
-}
+// Removed PaymentMethod and UserCredits interfaces - not using payment/credits features
 
 export interface UserData {
   profile: UserProfile | null;
   preferences: UserPreferences | null;
-  paymentMethod: PaymentMethod | null;
-  credits: UserCredits | null;
   loading: boolean;
   saving: boolean;
   error: string | null;
@@ -108,8 +79,6 @@ export function useUserData() {
   const [data, setData] = useState<UserData>({
     profile: null,
     preferences: null,
-    paymentMethod: null,
-    credits: null,
     loading: false,
     saving: false,
     error: null,
@@ -130,8 +99,6 @@ export function useUserData() {
       setData({
         profile: null,
         preferences: null,
-        paymentMethod: null,
-        credits: null,
         loading: false,
         saving: false,
         error: null,
@@ -150,8 +117,6 @@ export function useUserData() {
         loading: false,
         profile: null,
         preferences: null,
-        paymentMethod: null,
-        credits: null,
       }));
       return;
     }
@@ -164,8 +129,8 @@ export function useUserData() {
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
 
-      // Fetch all data in parallel
-      const [profileResult, preferencesResult, paymentResult, creditsResult] = await Promise.all([
+      // Fetch profile and preferences data in parallel
+      const [profileResult, preferencesResult] = await Promise.all([
         // Fetch user profile
         supabase
           .from('profiles')
@@ -179,31 +144,11 @@ export function useUserData() {
           .select('*')
           .eq('user_id', user.id)
           .single(),
-        
-        // Fetch payment method
-        supabase
-          .from('payment_method')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('active', true)
-          .single(),
-        
-        // Fetch user credits
-        supabase
-          .from('user_credits')
-          .select('balance_usd, updated_at')
-          .eq('user_id', user.id)
-          .single(),
       ]);
 
       setData({
-        profile: profileResult.data || getDefaultProfile(user.id, user.email || ''),
-        preferences: preferencesResult.data || getDefaultPreferences(user.id),
-        paymentMethod: paymentResult.data || null,
-        credits: creditsResult.data ? {
-          balance_usd: creditsResult.data.balance_usd,
-          last_updated: creditsResult.data.updated_at,
-        } : null,
+        profile: (profileResult.data as UserProfile) || getDefaultProfile(user.id, user.email || ''),
+        preferences: (preferencesResult.data as UserPreferences) || getDefaultPreferences(user.id),
         loading: false,
         saving: false,
         error: null,
@@ -232,7 +177,7 @@ export function useUserData() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ display_name: newDisplayName })
+        .update({ display_name: newDisplayName } as any) // Type assertion until DB schema is updated
         .eq('id', user.id);
 
       if (error) {
@@ -349,7 +294,7 @@ export function useUserData() {
     try {
       const { error } = await supabase
         .from('user_preferences')
-        .update({ tts_voice: voice })
+        .update({ tts_voice: voice } as any) // Type assertion until DB schema is updated
         .eq('user_id', user.id);
 
       if (error) {
