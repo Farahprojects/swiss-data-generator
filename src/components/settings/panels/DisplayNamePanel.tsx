@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserData } from '@/hooks/useUserData';
 import { Loader, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DisplayNamePanel: React.FC = () => {
-  const { profile, displayName, updateDisplayName, loading } = useUserProfile();
+  const { profile, displayName, updateDisplayName, loading } = useUserData();
   const [isEditing, setIsEditing] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(profile?.display_name || '');
   const [saving, setSaving] = useState(false);

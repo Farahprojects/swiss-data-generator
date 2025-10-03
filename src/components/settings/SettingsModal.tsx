@@ -13,12 +13,12 @@ import { VoiceSelectionPanel } from "./VoiceSelectionPanel";
 import DisplayNamePanel from "./panels/DisplayNamePanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSettingsData } from "@/hooks/useSettingsData";
+import { useUserData } from "@/hooks/useUserData";
 
 export const SettingsModal = () => {
   const { isOpen, closeSettings, activePanel, setActivePanel } = useSettingsModal();
   const { signOut, user, loading } = useAuth();
-  const { fetchData: fetchSettingsData } = useSettingsData();
+  const { fetchData: fetchSettingsData } = useUserData();
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const isMobile = useIsMobile();

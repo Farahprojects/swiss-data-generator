@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader, RefreshCw } from "lucide-react";
-import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useUserData } from "@/hooks/useUserData";
 import { Button } from "@/components/ui/button";
 
 
@@ -13,7 +13,7 @@ export const NotificationsPanel = () => {
     saving,
     error,
     updateMainNotificationsToggle
-  } = useUserPreferences();
+  } = useUserData();
 
 
   // Handle refresh on timeout errors

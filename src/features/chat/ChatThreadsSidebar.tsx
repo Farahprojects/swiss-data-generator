@@ -3,7 +3,7 @@ import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserData } from '@/hooks/useUserData';
 import { useThreads } from '@/contexts/ThreadsContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -69,7 +69,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { messages } = useMessageStore();
 
   const { user, signOut } = useAuth();
-  const { displayName } = useUserProfile();
+  const { displayName } = useUserData();
   
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();

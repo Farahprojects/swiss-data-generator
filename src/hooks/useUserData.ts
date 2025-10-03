@@ -1,0 +1,437 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  email_verified: boolean;
+  display_name: string | null;
+  subscription_active: boolean;
+  subscription_plan: string;
+  subscription_status: string;
+  stripe_customer_id?: string;
+  created_at: string;
+  last_seen_at: string;
+}
+
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  email_notifications_enabled: boolean;
+  client_view_mode: 'grid' | 'list';
+  tts_voice: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  card_brand: string;
+  card_last4: string;
+  exp_month: number;
+  exp_year: number;
+  active: boolean;
+  last_charge_at?: string;
+  last_charge_status?: string;
+  last_invoice_amount_cents?: number;
+  last_invoice_currency?: string;
+  last_receipt_url?: string;
+  next_billing_at?: string;
+  invoice_history?: Array<{
+    id: string;
+    number: string;
+    amount_cents: number;
+    currency: string;
+    status: string;
+    charge_date: string;
+    receipt_url?: string;
+  }>;
+}
+
+export interface UserCredits {
+  balance_usd: number;
+  last_updated: string;
+}
+
+export interface UserData {
+  profile: UserProfile | null;
+  preferences: UserPreferences | null;
+  paymentMethod: PaymentMethod | null;
+  credits: UserCredits | null;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+}
+
+interface UpdateOptions {
+  showToast?: boolean;
+}
+
+// ============================================================================
+// DEFAULTS
+// ============================================================================
+
+const getDefaultPreferences = (userId: string): UserPreferences => ({
+  id: '',
+  user_id: userId,
+  email_notifications_enabled: true,
+  client_view_mode: 'grid',
+  tts_voice: 'Puck',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
+const getDefaultProfile = (userId: string, email: string): UserProfile => ({
+  id: userId,
+  email: email,
+  email_verified: false,
+  display_name: null,
+  subscription_active: false,
+  subscription_plan: '',
+  subscription_status: '',
+  created_at: new Date().toISOString(),
+  last_seen_at: new Date().toISOString(),
+});
+
+// ============================================================================
+// MAIN HOOK
+// ============================================================================
+
+export function useUserData() {
+  const { user } = useAuth();
+  const [data, setData] = useState<UserData>({
+    profile: null,
+    preferences: null,
+    paymentMethod: null,
+    credits: null,
+    loading: false,
+    saving: false,
+    error: null,
+  });
+  
+  const [retryCount, setRetryCount] = useState(0);
+  const { toast } = useToast();
+  
+  // Initialize with optimistic defaults
+  useEffect(() => {
+    if (user) {
+      setData(prev => ({
+        ...prev,
+        profile: prev.profile || getDefaultProfile(user.id, user.email || ''),
+        preferences: prev.preferences || getDefaultPreferences(user.id),
+      }));
+    } else {
+      setData({
+        profile: null,
+        preferences: null,
+        paymentMethod: null,
+        credits: null,
+        loading: false,
+        saving: false,
+        error: null,
+      });
+    }
+  }, [user]);
+
+  // ============================================================================
+  // FETCH FUNCTIONS
+  // ============================================================================
+
+  const fetchUserData = useCallback(async (force = false) => {
+    if (!user?.id) {
+      setData(prev => ({
+        ...prev,
+        loading: false,
+        profile: null,
+        preferences: null,
+        paymentMethod: null,
+        credits: null,
+      }));
+      return;
+    }
+
+    // Don't refetch if we already have data unless forced
+    if (!force && data.profile && data.preferences) {
+      return;
+    }
+
+    try {
+      setData(prev => ({ ...prev, loading: true, error: null }));
+
+      // Fetch all data in parallel
+      const [profileResult, preferencesResult, paymentResult, creditsResult] = await Promise.all([
+        // Fetch user profile
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single(),
+        
+        // Fetch user preferences
+        supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single(),
+        
+        // Fetch payment method
+        supabase
+          .from('payment_method')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('active', true)
+          .single(),
+        
+        // Fetch user credits
+        supabase
+          .from('user_credits')
+          .select('balance_usd, updated_at')
+          .eq('user_id', user.id)
+          .single(),
+      ]);
+
+      setData({
+        profile: profileResult.data || getDefaultProfile(user.id, user.email || ''),
+        preferences: preferencesResult.data || getDefaultPreferences(user.id),
+        paymentMethod: paymentResult.data || null,
+        credits: creditsResult.data ? {
+          balance_usd: creditsResult.data.balance_usd,
+          last_updated: creditsResult.data.updated_at,
+        } : null,
+        loading: false,
+        saving: false,
+        error: null,
+      });
+
+      setRetryCount(0);
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      setData(prev => ({
+        ...prev,
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch user data',
+      }));
+    }
+  }, [user, data.profile, data.preferences]);
+
+  // ============================================================================
+  // UPDATE FUNCTIONS
+  // ============================================================================
+
+  const updateDisplayName = useCallback(async (newDisplayName: string, options: UpdateOptions = {}) => {
+    if (!user?.id) return { error: 'No user' };
+
+    setData(prev => ({ ...prev, saving: true, error: null }));
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: newDisplayName })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating display name:', error);
+        setData(prev => ({ ...prev, saving: false, error: error.message }));
+        return { error };
+      }
+
+      // Update local state
+      setData(prev => ({
+        ...prev,
+        profile: prev.profile ? { ...prev.profile, display_name: newDisplayName } : null,
+        saving: false,
+      }));
+
+      if (options.showToast !== false) {
+        toast({
+          title: "Success",
+          description: "Display name updated successfully",
+        });
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Error updating display name:', err);
+      setData(prev => ({ ...prev, saving: false, error: 'Failed to update display name' }));
+      return { error: err };
+    }
+  }, [user, toast]);
+
+  const updateMainNotificationsToggle = useCallback(async (enabled: boolean, options: UpdateOptions = {}) => {
+    if (!user?.id || !data.preferences) return { error: 'No user or preferences' };
+
+    setData(prev => ({ ...prev, saving: true, error: null }));
+
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .update({ email_notifications_enabled: enabled })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating notifications:', error);
+        setData(prev => ({ ...prev, saving: false, error: error.message }));
+        return { error };
+      }
+
+      // Update local state
+      setData(prev => ({
+        ...prev,
+        preferences: prev.preferences ? { ...prev.preferences, email_notifications_enabled: enabled } : null,
+        saving: false,
+      }));
+
+      if (options.showToast !== false) {
+        toast({
+          title: "Success",
+          description: `Email notifications ${enabled ? 'enabled' : 'disabled'}`,
+        });
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Error updating notifications:', err);
+      setData(prev => ({ ...prev, saving: false, error: 'Failed to update notifications' }));
+      return { error: err };
+    }
+  }, [user, data.preferences, toast]);
+
+  const updateClientViewMode = useCallback(async (mode: 'grid' | 'list', options: UpdateOptions = {}) => {
+    if (!user?.id || !data.preferences) return { error: 'No user or preferences' };
+
+    setData(prev => ({ ...prev, saving: true, error: null }));
+
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .update({ client_view_mode: mode })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating view mode:', error);
+        setData(prev => ({ ...prev, saving: false, error: error.message }));
+        return { error };
+      }
+
+      // Update local state
+      setData(prev => ({
+        ...prev,
+        preferences: prev.preferences ? { ...prev.preferences, client_view_mode: mode } : null,
+        saving: false,
+      }));
+
+      if (options.showToast !== false) {
+        toast({
+          title: "Success",
+          description: `View mode updated to ${mode}`,
+        });
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Error updating view mode:', err);
+      setData(prev => ({ ...prev, saving: false, error: 'Failed to update view mode' }));
+      return { error: err };
+    }
+  }, [user, data.preferences, toast]);
+
+  const updateTtsVoice = useCallback(async (voice: string, options: UpdateOptions = {}) => {
+    if (!user?.id || !data.preferences) return { error: 'No user or preferences' };
+
+    setData(prev => ({ ...prev, saving: true, error: null }));
+
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .update({ tts_voice: voice })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating TTS voice:', error);
+        setData(prev => ({ ...prev, saving: false, error: error.message }));
+        return { error };
+      }
+
+      // Update local state
+      setData(prev => ({
+        ...prev,
+        preferences: prev.preferences ? { ...prev.preferences, tts_voice: voice } : null,
+        saving: false,
+      }));
+
+      if (options.showToast !== false) {
+        toast({
+          title: "Success",
+          description: `Voice updated to ${voice}`,
+        });
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Error updating TTS voice:', err);
+      setData(prev => ({ ...prev, saving: false, error: 'Failed to update voice' }));
+      return { error: err };
+    }
+  }, [user, data.preferences, toast]);
+
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+
+  const getDisplayName = useCallback(() => {
+    if (!data.profile) return user?.email?.split('@')[0] || 'User';
+    return data.profile.display_name || user?.email?.split('@')[0] || 'User';
+  }, [data.profile, user?.email]);
+
+  const refresh = useCallback((opts?: { force?: boolean }) => {
+    return fetchUserData(opts?.force);
+  }, [fetchUserData]);
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
+
+  // Auto-retry on error
+  useEffect(() => {
+    if (data.error && retryCount < 3) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        fetchUserData(true);
+      }, 1000 * Math.pow(2, retryCount)); // Exponential backoff
+
+      return () => clearTimeout(timer);
+    }
+  }, [data.error, retryCount, fetchUserData]);
+
+  // ============================================================================
+  // RETURN VALUE
+  // ============================================================================
+
+  return {
+    // Data
+    ...data,
+    
+    // Computed values
+    displayName: getDisplayName(),
+    
+    // Update functions
+    updateDisplayName,
+    updateMainNotificationsToggle,
+    updateClientViewMode,
+    updateTtsVoice,
+    
+    // Utility functions
+    refresh,
+    fetchData: fetchUserData,
+  };
+}
