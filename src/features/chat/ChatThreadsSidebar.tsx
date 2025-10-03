@@ -30,6 +30,9 @@ import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketSe
 import { supabase } from '@/integrations/supabase/client';
 import { SearchModal } from '@/components/search/SearchModal';
 import { NewChatDropdown } from '@/components/chat/NewChatDropdown';
+import { AddPersonButton } from '@/components/person/AddPersonButton';
+import { PersonProfilesList } from '@/components/person/PersonProfilesList';
+import { ProfileModal } from '@/components/person/ProfileModal';
 
 
 interface ChatThreadsSidebarProps {
@@ -81,6 +84,46 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
+  // Person profiles handlers
+  const handleCreateProfile = (name: string, birthData: any) => {
+    console.log('Creating profile:', { name, birthData });
+    // TODO: Implement actual profile creation
+    // For now, just add to mock data
+    const newProfile = {
+      id: Date.now().toString(),
+      name,
+      chatsCount: 0,
+      journalCount: 0,
+      chats: [],
+      journal: [],
+    };
+    setPersonProfiles(prev => [...prev, newProfile]);
+  };
+
+  const handleProfileClick = (profileId: string) => {
+    navigate(`/person/${profileId}`);
+  };
+
+  const handleChatClick = (profileId: string, chatId: string) => {
+    console.log('Chat clicked:', { profileId, chatId });
+    // TODO: Navigate to profile-specific chat
+  };
+
+  const handleJournalClick = (profileId: string, journalId: string) => {
+    console.log('Journal clicked:', { profileId, journalId });
+    // TODO: Navigate to journal entry
+  };
+
+  const handleNewChat = (profileId: string) => {
+    console.log('New chat for profile:', profileId);
+    // TODO: Create new chat for this profile
+  };
+
+  const handleNewJournal = (profileId: string) => {
+    console.log('New journal for profile:', profileId);
+    // TODO: Create new journal entry for this profile
+  };
+
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -90,6 +133,30 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [editTitle, setEditTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  
+  // Person profiles state (dev-only UI while building)
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [personProfiles, setPersonProfiles] = useState([
+    // Mock data for now - will be replaced with real data
+    {
+      id: '1',
+      name: 'John Smith',
+      chatsCount: 3,
+      journalCount: 5,
+      chats: [
+        { id: 'c1', title: 'Relationship Reading' },
+        { id: 'c2', title: 'Transit Chat' },
+        { id: 'c3', title: 'General Questions' },
+      ],
+      journal: [
+        { id: 'j1', title: 'Session Notes - Jan 15' },
+        { id: 'j2', title: 'Transit Observations' },
+        { id: 'j3', title: 'Birth Chart Analysis' },
+        { id: 'j4', title: 'Weekly Reflection' },
+        { id: 'j5', title: 'Dream Journal Entry' },
+      ],
+    },
+  ]);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -406,6 +473,24 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
           {/* Dark gray line separator */}
           <div className="border-t border-gray-400 my-2"></div>
+
+          {/* Person Profiles Section - NEW (dev only) */}
+          {import.meta.env.MODE !== 'production' && (
+            <>
+              <AddPersonButton onClick={() => setShowProfileModal(true)} />
+              <PersonProfilesList
+                profiles={personProfiles}
+                onProfileClick={handleProfileClick}
+                onChatClick={handleChatClick}
+                onJournalClick={handleJournalClick}
+                onNewChat={handleNewChat}
+                onNewJournal={handleNewJournal}
+              />
+            </>
+          )}
+          
+          {/* Space between Person Profiles and Chat History */}
+          <div className="py-2"></div>
           
           {/* Chat history section */}
           <div className="space-y-0.5">
@@ -731,6 +816,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           // TODO: Implement scroll to specific message
         }}
       />
+
+      {/* Profile Creation Modal */}
+      {import.meta.env.MODE !== 'production' && (
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          onCreateProfile={handleCreateProfile}
+        />
+      )}
     </div>
   );
 };
