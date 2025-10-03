@@ -181,48 +181,6 @@ export type Database = {
         }
         Relationships: []
       }
-      chat_audio_clips: {
-        Row: {
-          chat_id: string
-          created_at: string | null
-          id: string
-        }
-        Insert: {
-          chat_id: string
-          created_at?: string | null
-          id?: string
-        }
-        Update: {
-          chat_id?: string
-          created_at?: string | null
-          id?: string
-        }
-        Relationships: []
-      }
-      conversation_broadcasts: {
-        Row: {
-          channel_name: string
-          created_at: string | null
-          id: string
-          message_type: string | null
-          payload: Json | null
-        }
-        Insert: {
-          channel_name: string
-          created_at?: string | null
-          id?: string
-          message_type?: string | null
-          payload?: Json | null
-        }
-        Update: {
-          channel_name?: string
-          created_at?: string | null
-          id?: string
-          message_type?: string | null
-          payload?: Json | null
-        }
-        Relationships: []
-      }
       conversation_folders: {
         Row: {
           conversation_id: string
@@ -379,42 +337,6 @@ export type Database = {
         }
         Relationships: []
       }
-      edge_function_logs: {
-        Row: {
-          created_at: string | null
-          function_name: string
-          id: string
-          ip_address: string
-          is_blocked: boolean | null
-          request_id: string
-          status_code: number
-          token_hash: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          function_name: string
-          id?: string
-          ip_address: string
-          is_blocked?: boolean | null
-          request_id: string
-          status_code: number
-          token_hash?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          function_name?: string
-          id?: string
-          ip_address?: string
-          is_blocked?: boolean | null
-          request_id?: string
-          status_code?: number
-          token_hash?: string | null
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
       email_messages: {
         Row: {
           attachment_count: number | null
@@ -496,78 +418,6 @@ export type Database = {
           subject?: string
           template_type?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      email_signatures: {
-        Row: {
-          created_at: string | null
-          id: string
-          is_default: boolean | null
-          logo_url: string | null
-          name: string
-          signature_html: string
-          signature_text: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          is_default?: boolean | null
-          logo_url?: string | null
-          name: string
-          signature_html: string
-          signature_text: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          is_default?: boolean | null
-          logo_url?: string | null
-          name?: string
-          signature_html?: string
-          signature_text?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      email_templates: {
-        Row: {
-          body_template: string
-          category: string | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          subject_template: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          body_template: string
-          category?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          subject_template: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          body_template?: string
-          category?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          subject_template?: string
-          updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -1149,39 +999,6 @@ export type Database = {
           is_active?: boolean | null
           max_uses?: number | null
           times_used?: number | null
-        }
-        Relationships: []
-      }
-      rate_limit_rules: {
-        Row: {
-          block_duration_seconds: number
-          created_at: string | null
-          function_name: string
-          id: string
-          is_active: boolean | null
-          max_hits: number
-          updated_at: string | null
-          window_seconds: number
-        }
-        Insert: {
-          block_duration_seconds?: number
-          created_at?: string | null
-          function_name: string
-          id?: string
-          is_active?: boolean | null
-          max_hits?: number
-          updated_at?: string | null
-          window_seconds?: number
-        }
-        Update: {
-          block_duration_seconds?: number
-          created_at?: string | null
-          function_name?: string
-          id?: string
-          is_active?: boolean | null
-          max_hits?: number
-          updated_at?: string | null
-          window_seconds?: number
         }
         Relationships: []
       }
