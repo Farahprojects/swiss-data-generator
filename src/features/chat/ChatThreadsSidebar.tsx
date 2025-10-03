@@ -3,6 +3,7 @@ import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThreads } from '@/contexts/ThreadsContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { messages } = useMessageStore();
 
   const { user, signOut } = useAuth();
+  const { displayName } = useUserProfile();
   
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
@@ -537,7 +539,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                     <UserAvatar size="sm" />
                     <div className="flex-1 text-left min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate pr-2">
-                        {user?.email?.split('@')[0] || 'User'}
+                        {displayName}
                       </div>
                     </div>
                     <Settings className="h-4 w-4 text-gray-500" />
@@ -554,7 +556,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                         <UserAvatar size="sm" />
                         <div className="flex-1 text-left min-w-0">
                           <div className="text-sm font-medium text-gray-900 truncate pr-2">
-                            {user?.email?.split('@')[0] || 'User'}
+                            {displayName}
                           </div>
                         </div>
                       </div>

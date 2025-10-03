@@ -10,6 +10,7 @@ import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { VoiceSelectionPanel } from "./VoiceSelectionPanel";
+import DisplayNamePanel from "./panels/DisplayNamePanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsData } from "@/hooks/useSettingsData";
@@ -93,6 +94,9 @@ export const SettingsModal = () => {
     <Tabs value={activePanel} className="space-y-4">
       <TabsContent value="general">
         <div className="space-y-6">
+          {/* Display Name - Available for all users */}
+          <DisplayNamePanel />
+          
           {/* Voice Selection - Available for all users */}
           <VoiceSelectionPanel />
           
