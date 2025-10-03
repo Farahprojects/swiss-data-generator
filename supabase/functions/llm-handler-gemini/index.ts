@@ -43,9 +43,9 @@ serve(async (req) => {
     }
 
     // Get Google API key
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_1");
     if (!GOOGLE_API_KEY) {
-      console.error("[llm-handler-gemini] Missing GOOGLE_API_KEY");
+      console.error("[llm-handler-gemini] Missing GOOGLE_LLM_1");
       throw new Error("Google API key not configured");
     }
 
