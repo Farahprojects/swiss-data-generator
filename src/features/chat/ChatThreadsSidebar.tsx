@@ -564,10 +564,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   </DropdownMenuTrigger>
                 </div>
                 <DropdownMenuContent align="end" className="min-w-48 rounded-xl border border-gray-200 shadow-lg p-1">
-                  <div className="px-2 py-1.5">
-                    <div className="text-sm font-medium text-gray-900">{user?.email}</div>
-                  </div>
-                  <DropdownMenuSeparator />
                   
                   <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
                     <Settings className="mr-2 h-4 w-4" />
