@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useChatStore } from '@/core/store';
+import { useUserData } from '@/hooks/useUserData';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Volume2, ChevronDown } from 'lucide-react';
 import {
@@ -10,14 +10,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const VoiceSelectionPanel: React.FC = () => {
-  const ttsVoice = useChatStore((s) => s.ttsVoice);
-  const setTtsVoice = useChatStore((s) => s.setTtsVoice);
+  const { preferences, updateTtsVoice, saving } = useUserData();
+  const ttsVoice = preferences?.tts_voice || 'Puck';
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handleVoiceChange = (voice: string) => {
-    setTtsVoice(voice);
+  const handleVoiceChange = async (voice: string) => {
+    await updateTtsVoice(voice, { showToast: false });
   };
 
   const handlePlayPreview = async (voice: string) => {
