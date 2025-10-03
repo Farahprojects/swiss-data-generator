@@ -92,60 +92,50 @@ export const VoiceSelectionPanel: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Assistant Voice</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Choose the voice for your AI assistant. Click the play button to preview each voice.
-        </p>
-        
-        {/* Elegant Voice Selection Dropdown */}
-        <div className="flex items-center gap-3">
-          {/* Play Button */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handlePlayPreview(ttsVoice)}
-            disabled={isLoading === ttsVoice}
-            className="h-10 w-10 p-0 border-gray-300 hover:bg-gray-50"
-          >
-            {isLoading === ttsVoice ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-            ) : playingVoice === ttsVoice ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-          </Button>
-          
-          {/* Voice Name Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="h-10 px-3 justify-between min-w-[140px] border-gray-300 hover:bg-gray-50"
+    <div className="flex items-center justify-between py-3">
+      <span className="text-sm text-gray-800">Choose Voice</span>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => handlePlayPreview(ttsVoice)}
+          disabled={isLoading === ttsVoice}
+          className="h-9 w-9 p-0 rounded-full hover:bg-gray-100"
+        >
+          {isLoading === ttsVoice ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+          ) : playingVoice === ttsVoice ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="h-9 px-3 rounded-full justify-between min-w-[140px] hover:bg-gray-100"
+            >
+              <span className="text-sm font-medium">{ttsVoice}</span>
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {voices.map((voice) => (
+              <DropdownMenuItem
+                key={voice.name}
+                onClick={() => handleVoiceChange(voice.name)}
+                className={`cursor-pointer ${ttsVoice === voice.name ? 'bg-gray-100' : ''}`}
               >
-                <span className="text-sm font-medium">{ttsVoice}</span>
-                <ChevronDown className="h-4 w-4 text-gray-500" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {voices.map((voice) => (
-                <DropdownMenuItem
-                  key={voice.name}
-                  onClick={() => handleVoiceChange(voice.name)}
-                  className={`cursor-pointer ${ttsVoice === voice.name ? 'bg-gray-100' : ''}`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm">{voice.name}</span>
-                    <span className="text-xs text-gray-500">{voice.gender}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-sm">{voice.name}</span>
+                  <span className="text-xs text-gray-500">{voice.gender}</span>
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

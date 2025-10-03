@@ -100,14 +100,14 @@ export const SettingsModal = () => {
           {/* Voice Selection - Available for all users */}
           <VoiceSelectionPanel />
           
-          <div className="border-t pt-6">
+          <div className="border-t pt-2">
             {user ? (
               <>
                 <div className="flex items-center justify-between py-3">
                   <span className="text-sm text-gray-800">Log out on this device</span>
                   <Button 
-                    variant="outline" 
-                    className="text-sm" 
+                    variant="ghost" 
+                    className="h-9 rounded-full px-4 text-gray-800 hover:bg-gray-100" 
                     onClick={handleLogout}
                     disabled={loggingOut}
                   >
@@ -115,8 +115,14 @@ export const SettingsModal = () => {
                   </Button>
                 </div>
                 <div className="flex items-center justify-between py-3">
-                  <span className="text-sm text-red-600">Delete account</span>
-                  <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
+                  <span className="text-sm text-gray-800">Delete account</span>
+                  <Button 
+                    variant="ghost" 
+                    className="h-9 rounded-full px-4 text-gray-800 hover:bg-gray-100" 
+                    onClick={() => handleTabChange("delete")}
+                  >
+                    Delete account
+                  </Button>
                 </div>
               </>
             ) : (
