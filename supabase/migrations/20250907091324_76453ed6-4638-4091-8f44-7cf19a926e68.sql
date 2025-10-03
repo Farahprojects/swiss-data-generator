@@ -1,2 +1,0 @@
-INSERT INTO public.report_prompts (name, system_prompt)
-VALUES ('Analyses', 'Summarise this 4-pair exchange by capturing the user''s stated goal, their hidden resistance patterns, and emotional signals that may relate to their deeper tendencies.');
