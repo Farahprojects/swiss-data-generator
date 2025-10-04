@@ -169,7 +169,7 @@ serve(async (req) => {
 
     // For non-conversation: Fire-and-forget LLM call; LLM will save assistant via chat-send
     console.log(`[chat-send] 🤖 CALLING LLM HANDLER - chat_id: ${chat_id}`);
-    fetch(`${SUPABASE_URL}/functions/v1/llm-handler-openai`, {
+    fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

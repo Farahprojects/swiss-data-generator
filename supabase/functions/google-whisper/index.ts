@@ -148,6 +148,65 @@ serve(async (req) => {
       transcriptPreview: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : '')
     });
 
+    // For voice mode: Save user message and call LLM separately
+    if (chattype === 'voice' && chat_id) {
+      console.log('[google-whisper] 🔄 VOICE MODE: Saving user message and calling LLM');
+      
+      // Fire and forget: Save user message to chat-send
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/chat-send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: transcript,
+          client_msg_id: crypto.randomUUID(),
+          chattype: 'voice',
+          mode: mode
+        })
+      }).catch((error) => {
+        console.error('[google-whisper] ❌ User message save failed:', error);
+      });
+
+      // Fire and forget: Call LLM
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-gemini`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: transcript,
+          chattype: 'voice',
+          mode: mode,
+          voice
+        })
+      }).catch((error) => {
+        console.error('[google-whisper] ❌ LLM call failed:', error);
+      });
+
+      // Broadcast thinking-mode to WebSocket
+      fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel: `conversation:${chat_id}`,
+          event: 'thinking-mode',
+          payload: { transcript }
+        })
+      }).then(() => {
+        console.log('[google-whisper] ✅ thinking-mode broadcast sent');
+      }).catch((error) => {
+        console.error('[google-whisper] ❌ thinking-mode broadcast failed:', error);
+      });
+    }
+
     return new Response(
       JSON.stringify({ transcript }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
