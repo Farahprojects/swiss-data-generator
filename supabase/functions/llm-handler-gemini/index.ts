@@ -144,16 +144,22 @@ Check-in: Close with a simple, open question.`;
 
     console.log(`[llm-handler-gemini] 📄 Parsing Gemini response...`);
     const data = await resp.json();
+    console.log(`[llm-handler-gemini] 🔍 Raw response structure:`, JSON.stringify(data, null, 2));
 
     // Extract assistant text from Gemini response
     console.log(`[llm-handler-gemini] 🔍 Extracting text from response...`);
     let assistantText = '';
     try {
+      console.log(`[llm-handler-gemini] 🔍 Candidates:`, data?.candidates);
+      console.log(`[llm-handler-gemini] 🔍 First candidate:`, data?.candidates?.[0]);
+      console.log(`[llm-handler-gemini] 🔍 Content:`, data?.candidates?.[0]?.content);
+      console.log(`[llm-handler-gemini] 🔍 Parts:`, data?.candidates?.[0]?.content?.parts);
+      
       const parts = data?.candidates?.[0]?.content?.parts || [];
       assistantText = parts.map((p: { text?: string }) => p?.text).filter(Boolean).join(' ').trim();
       console.log(`[llm-handler-gemini] ✅ Extracted text: ${assistantText.substring(0, 50)}...`);
-    } catch (_) {
-      console.error(`[llm-handler-gemini] ❌ Error extracting text from response`);
+    } catch (err) {
+      console.error(`[llm-handler-gemini] ❌ Error extracting text from response:`, err);
       // fall through to validation below
     }
 
