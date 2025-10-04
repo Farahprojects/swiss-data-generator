@@ -35,18 +35,18 @@ class SttService {
     if (mode) form.append('mode', mode);
     form.append('language', 'en');
 
-    const { data, error } = await supabase.functions.invoke('openai-whisper', {
+    const { data, error } = await supabase.functions.invoke('google-whisper', {
       body: form
     });
 
     if (error) {
-      console.error('[STT] OpenAI Whisper error:', error);
-      throw new Error(`Error invoking openai-whisper: ${error.message}`);
+      console.error('[STT] Google Whisper error:', error);
+      throw new Error(`Error invoking google-whisper: ${error.message}`);
     }
 
     if (!data) {
       console.error('[STT] No data in response');
-      throw new Error('No data received from OpenAI Whisper');
+      throw new Error('No data received from Google Whisper');
     }
 
 
