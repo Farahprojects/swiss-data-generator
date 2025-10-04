@@ -42,14 +42,18 @@ serve(async (req) => {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
 
+    console.log(`[llm-handler-gemini] ✅ Input validation passed`);
+
     // Get Google API key
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_1");
     if (!GOOGLE_API_KEY) {
       console.error("[llm-handler-gemini] Missing GOOGLE_LLM_1");
       throw new Error("Google API key not configured");
     }
+    console.log(`[llm-handler-gemini] ✅ Google API key found (${GOOGLE_API_KEY.substring(0, 10)}...)`);
 
     // Fetch conversation history (last 6 completed messages, optimized)
+    console.log(`[llm-handler-gemini] 📋 Fetching conversation history for chat_id: ${chat_id}`);
     const HISTORY_LIMIT = 6;
     const { data: history, error: historyError } = await supabase
       .from("messages")
@@ -62,8 +66,10 @@ serve(async (req) => {
       .limit(HISTORY_LIMIT);
 
     if (historyError) {
+      console.error(`[llm-handler-gemini] ❌ History fetch error:`, historyError);
       throw new Error("Failed to fetch conversation history");
     }
+    console.log(`[llm-handler-gemini] ✅ History fetched: ${history?.length || 0} messages`);
 
     const requestStartTime = Date.now();
 
@@ -108,6 +114,7 @@ Check-in: Close with a simple, open question.`;
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     // Call Google Generative Language API (Gemini)
+    console.log(`[llm-handler-gemini] 🤖 Calling Gemini API...`);
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
     const resp = await fetch(geminiUrl, {
@@ -125,6 +132,8 @@ Check-in: Close with a simple, open question.`;
       }),
       signal: controller.signal,
     });
+
+    console.log(`[llm-handler-gemini] 📡 Gemini API response status: ${resp.status}`);
 
     clearTimeout(timeoutId);
 
