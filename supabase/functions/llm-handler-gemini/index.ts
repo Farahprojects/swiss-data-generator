@@ -142,23 +142,30 @@ Check-in: Close with a simple, open question.`;
       throw new Error(`Gemini API request failed: ${resp.status} - ${errorText}`);
     }
 
+    console.log(`[llm-handler-gemini] 📄 Parsing Gemini response...`);
     const data = await resp.json();
 
     // Extract assistant text from Gemini response
+    console.log(`[llm-handler-gemini] 🔍 Extracting text from response...`);
     let assistantText = '';
     try {
       const parts = data?.candidates?.[0]?.content?.parts || [];
       assistantText = parts.map((p: { text?: string }) => p?.text).filter(Boolean).join(' ').trim();
+      console.log(`[llm-handler-gemini] ✅ Extracted text: ${assistantText.substring(0, 50)}...`);
     } catch (_) {
+      console.error(`[llm-handler-gemini] ❌ Error extracting text from response`);
       // fall through to validation below
     }
 
     if (!assistantText) {
+      console.error(`[llm-handler-gemini] ❌ No response text from Gemini`);
       throw new Error("No response text from Gemini");
     }
 
     // Sanitize assistant response
+    console.log(`[llm-handler-gemini] 🧹 Sanitizing response text...`);
     const sanitizedText = sanitizePlainText(assistantText);
+    console.log(`[llm-handler-gemini] ✅ Text sanitized: ${sanitizedText.substring(0, 50)}...`);
 
     // Extract usage metrics from Gemini response
     const usage = {
@@ -169,6 +176,8 @@ Check-in: Close with a simple, open question.`;
 
     const llmLatency_ms = Date.now() - requestStartTime;
     const totalLatency_ms = Date.now() - requestStartTime;
+
+    console.log(`[llm-handler-gemini] 💾 Processing response and calling chat-send...`);
 
     // Fire-and-forget TTS call - ONLY for voice mode
     if (chattype === 'voice') {
@@ -242,7 +251,7 @@ Check-in: Close with a simple, open question.`;
       });
     }
 
-    console.log('[llm-handler-gemini] done');
+    console.log('[llm-handler-gemini] ✅ Function completed successfully');
     return new Response(JSON.stringify({
       text: sanitizedText,
       usage,
