@@ -30,105 +30,13 @@ function normalizeLanguageCode(language?: string | null): string {
   return language;
 }
 
-function stripPemHeaderFooter(pem: string): Uint8Array {
-  const cleaned = pem
-    .replace(/-----BEGIN [^-]+-----/g, '')
-    .replace(/-----END [^-]+-----/g, '')
-    .replace(/\s+/g, '');
-  const raw = atob(cleaned);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  const b64 = base64Encode(bytes);
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-async function importPrivateKeyRS256(pem: string): Promise<CryptoKey> {
-  const pkcs8 = stripPemHeaderFooter(pem);
-  return await crypto.subtle.importKey(
-    'pkcs8',
-    pkcs8,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-}
-
-async function createServiceAccountJwt(clientEmail: string, privateKeyPem: string, scopes: string[]): Promise<string> {
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: clientEmail,
-    scope: scopes.join(' '),
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  };
-
-  const encoder = new TextEncoder();
-  const headerBytes = encoder.encode(JSON.stringify(header));
-  const payloadBytes = encoder.encode(JSON.stringify(payload));
-  const signingInput = `${base64UrlEncode(headerBytes)}.${base64UrlEncode(payloadBytes)}`;
-
-  const key = await importPrivateKeyRS256(privateKeyPem);
-  const signature = new Uint8Array(
-    await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(signingInput))
-  );
-  const jwt = `${signingInput}.${base64UrlEncode(signature)}`;
-  return jwt;
-}
-
-async function getGoogleAccessToken(serviceAccountJson: string): Promise<string> {
-  let sa: any;
-  try {
-    sa = JSON.parse(serviceAccountJson);
-  } catch (_e) {
-    throw new Error('Invalid GOOGLE-STT service account JSON');
-  }
-
-  const clientEmail = sa.client_email;
-  const privateKey = sa.private_key;
-  if (!clientEmail || !privateKey) {
-    throw new Error('GOOGLE-STT is missing client_email or private_key');
-  }
-
-  const jwt = await createServiceAccountJwt(clientEmail, privateKey, [
-    'https://www.googleapis.com/auth/cloud-platform',
-  ]);
-
-  const body = new URLSearchParams();
-  body.set('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
-  body.set('assertion', jwt);
-
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-
-  if (!tokenRes.ok) {
-    const errText = await tokenRes.text();
-    throw new Error(`Google OAuth token error: ${tokenRes.status} - ${errText}`);
-  }
-
-  const tokenJson = await tokenRes.json();
-  const accessToken = tokenJson.access_token;
-  if (!accessToken) {
-    throw new Error('Google OAuth token response missing access_token');
-  }
-  return accessToken;
-}
-
 async function transcribeWithGoogle({
-  accessToken,
+  apiKey,
   audioBytes,
   mimeType,
   languageCode,
 }: {
-  accessToken: string;
+  apiKey: string;
   audioBytes: Uint8Array;
   mimeType: string;
   languageCode: string;
@@ -145,10 +53,9 @@ async function transcribeWithGoogle({
     config.sampleRateHertz = encodingInfo.sampleRateHertz;
   }
 
-  const resp = await fetch('https://speech.googleapis.com/v1p1beta1/speech:recognize', {
+  const resp = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -216,15 +123,14 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
 
-    const googleServiceAccount = Deno.env.get('GOOGLE-STT');
-    if (!googleServiceAccount) {
-      throw new Error('Google STT service account not configured (GOOGLE-STT)');
+    const googleApiKey = Deno.env.get('GOOGLE-STT');
+    if (!googleApiKey) {
+      throw new Error('Google STT API key not configured (GOOGLE-STT)');
     }
 
-    const accessToken = await getGoogleAccessToken(googleServiceAccount);
     const languageCode = normalizeLanguageCode(language);
     const transcript = await transcribeWithGoogle({
-      accessToken,
+      apiKey: googleApiKey,
       audioBytes: audioBuffer,
       mimeType,
       languageCode,
