@@ -117,22 +117,26 @@ Check-in: Close with a simple, open question.`;
     console.log(`[llm-handler-gemini] 🤖 Calling Gemini API...`);
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
+    const requestBody = {
+      system_instruction: { role: 'system', parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: {
+        temperature: 0.7,
+      },
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
+    };
+    
+    console.log(`[llm-handler-gemini] 📤 Request body:`, JSON.stringify(requestBody, null, 2));
+
     const resp = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': GOOGLE_API_KEY,
       },
-      body: JSON.stringify({
-        system_instruction: { role: 'system', parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-        },
-        thinkingConfig: {
-          thinkingBudget: 0,
-        },
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
 
@@ -142,6 +146,7 @@ Check-in: Close with a simple, open question.`;
 
     if (!resp.ok) {
       const errorText = await resp.text();
+      console.error(`[llm-handler-gemini] ❌ Gemini API Error:`, errorText);
       throw new Error(`Gemini API request failed: ${resp.status} - ${errorText}`);
     }
 
