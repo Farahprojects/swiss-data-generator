@@ -127,7 +127,10 @@ Check-in: Close with a simple, open question.`;
         system_instruction: { role: 'system', parts: [{ text: systemPrompt }] },
         contents,
         generationConfig: {
-          maxOutputTokens: 1000,
+          temperature: 0.7,
+        },
+        thinkingConfig: {
+          thinkingBudget: 0,
         },
       }),
       signal: controller.signal,
