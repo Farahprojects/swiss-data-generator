@@ -122,7 +122,6 @@ Check-in: Close with a simple, open question.`;
       contents,
       generationConfig: {
         temperature: 0.7,
-        thinkingBudget: 0,
       },
     };
     
