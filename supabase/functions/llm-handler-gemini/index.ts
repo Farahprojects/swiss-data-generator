@@ -42,7 +42,7 @@ serve(async (req) => {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
 
-    console.log(`[llm-handler-gemini] ✅ Input validation passed`);
+    
 
     // Get Google API key
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_1");
@@ -50,10 +50,10 @@ serve(async (req) => {
       console.error("[llm-handler-gemini] Missing GOOGLE_LLM_1");
       throw new Error("Google API key not configured");
     }
-    console.log(`[llm-handler-gemini] ✅ Google API key found (${GOOGLE_API_KEY.substring(0, 10)}...)`);
+    
 
     // Fetch conversation history (last 6 completed messages, optimized)
-    console.log(`[llm-handler-gemini] 📋 Fetching conversation history for chat_id: ${chat_id}`);
+    
     const HISTORY_LIMIT = 6;
     const { data: history, error: historyError } = await supabase
       .from("messages")
@@ -69,7 +69,7 @@ serve(async (req) => {
       console.error(`[llm-handler-gemini] ❌ History fetch error:`, historyError);
       throw new Error("Failed to fetch conversation history");
     }
-    console.log(`[llm-handler-gemini] ✅ History fetched: ${history?.length || 0} messages`);
+    
 
     const requestStartTime = Date.now();
 
@@ -114,7 +114,7 @@ Check-in: Close with a simple, open question.`;
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     // Call Google Generative Language API (Gemini)
-    console.log(`[llm-handler-gemini] 🤖 Calling Gemini API...`);
+    
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
     const requestBody = {
@@ -125,7 +125,7 @@ Check-in: Close with a simple, open question.`;
       },
     };
     
-    console.log(`[llm-handler-gemini] 📤 Request body:`, JSON.stringify(requestBody, null, 2));
+    
 
     const resp = await fetch(geminiUrl, {
       method: 'POST',
@@ -137,7 +137,7 @@ Check-in: Close with a simple, open question.`;
       signal: controller.signal,
     });
 
-    console.log(`[llm-handler-gemini] 📡 Gemini API response status: ${resp.status}`);
+    
 
     clearTimeout(timeoutId);
 
@@ -147,19 +147,11 @@ Check-in: Close with a simple, open question.`;
       throw new Error(`Gemini API request failed: ${resp.status} - ${errorText}`);
     }
 
-    console.log(`[llm-handler-gemini] 📄 Parsing Gemini response...`);
     const data = await resp.json();
-    console.log(`[llm-handler-gemini] 🔍 Raw response structure:`, JSON.stringify(data, null, 2));
 
     // Extract assistant text from Gemini response
-    console.log(`[llm-handler-gemini] 🔍 Extracting text from response...`);
     let assistantText = '';
     try {
-      console.log(`[llm-handler-gemini] 🔍 Candidates:`, data?.candidates);
-      console.log(`[llm-handler-gemini] 🔍 First candidate:`, data?.candidates?.[0]);
-      console.log(`[llm-handler-gemini] 🔍 Content:`, data?.candidates?.[0]?.content);
-      console.log(`[llm-handler-gemini] 🔍 Parts:`, data?.candidates?.[0]?.content?.parts);
-      
       const parts = data?.candidates?.[0]?.content?.parts || [];
       assistantText = parts.map((p: { text?: string }) => p?.text).filter(Boolean).join(' ').trim();
       console.log(`[llm-handler-gemini] ✅ Extracted text: ${assistantText.substring(0, 50)}...`);
@@ -174,9 +166,7 @@ Check-in: Close with a simple, open question.`;
     }
 
     // Sanitize assistant response
-    console.log(`[llm-handler-gemini] 🧹 Sanitizing response text...`);
     const sanitizedText = sanitizePlainText(assistantText);
-    console.log(`[llm-handler-gemini] ✅ Text sanitized: ${sanitizedText.substring(0, 50)}...`);
 
     // Extract usage metrics from Gemini response
     const usage = {
@@ -188,14 +178,11 @@ Check-in: Close with a simple, open question.`;
     const llmLatency_ms = Date.now() - requestStartTime;
     const totalLatency_ms = Date.now() - requestStartTime;
 
-    console.log(`[llm-handler-gemini] 💾 Processing response and calling chat-send...`);
+    
 
     // Fire-and-forget TTS call - ONLY for voice mode
     if (chattype === 'voice') {
-      console.log(`[llm-handler-gemini] 🎤 VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
-
       const selectedVoice = (typeof voice === 'string' && voice.trim().length > 0) ? voice : 'Puck';
-      console.log(`[llm-handler-gemini] 🎵 Using TTS voice: ${selectedVoice}`);
 
       fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
@@ -237,7 +224,6 @@ Check-in: Close with a simple, open question.`;
       });
     } else {
       // Non-voice mode - also send to chat-send
-      console.log(`[llm-handler-gemini] 🤖 NON-VOICE MODE: Sending assistant message to chat-send - chat_id: ${chat_id}`);
 
       const assistantClientId = crypto.randomUUID();
       console.log(`[llm-handler-gemini] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
