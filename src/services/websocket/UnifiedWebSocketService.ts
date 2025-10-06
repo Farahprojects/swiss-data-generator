@@ -205,6 +205,7 @@ class UnifiedWebSocketService {
    */
   private async setupRealtimeSubscription(chat_id: string) {
     try {
+      console.log(`[UnifiedWebSocket] 📡 Subscribing to messages for chat_id: ${chat_id}`);
       this.subscriptionRetryCount = 0;
 
       // Store callbacks in local variables to preserve context
@@ -278,7 +279,8 @@ class UnifiedWebSocketService {
           this.realtimeStatus = status as any;
           
           if (status === 'SUBSCRIBED') {
-            console.log('[UnifiedWebSocket] ✅ SUBSCRIBED successfully');
+            console.log(`[UnifiedWebSocket] ✅ SUBSCRIBED successfully to chat_id: ${chat_id}`);
+            console.log(`[UnifiedWebSocket] 🎯 Listening for INSERT/UPDATE on messages where chat_id=eq.${chat_id}`);
             this.subscriptionRetryCount = 0;
             this.coldReconnectAttempts = 0;
             if (this.connectTimeoutId !== null) {
@@ -289,7 +291,7 @@ class UnifiedWebSocketService {
               this.onStatusChange('CONNECTED');
             }
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-            console.warn('[UnifiedWebSocket] ⚠️ Connection failed:', status, '- triggering cold reconnect');
+            console.warn(`[UnifiedWebSocket] ⚠️ Connection failed for chat_id ${chat_id}:`, status, '- triggering cold reconnect');
             // Simple, professional recovery: cold reconnect once
             this.coldReconnect();
           }
