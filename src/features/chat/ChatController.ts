@@ -101,9 +101,40 @@ class ChatController {
         onSystemMessage: this.handleSystemMessage.bind(this)
       });
       
-      await this.loadExistingMessages(chat_id);
+      // Check if conversation exists before fetching messages
+      const conversationExists = await this.verifyConversationExists(chat_id);
+      if (conversationExists) {
+        await this.loadExistingMessages(chat_id);
+      } else {
+        console.log(`[ChatController] Conversation ${chat_id} does not exist yet, skipping message fetch (new conversation)`);
+        // Clear messages for new conversation
+        const { setChatId } = useMessageStore.getState();
+        setChatId(chat_id);
+      }
     } finally {
       this.isInitializing = false;
+    }
+  }
+
+  /**
+   * Verify conversation exists in database before fetching messages
+   */
+  private async verifyConversationExists(chat_id: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', chat_id)
+        .single();
+      
+      if (error || !data) {
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('[ChatController] Error verifying conversation exists:', error);
+      return false;
     }
   }
 
