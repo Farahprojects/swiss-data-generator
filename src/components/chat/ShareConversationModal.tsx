@@ -17,23 +17,22 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
   const [isShared, setIsShared] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Check if conversation is already shared
+  // Auto-create share link when modal opens
   useEffect(() => {
-    // For now, assume it's not shared. In a real implementation, you'd check the conversation's is_public status
-    setIsShared(false);
-  }, [conversationId]);
+    const autoShare = async () => {
+      setIsLoading(true);
+      try {
+        await shareConversation(conversationId);
+        setIsShared(true);
+      } catch (error) {
+        console.error('Error sharing conversation:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleShare = async () => {
-    setIsLoading(true);
-    try {
-      await shareConversation(conversationId);
-      setIsShared(true);
-    } catch (error) {
-      console.error('Error sharing conversation:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    autoShare();
+  }, [conversationId]);
 
   const handleUnshare = async () => {
     setIsLoading(true);
@@ -84,38 +83,20 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {!isShared ? (
-            /* Share Prompt */
+          {isLoading ? (
+            /* Loading State */
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                <Link className="w-8 h-8 text-blue-600" />
+                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Share this conversation</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Creating share link...</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  Create a public link that others can use to join this conversation. 
-                  Anyone with the link can participate in the chat.
+                  Setting up public access for this conversation.
                 </p>
               </div>
-              <button
-                onClick={handleShare}
-                disabled={isLoading}
-                className="w-full px-6 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creating link...
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-4 h-4" />
-                    Create share link
-                  </>
-                )}
-              </button>
             </div>
-          ) : (
+          ) : isShared ? (
             /* Share Success */
             <div className="space-y-4">
               <div className="text-center">
