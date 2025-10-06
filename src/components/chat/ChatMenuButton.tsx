@@ -23,34 +23,10 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
 
   // Check if conversation is shared
   useEffect(() => {
-    const checkSharingStatus = async () => {
-      if (!chat_id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('conversations')
-          .select('is_public, share_token, share_mode')
-          .eq('id', chat_id)
-          .single();
-        
-        if (error) {
-          console.error('Error checking sharing status:', error);
-          return;
-        }
-        
-        setIsShared(data?.is_public || false);
-        setShareToken(data?.share_token || null);
-        if (data?.share_mode === 'join_conversation') {
-          setShareMode('join_conversation');
-        } else {
-          setShareMode('view_only');
-        }
-      } catch (error) {
-        console.error('Error checking sharing status:', error);
-      }
-    };
-
-    checkSharingStatus();
+    // Sharing feature has been removed - set defaults
+    setIsShared(false);
+    setShareToken(null);
+    setShareMode('view_only');
   }, [chat_id]);
 
   const handleShareClick = () => {

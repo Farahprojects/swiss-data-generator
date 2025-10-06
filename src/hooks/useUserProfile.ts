@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 interface UserProfile {
   id: string;
   email: string;
-  display_name: string | null;
   email_verified: boolean;
 }
 
@@ -25,7 +24,7 @@ export const useUserProfile = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, email, display_name, email_verified')
+          .select('id, email, email_verified')
           .eq('id', user.id)
           .single();
 
@@ -48,30 +47,16 @@ export const useUserProfile = () => {
 
   const getDisplayName = () => {
     if (!profile) return user?.email?.split('@')[0] || 'User';
-    return profile.display_name || user?.email?.split('@')[0] || 'User';
+    // display_name column was dropped, use email
+    return user?.email?.split('@')[0] || 'User';
   };
 
   const updateDisplayName = async (newDisplayName: string) => {
     if (!user?.id) return { error: 'No user' };
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ display_name: newDisplayName })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Error updating display name:', error);
-        return { error };
-      }
-
-      // Update local state
-      setProfile(prev => prev ? { ...prev, display_name: newDisplayName } : null);
-      return { error: null };
-    } catch (err) {
-      console.error('Error updating display name:', err);
-      return { error: err };
-    }
+    // display_name column was dropped - this function is now a no-op
+    console.warn('updateDisplayName: display_name column no longer exists in profiles table');
+    return { error: 'Display name feature has been removed' };
   };
 
   return {

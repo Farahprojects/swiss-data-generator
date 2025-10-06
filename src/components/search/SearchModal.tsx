@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Search, MessageSquare, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
@@ -34,7 +35,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onSelectMessage
 }) => {
   const { user } = useAuth();
-  const { setChatId } = useChatStore();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ConversationGroup[]>([]);
   const [recentConversations, setRecentConversations] = useState<any[]>([]);
@@ -230,7 +231,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     for (const group of results) {
       for (const message of group.messages) {
         if (currentIndex === selectedIndex) {
-          setChatId(message.chat_id);
+          // Navigate to conversation directly instead of using setChatId
+          navigate(`/c/${message.chat_id}`);
           onSelectMessage(message.chat_id, message.id);
           onClose();
           return;
@@ -326,7 +328,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   
                   <button
                     onClick={() => {
-                      setChatId(conv.id);
+                      navigate(`/c/${conv.id}`);
                       onSelectMessage(conv.id, '');
                       onClose();
                     }}
@@ -364,7 +366,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         <button
                           key={message.id}
                           onClick={() => {
-                            setChatId(message.chat_id);
+                            navigate(`/c/${message.chat_id}`);
                             onSelectMessage(message.chat_id, message.id);
                             onClose();
                           }}

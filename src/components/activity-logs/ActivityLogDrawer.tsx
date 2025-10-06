@@ -44,23 +44,14 @@ interface ActivityLogDrawerProps {
 // Helper function to convert legacy string content to ReportData format
 const createLegacyReportData = (content: string): ReportData => {
   return {
-    guest_report: {
-      id: 'legacy',
-      email: '',
-      report_type: null,
-      is_ai_report: null,
-      payment_status: 'completed',
-      created_at: new Date().toISOString(),
-      report_data: { report: content }
-    },
     report_content: content,
     swiss_data: null,
     metadata: {
-      has_ai_report: false,
       content_type: 'ai',
+      has_ai_report: true,
       has_swiss_data: false,
       is_ready: true,
-      report_type: null
+      report_type: 'legacy'
     }
   };
 };

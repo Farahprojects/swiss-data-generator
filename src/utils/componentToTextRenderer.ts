@@ -6,8 +6,8 @@ import { isSynastryData, parseAstroData } from '@/lib/astroFormatter';
 const isSynastryReport = (reportData: ReportData): boolean => {
   if (!reportData.swiss_data) return false;
 
-  // Use report_type from metadata/guest_report for accurate routing
-  const reportTypeRaw = reportData.metadata?.report_type || reportData.guest_report?.report_type || '';
+  // Use report_type from metadata for routing
+  const reportTypeRaw = reportData.metadata?.report_type || '';
   const reportType = String(reportTypeRaw).toLowerCase();
 
   // Route based on explicit type first
@@ -47,17 +47,15 @@ export const renderAstroDataAsText = (reportData: ReportData): string => {
 const renderIndividualAsText = (reportData: ReportData): string => {
   const parsed = parseAstroData(reportData.swiss_data);
   const natal = parsed.natal;
-  const reportInfo = reportData.guest_report?.report_data;
 
   let text = '';
 
-  const name = reportInfo?.name || 'Unknown';
+  const name = 'Individual';
   text += `${name}'s Astro Data\n`;
   text += '='.repeat(name.length + 12) + '\n\n';
 
-  if (reportInfo?.birthDate) text += `Born: ${reportInfo.birthDate}\n`;
-  if (reportInfo?.birthLocation) text += `Birth Location: ${reportInfo.birthLocation}\n\n`;
-
+  // Birth info removed since guest_report.report_data is no longer available
+  text += '\n';
   if (natal?.angles?.length > 0) {
     text += 'CHART ANGLES\n------------\n';
     natal.angles.forEach((angle: any) => {
