@@ -9,6 +9,11 @@ class UnifiedWebSocketService {
   private realtimeStatus: 'SUBSCRIBED' | 'CLOSED' | 'TIMED_OUT' | 'CHANNEL_ERROR' | 'SUBSCRIBING' | null = null;
   private subscriptionRetryCount: number = 0;
   private currentChatId: string | null = null;
+  private readonly connectTimeoutMs: number = 2000;
+  private connectTimeoutId: number | null = null;
+  private isColdReconnecting: boolean = false;
+  private coldReconnectAttempts: number = 0;
+  private wakeListenersAttached: boolean = false;
 
   // Callbacks for message fetching only
   private onMessage?: (message: Message) => void;
@@ -18,6 +23,15 @@ class UnifiedWebSocketService {
   private onAssistantMessage?: (message: Message) => void;
   private onSystemMessage?: (message: Message) => void;
   private onError?: (error: string) => void;
+  private lastCallbacks?: {
+    onMessageReceived?: (message: Message) => void;
+    onMessageUpdated?: (message: Message) => void;
+    onStatusChange?: (status: string) => void;
+    onOptimisticMessage?: (message: Message) => void;
+    onAssistantMessage?: (message: Message) => void;
+    onSystemMessage?: (message: Message) => void;
+    onReportCompleted?: (reportData: any) => void;
+  };
   
   // Callbacks for report completion events
   private onReportCompleted?: (reportData: any) => void;
@@ -40,6 +54,7 @@ class UnifiedWebSocketService {
     onReportCompleted?: (reportData: any) => void;
   }) {
     
+    this.lastCallbacks = callbacks;
     this.onMessage = callbacks?.onMessageReceived;
     this.onMessageUpdated = callbacks?.onMessageUpdated;
     this.onStatusChange = callbacks?.onStatusChange;
@@ -48,6 +63,23 @@ class UnifiedWebSocketService {
     this.onSystemMessage = callbacks?.onSystemMessage;
     this.onReportCompleted = callbacks?.onReportCompleted;
     this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
+
+    // Attach wake listeners once
+    if (!this.wakeListenersAttached) {
+      this.wakeListenersAttached = true;
+      try {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            this.ensureConnected();
+          }
+        });
+      } catch (_) {}
+      try {
+        window.addEventListener('online', () => {
+          this.ensureConnected();
+        });
+      } catch (_) {}
+    }
   }
 
   /**
@@ -119,6 +151,9 @@ class UnifiedWebSocketService {
 
     // Setup realtime subscription for this specific chat
     this.setupRealtimeSubscription(chat_id);
+
+    // Start connection confirmation timer; if not connected, cold reconnect
+    this.startConnectConfirmationTimer();
   }
 
   /**
@@ -218,15 +253,14 @@ class UnifiedWebSocketService {
           
           if (status === 'SUBSCRIBED') {
             this.subscriptionRetryCount = 0;
+            this.coldReconnectAttempts = 0;
+            if (this.connectTimeoutId !== null) {
+              clearTimeout(this.connectTimeoutId);
+              this.connectTimeoutId = null;
+            }
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-            const retry = Math.min(++this.subscriptionRetryCount, 5);
-            const delay = Math.min(1000 * Math.pow(2, retry), 8000);
-            console.warn(`[UnifiedWebSocket] Realtime ${status}. Retrying in ${delay}ms (attempt ${retry})`);
-            setTimeout(() => {
-              if (this.currentChatId === chat_id) {
-                this.setupRealtimeSubscription(chat_id);
-              }
-            }, delay);
+            // Simple, professional recovery: cold reconnect once
+            this.coldReconnect();
           }
         });
     } catch (error) {
@@ -236,6 +270,74 @@ class UnifiedWebSocketService {
         onErrorCallback(error.message || 'Failed to setup WebSocket connection');
       }
     }
+  }
+
+  /**
+   * Ensure WS is connected; if not, perform a cold reconnect.
+   */
+  async ensureConnected() {
+    if (!this.currentChatId) return;
+    if (this.realtimeStatus !== 'SUBSCRIBED' || !this.realtimeChannel) {
+      await this.coldReconnect();
+    }
+  }
+
+  /**
+   * Cold reconnect = teardown + rebind callbacks + resubscribe.
+   * Mirrors a lightweight browser refresh for WS stack.
+   */
+  private async coldReconnect() {
+    if (this.isColdReconnecting) return;
+    this.isColdReconnecting = true;
+    try {
+      if (this.onStatusChange && typeof this.onStatusChange === 'function') {
+        this.onStatusChange('REFRESHING');
+      }
+
+      // Hard teardown
+      if (this.realtimeChannel) {
+        supabase.removeChannel(this.realtimeChannel);
+        this.realtimeChannel = null;
+      }
+
+      // Re-bind callbacks (refresh closures)
+      await this.initializeCallbacks(this.lastCallbacks);
+
+      // Resubscribe if chat is known
+      if (this.currentChatId) {
+        this.setupRealtimeSubscription(this.currentChatId);
+        this.startConnectConfirmationTimer(() => {
+          // If still not connected, surface reload recommendation
+          if (this.onStatusChange && typeof this.onStatusChange === 'function') {
+            this.onStatusChange('RELOAD_REQUIRED');
+          }
+        });
+      }
+    } finally {
+      this.isColdReconnecting = false;
+    }
+  }
+
+  /**
+   * Start a short timer to confirm connection; if not SUBSCRIBED, cold reconnect.
+   */
+  private startConnectConfirmationTimer(onTimeout?: () => void) {
+    if (this.connectTimeoutId !== null) {
+      clearTimeout(this.connectTimeoutId);
+    }
+    this.connectTimeoutId = window.setTimeout(() => {
+      this.connectTimeoutId = null;
+      if (this.realtimeStatus !== 'SUBSCRIBED') {
+        this.coldReconnectAttempts += 1;
+        if (this.coldReconnectAttempts <= 1) {
+          this.coldReconnect();
+        } else if (onTimeout) {
+          onTimeout();
+        }
+      } else {
+        this.coldReconnectAttempts = 0;
+      }
+    }, this.connectTimeoutMs);
   }
 
   // Message fetching only - no sending methods
@@ -271,6 +373,10 @@ class UnifiedWebSocketService {
       this.realtimeChannel = null;
     }
     this.currentChatId = null;
+    if (this.connectTimeoutId !== null) {
+      clearTimeout(this.connectTimeoutId);
+      this.connectTimeoutId = null;
+    }
   }
 }
 
