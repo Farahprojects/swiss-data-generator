@@ -67,24 +67,26 @@ class UnifiedWebSocketService {
     // Attach wake listeners once
     if (!this.wakeListenersAttached) {
       this.wakeListenersAttached = true;
+      const wakeReconnect = this.debounce(() => {
+        console.log('[UnifiedWebSocket] 🔔 Wake signal received - forcing cold reconnect');
+        this.coldReconnect();
+      }, 250);
+
       try {
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
-            console.log('[UnifiedWebSocket] 👁️ Tab visible - ensuring connection');
-            this.ensureConnected();
+            wakeReconnect();
           }
         });
       } catch (_) {}
       try {
         window.addEventListener('online', () => {
-          console.log('[UnifiedWebSocket] 🌐 Network online - ensuring connection');
-          this.ensureConnected();
+          wakeReconnect();
         });
       } catch (_) {}
       try {
         window.addEventListener('focus', () => {
-          console.log('[UnifiedWebSocket] 🎯 Window focused - ensuring connection');
-          this.ensureConnected();
+          wakeReconnect();
         });
       } catch (_) {}
     }
@@ -383,6 +385,22 @@ class UnifiedWebSocketService {
         this.coldReconnectAttempts = 0;
       }
     }, this.connectTimeoutMs);
+  }
+
+  /**
+   * Simple debounce helper to avoid repeated reconnects from multiple wake signals
+   */
+  private debounce<T extends (...args: any[]) => void>(fn: T, wait: number): T {
+    let t: number | null = null;
+    return ((...args: any[]) => {
+      if (t !== null) {
+        clearTimeout(t);
+      }
+      t = window.setTimeout(() => {
+        t = null;
+        fn(...args);
+      }, wait);
+    }) as T;
   }
 
   // Message fetching only - no sending methods
