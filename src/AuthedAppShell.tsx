@@ -1,14 +1,5 @@
 import React, { lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThreadsProvider } from '@/contexts/ThreadsContext';
-import { ModalStateProvider } from '@/contexts/ModalStateProvider';
-import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
-import { AuthModalProvider } from '@/contexts/AuthModalContext';
-import { ModeProvider } from '@/contexts/ModeContext';
-import { PricingProvider } from '@/contexts/PricingContext';
-import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
-import { ProfileProvider } from '@/contexts/ProfileContext';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -29,98 +20,69 @@ import ChatContainer from './pages/ChatContainer';
 import Index from './pages/Index';
 import MobileLanding from './pages/MobileLanding';
 import NotFound from './pages/NotFound';
-import NavigationStateProvider from '@/contexts/NavigationStateContext';
 const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
 import Profile from './pages/Profile';
 import Beats from './pages/Beats';
 import PersonProfile from './pages/PersonProfile';
 
-
-// This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
+// This shell contains all routes that can rely on context providers. Providers are now applied at the App root.
 const AuthedAppShell: React.FC = () => {
-  // Lightweight trace: mark that authed shell loaded
-  if (typeof window !== 'undefined') {
-    (window as any).__authTrace = (window as any).__authTrace || { providerMounts: 0, listeners: 0, initialSessionChecks: 0 };
-    (window as any).__authTrace.shellLoads = ((window as any).__authTrace.shellLoads || 0) + 1;
-  }
-
   const isMobile = useIsMobile();
   const isNativeApp = useIsNativeApp();
   const isDev = import.meta.env.MODE !== 'production';
 
   return (
-    <NavigationStateProvider>
-      <AuthProvider>
-        <ThreadsProvider>
-          <SubscriptionProvider>
-            <ModalStateProvider>
-              <ProfileProvider>
-              <SettingsModalProvider>
-                <AuthModalProvider>
-                  <PricingProvider>
-                    <ModeProvider>
-                <Routes>
-              {/* Main public route - show MobileLanding on mobile, Index on desktop */}
-              <Route path="/" element={
-                isMobile && !isNativeApp ? <MobileLanding /> : <Index />
-              } />
-              
-              {/* Public routes */}
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/legal" element={<Legal />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
-              
-              {/* Auth routes - redirect mobile users to landing page */}
-              <Route path="/login" element={
-                isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Login />
-              } />
-              <Route path="/signup" element={
-                isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Signup />
-              } />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/password" element={<Auth />} />
-              <Route path="/auth/email" element={<Auth />} />
-              
-              {/* Payment/subscription routes */}
-              <Route path="/subscription" element={<SubscriptionPaywall />} />
-              <Route path="/subscription-paywall" element={<SubscriptionPaywall />} />
-              <Route path="/success" element={<SubscriptionSuccess />} />
-              <Route path="/cancel" element={<SubscriptionPaywall />} />
-              <Route path="/stripe" element={<EmbeddedCheckout />} />
-              
-              
-              {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
-              <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />
-              
-              {/* Auth clean page - no auto thread creation */}
-              <Route path="/therai" element={<AuthGuard><ChatContainer /></AuthGuard>} />
+    <Routes>
+      {/* Main public route - show MobileLanding on mobile, Index on desktop */}
+      <Route path="/" element={
+        isMobile && !isNativeApp ? <MobileLanding /> : <Index />
+      } />
+      
+      {/* Public routes */}
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/legal" element={<Legal />} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
+      
+      {/* Auth routes - redirect mobile users to landing page */}
+      <Route path="/login" element={
+        isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Login />
+      } />
+      <Route path="/signup" element={
+        isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Signup />
+      } />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/password" element={<Auth />} />
+      <Route path="/auth/email" element={<Auth />} />
+      
+      {/* Payment/subscription routes */}
+      <Route path="/subscription" element={<SubscriptionPaywall />} />
+      <Route path="/subscription-paywall" element={<SubscriptionPaywall />} />
+      <Route path="/success" element={<SubscriptionSuccess />} />
+      <Route path="/cancel" element={<SubscriptionPaywall />} />
+      <Route path="/stripe" element={<EmbeddedCheckout />} />
+      
+      {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
+      <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />
+      
+      {/* Auth clean page - no auto thread creation */}
+      <Route path="/therai" element={<AuthGuard><ChatContainer /></AuthGuard>} />
 
-              {/* Person profile route - dev only */}
-              {isDev && (
-                <Route path="/person/:id" element={<AuthGuard><PersonProfile /></AuthGuard>} />
-              )}
-              
-              {/* Protected routes */}
-              <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
-              <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
-              <Route path="/beats" element={<Beats />} />
-              
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-                </Routes>
-                    </ModeProvider>
-                  </PricingProvider>
-                </AuthModalProvider>
-              </SettingsModalProvider>
-              </ProfileProvider>
-            </ModalStateProvider>
-          </SubscriptionProvider>
-        </ThreadsProvider>
-      </AuthProvider>
-    </NavigationStateProvider>
+      {/* Person profile route - dev only */}
+      {isDev && (
+        <Route path="/person/:id" element={<AuthGuard><PersonProfile /></AuthGuard>} />
+      )}
+      
+      {/* Protected routes */}
+      <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
+      <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
+      <Route path="/beats" element={<Beats />} />
+      
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 

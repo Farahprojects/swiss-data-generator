@@ -7,30 +7,57 @@ import JoinConversation from '@/pages/JoinConversation'
 import { AuthProvider } from '@/contexts/AuthContext'
 import NavigationStateProvider from '@/contexts/NavigationStateContext'
 import { ModeProvider } from '@/contexts/ModeContext'
+import { ThreadsProvider } from '@/contexts/ThreadsContext'
+import { ModalStateProvider } from '@/contexts/ModalStateProvider'
+import { SettingsModalProvider } from '@/contexts/SettingsModalContext'
+import { AuthModalProvider } from '@/contexts/AuthModalContext'
+import { PricingProvider } from '@/contexts/PricingContext'
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
+import { ProfileProvider } from '@/contexts/ProfileContext'
 
 const queryClient = new QueryClient()
+
+function AppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <NavigationStateProvider>
+      <AuthProvider>
+        <ThreadsProvider>
+          <SubscriptionProvider>
+            <ModalStateProvider>
+              <ProfileProvider>
+                <SettingsModalProvider>
+                  <AuthModalProvider>
+                    <PricingProvider>
+                      <ModeProvider>
+                        {children}
+                      </ModeProvider>
+                    </PricingProvider>
+                  </AuthModalProvider>
+                </SettingsModalProvider>
+              </ProfileProvider>
+            </ModalStateProvider>
+          </SubscriptionProvider>
+        </ThreadsProvider>
+      </AuthProvider>
+    </NavigationStateProvider>
+  )
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          {/* Public routes - no auth required but need providers used by chat */}
-          <Route path="/join/:chatId" element={
-            <NavigationStateProvider>
-              <AuthProvider>
-                <ModeProvider>
-                  <JoinConversation />
-                </ModeProvider>
-              </AuthProvider>
-            </NavigationStateProvider>
-          } />
-          
-          {/* All other routes go through AuthedAppShell */}
-          <Route path="/*" element={<AuthedAppShell />} />
-        </Routes>
-        <Toaster />
-      </Router>
+      <AppProviders>
+        <Router>
+          <Routes>
+            {/* Public routes - no auth required */}
+            <Route path="/join/:chatId" element={<JoinConversation />} />
+            
+            {/* All other routes go through AuthedAppShell */}
+            <Route path="/*" element={<AuthedAppShell />} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </AppProviders>
     </QueryClientProvider>
   )
 }
