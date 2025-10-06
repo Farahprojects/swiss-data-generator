@@ -146,9 +146,30 @@ export const ShareConversationModal: React.FC<ShareConversationModalProps> = ({
                 Stop sharing
               </button>
             </div>
+          ) : (
+            /* Error State */
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                <X className="w-8 h-8 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to share</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  There was an error creating the share link. Please try again.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+export default ShareConversationModal;

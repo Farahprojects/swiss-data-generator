@@ -56,3 +56,5 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
     </>
   );
 };
+export default ChatMenuButton;
+
