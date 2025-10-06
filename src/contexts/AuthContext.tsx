@@ -163,31 +163,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Validate session after any auth state change (deferred to avoid deadlocks)
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && supaSession?.user) {
-        setTimeout(async () => {
-          setIsValidating(true);
-          try {
-            const { data: userData, error } = await supabase.auth.getUser();
-            if (error || !userData?.user) {
-              console.warn('[AuthContext] Session validation failed, clearing auth state');
-              const { cleanupAuthState } = await import('@/utils/authCleanup');
-              cleanupAuthState();
-              try {
-                await supabase.auth.signOut({ scope: 'global' });
-              } catch (signOutError) {
-                console.warn('Global signOut failed during validation cleanup:', signOutError);
-              }
-              setUser(null);
-              setSession(null);
-            }
-          } catch (validationError) {
-            console.error('Session validation error:', validationError);
-          } finally {
-            setIsValidating(false);
-          }
-        }, 0);
-      }
+      // Session validation removed - auth subscription already provides validated user
+      // No need to call getUser() again, it's redundant and causes unnecessary API calls
 
       if (event === 'SIGNED_IN' && supaSession) {
         // Handle pending join after user signs in
@@ -272,31 +249,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(supaSession);
       setLoading(false);
 
-      // Immediate validation if we have a session (deferred to avoid deadlocks)
-      if (supaSession?.user) {
-        setTimeout(async () => {
-          setIsValidating(true);
-          try {
-            const { data: userData, error } = await supabase.auth.getUser();
-            if (error || !userData?.user) {
-              console.warn('[AuthContext] Initial session validation failed, clearing auth state');
-              const { cleanupAuthState } = await import('@/utils/authCleanup');
-              cleanupAuthState();
-              try {
-                await supabase.auth.signOut({ scope: 'global' });
-              } catch (signOutError) {
-                console.warn('Global signOut failed during initial validation cleanup:', signOutError);
-              }
-              setUser(null);
-              setSession(null);
-            }
-          } catch (validationError) {
-            console.error('Initial session validation error:', validationError);
-          } finally {
-            setIsValidating(false);
-          }
-        }, 0);
-      }
+      // Initial validation removed - getSession() already validates the session
+      // No need for additional getUser() call
     }).catch((error) => {
       console.error('Error getting initial session:', error);
       setLoading(false);

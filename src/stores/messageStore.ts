@@ -374,22 +374,11 @@ export const triggerMessageStoreSelfClean = async () => {
   await useMessageStore.getState().selfClean();
 };
 
-// Initialize message store - clear if no authenticated user
+// Initialize message store - no auth check needed
+// AuthContext will handle clearing when user logs out
 if (typeof window !== 'undefined') {
-  // Check auth state on store initialization
-  setTimeout(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        // No authenticated user, clear the message store
-        useMessageStore.getState().setChatId(null);
-      }
-    } catch (error) {
-      console.warn('[MessageStore] Error checking auth state on init:', error);
-      // On error, clear the store to be safe
-      useMessageStore.getState().setChatId(null);
-    }
-  }, 100); // Small delay to ensure auth context is initialized
+  // Removed redundant auth.getUser() call
+  // MessageStore lifecycle is managed by AuthContext and ChatController
 
   // Add event hooks for self-healing
   // Browser focus - resync when user comes back to tab

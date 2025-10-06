@@ -32,16 +32,14 @@ export const createConversation = async (userId: string, title?: string): Promis
 /**
  * List all conversations for an authenticated user using edge function
  */
-export const listConversations = async (limit?: number, offset?: number): Promise<Conversation[]> => {
-  // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
+export const listConversations = async (userId: string, limit?: number, offset?: number): Promise<Conversation[]> => {
+  if (!userId) {
+    throw new Error('User ID is required');
   }
 
   const { data, error } = await supabase.functions.invoke('conversation-manager?action=list_conversations', {
     body: {
-      user_id: user.id,
+      user_id: userId,
       limit: limit || 50, // Default to 50 conversations
       offset: offset || 0
     }

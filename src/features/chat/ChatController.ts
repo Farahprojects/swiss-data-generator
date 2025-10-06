@@ -115,10 +115,6 @@ class ChatController {
     await unifiedWebSocketService.subscribeToChat(chat_id);
   }
 
-  // Heartbeat system
-  private dbHeartbeatInterval: NodeJS.Timeout | null = null;
-  private readonly DB_HEARTBEAT_INTERVAL = 30000; // 30 seconds
-
   /**
    * Handle incoming messages from unified WebSocket
    */
@@ -211,8 +207,7 @@ class ChatController {
    */
   private handleStatusChange(status: string) {
     if (status === 'SUBSCRIBED') {
-      // Start heartbeat for non-TTS mode
-      this.startHeartbeat();
+      console.log('[ChatController] WebSocket subscribed successfully');
     } else if (status === 'CLOSED') {
       console.warn('[ChatController] Unified WebSocket channel closed.');
     }
@@ -406,46 +401,6 @@ class ChatController {
 
   public setTtsMode(enabled: boolean): void {
     unifiedWebSocketService.setTtsMode(enabled);
-    
-    if (enabled) {
-      this.stopHeartbeat();
-    } else {
-      // Resume heartbeat after TTS mode ends
-      this.startHeartbeat();
-    }
-  }
-
-  // Heartbeat system
-  private startHeartbeat(): void {
-    this.stopHeartbeat(); // Clear any existing heartbeat
-    
-    this.dbHeartbeatInterval = setInterval(() => {
-      this.sendHeartbeat();
-    }, this.DB_HEARTBEAT_INTERVAL);
-    
-  }
-
-  private stopHeartbeat(): void {
-    if (this.dbHeartbeatInterval) {
-      clearInterval(this.dbHeartbeatInterval);
-      this.dbHeartbeatInterval = null;
-    }
-  }
-
-  private async sendHeartbeat(): Promise<void> {
-    try {
-      // Lightweight ping to keep connection alive
-      const { error } = await supabase
-        .from('messages')
-        .select('id')
-        .limit(1);
-      
-      if (error) {
-        console.warn('[ChatController] Heartbeat failed:', error);
-      }
-    } catch (error) {
-      console.warn('[ChatController] Heartbeat error:', error);
-    }
   }
 
 }

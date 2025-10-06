@@ -53,7 +53,7 @@ interface ChatState {
   
 
   // Thread actions
-  loadThreads: () => Promise<void>;
+  loadThreads: (userId?: string) => Promise<void>;
   addThread: (userId: string, title?: string) => Promise<string>;
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
@@ -222,11 +222,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   setPaymentFlowStopIcon: (show) => set({ isPaymentFlowStopIcon: show }),
 
   // Thread actions
-  loadThreads: async () => {
+  loadThreads: async (userId?: string) => {
+    if (!userId) {
+      console.warn('[ChatStore] loadThreads called without userId');
+      return;
+    }
+    
     set({ isLoadingThreads: true, threadsError: null });
     try {
       const { listConversations } = await import('@/services/conversations');
-      const conversations = await listConversations();
+      const conversations = await listConversations(userId);
       
       // Sort by updated_at desc for proper ordering
       const sortedConversations = conversations.sort(
@@ -237,10 +242,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       set({ threads: sortedConversations, isLoadingThreads: false });
       
       // Initialize real-time sync after initial load
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        get().initializeConversationSync(user.id);
-      }
+      get().initializeConversationSync(userId);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load threads';
       set({ threadsError: errorMessage, isLoadingThreads: false });
@@ -409,6 +411,8 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (!userId) return;
 
     try {
+      // Always load threads first
+      await get().loadThreads(userId);
 
       // Get all ready insights for this user
       const { data: insights, error: insightsError } = await supabase
@@ -425,7 +429,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
       if (!insights || insights.length === 0) {
         console.log('[Store] No insights to reconcile');
-        return;
+        return; // Already loaded threads above, so we can return early
       }
 
       // Get all existing conversations for the user (id + meta to identify insight chats)
@@ -477,8 +481,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         }
       }
 
-      // Reload threads to reflect reconciliation changes
-      await get().loadThreads();
+      // Only reload if we actually made changes
+      if (createdCount > 0 || deletedCount > 0) {
+        console.log(`[Store] Reloading threads after reconciliation (created: ${createdCount}, deleted: ${deletedCount})`);
+        await get().loadThreads(userId);
+      }
 
     } catch (error) {
       console.error('[Store] Error during insight reconciliation:', error);

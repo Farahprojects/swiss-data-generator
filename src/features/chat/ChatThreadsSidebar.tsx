@@ -257,7 +257,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
         // Refresh threads to include the new insight chat
         const { loadThreads } = useChatStore.getState();
-        await loadThreads();
+        await loadThreads(user.id);
 
         // Navigate to the new insight chat thread
         await handleSwitchToChat(reportId);

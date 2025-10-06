@@ -85,7 +85,15 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 export const useProfileState = (): ProfileState => {
   const ctx = useContext(ProfileContext);
-  if (!ctx) throw new Error('useProfileState must be used within ProfileProvider');
+  // DISABLED: Return safe defaults instead of throwing
+  if (!ctx) {
+    return {
+      hasProfileSetup: null,
+      profileId: null,
+      setProfileSetupCompleted: () => {},
+      refresh: async () => {},
+    };
+  }
   return ctx;
 };
 
