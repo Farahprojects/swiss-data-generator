@@ -15,7 +15,8 @@ import { getLastChatId } from '@/services/auth/chatTokens';
  * - Everything is explicit and direct
  */
 export const useChatInitialization = () => {
-  const { threadId } = useParams<{ threadId?: string }>();
+  const { threadId, chatId } = useParams<{ threadId?: string; chatId?: string }>();
+  const routeChatId = threadId || chatId;
   const { chat_id, startConversation } = useChatStore();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -42,16 +43,16 @@ export const useChatInitialization = () => {
   }, [user]);
 
   useEffect(() => {
-    // Handle direct URL navigation (typing /c/123 in browser)
-    if (threadId && threadId !== "1" && user) {
+    // Handle direct URL navigation for both /c/:threadId and /join/:chatId
+    if (routeChatId && routeChatId !== "1") {
       // Load the chat directly - let the message store handle validation
       const loadThread = async () => {
         try {
           // Use the same direct flow as handleSwitchToChat
           const { useMessageStore } = await import('@/stores/messageStore');
-          useMessageStore.getState().setChatId(threadId);
-          startConversation(threadId);
-          await chatController.switchToChat(threadId);
+          useMessageStore.getState().setChatId(routeChatId);
+          startConversation(routeChatId);
+          await chatController.switchToChat(routeChatId);
         } catch (error) {
           console.error('[useChatInitialization] Error loading thread:', error);
           useChatStore.getState().clearChat();
@@ -59,10 +60,10 @@ export const useChatInitialization = () => {
       };
       
       loadThread();
-    } else if (threadId === "1") {
+    } else if (routeChatId === "1") {
       useChatStore.getState().clearChat();
     }
-  }, [threadId, startConversation, user]);
+  }, [routeChatId, startConversation]);
 
   // Smart navigation: redirect to last chat when visiting root URLs
   useEffect(() => {

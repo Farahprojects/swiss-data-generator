@@ -149,62 +149,7 @@ const JoinConversation: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header with Join Button */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-medium text-gray-900">Shared Conversation</h1>
-              <p className="text-sm text-gray-500">{conversation.title || 'Untitled'}</p>
-            </div>
-          </div>
-          
-          {/* Join Button */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              Shared
-            </div>
-            
-            {!isAuthenticated ? (
-              <button
-                onClick={handleSignIn}
-                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Sign in to join
-              </button>
-            ) : isJoined ? (
-              <button
-                onClick={() => navigate(`/c/${chatId}`, { replace: true })}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Open conversation
-              </button>
-            ) : (
-              <button
-                onClick={handleJoin}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Join this conversation
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Chat Container - Full Height */}
-      <div className="flex-1 overflow-hidden">
-        <ChatContainer />
-      </div>
-    </div>
+    <ChatContainer />
   );
 };
 
