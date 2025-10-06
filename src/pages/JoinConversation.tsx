@@ -59,7 +59,7 @@ const JoinConversation: React.FC = () => {
 
         setConversation(data);
 
-        // If user is signed in, check if they already have access to this conversation
+        // If user is signed in, ensure it's in their history; then redirect to /c/:chatId
         if (isAuthenticated && user) {
           const { data: userConversation } = await supabase
             .from('conversations')
@@ -68,7 +68,20 @@ const JoinConversation: React.FC = () => {
             .eq('user_id', user.id)
             .single();
 
-          setIsJoined(!!userConversation);
+          if (!userConversation) {
+            await supabase
+              .from('conversations')
+              .insert({
+                id: chatId,
+                user_id: user.id,
+                title: data.title,
+                meta: { ...(data.meta || {}), is_shared_copy: true },
+              });
+          }
+
+          setIsJoined(true);
+          navigate(`/c/${chatId}`, { replace: true });
+          return;
         }
       } catch (err) {
         console.error('Error loading conversation:', err);

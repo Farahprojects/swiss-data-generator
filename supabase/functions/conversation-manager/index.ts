@@ -120,7 +120,7 @@ serve(async (req) => {
         // List all conversations for authenticated user
         const { data: conversations, error: listError } = await supabaseClient
           .from('conversations')
-          .select('id, user_id, title, created_at, updated_at')
+          .select('id, user_id, title, created_at, updated_at, meta, is_public')
           .eq('user_id', user_id)
           .order('updated_at', { ascending: false });
 
