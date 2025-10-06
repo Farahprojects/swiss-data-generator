@@ -7,19 +7,14 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   meta?: Record<string, any> | null;
-  is_public?: boolean;
-  share_token?: string;
-  share_mode?: 'view_only' | 'join_conversation';
+  shared_from_user_id?: string;
+  is_shared_copy?: boolean;
 }
 
-export interface ConversationParticipant {
-  id: string;
-  conversation_id: string;
+export interface ConversationInvitee {
+  email: string;
   user_id: string;
-  role: 'owner' | 'participant' | 'observer';
   joined_at: string;
-  last_seen_at: string;
-  notes?: Record<string, any>;
 }
 
 /**
@@ -115,42 +110,40 @@ export const updateConversationTitle = async (conversationId: string, title: str
 };
 
 /**
- * Share a conversation publicly using edge function
+ * Invite a user to a conversation by email
  */
-export const shareConversation = async (conversationId: string, mode: 'view_only' | 'join_conversation' = 'view_only'): Promise<string> => {
-  // Get current user
+export const inviteUserToConversation = async (conversationId: string, email: string): Promise<void> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
 
-  const { data, error } = await supabase.functions.invoke('conversation-manager?action=share_conversation', {
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=invite_user_to_conversation', {
     body: {
       user_id: user.id,
       conversation_id: conversationId,
-      share_mode: mode
+      invitee_email: email
     }
   });
 
   if (error) {
-    console.error('[Conversations] Error sharing conversation:', error);
-    throw new Error('Failed to share conversation');
+    console.error('[Conversations] Error inviting user:', error);
+    throw new Error(error.message || 'Failed to invite user');
   }
 
-  return data.share_token;
+  return data;
 };
 
 /**
- * Stop sharing a conversation using edge function
+ * Remove shared access to a conversation (removes all invitees)
  */
 export const unshareConversation = async (conversationId: string): Promise<void> => {
-  // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
 
-  const { error } = await supabase.functions.invoke('conversation-manager?action=unshare_conversation', {
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=unshare_conversation', {
     body: {
       user_id: user.id,
       conversation_id: conversationId
@@ -159,76 +152,69 @@ export const unshareConversation = async (conversationId: string): Promise<void>
 
   if (error) {
     console.error('[Conversations] Error unsharing conversation:', error);
-    throw new Error('Failed to unshare conversation');
+    throw new Error(error.message || 'Failed to unshare conversation');
   }
+
+  return data;
 };
 
 /**
- * Get a shared conversation by share token (public access)
+ * Remove a specific user from a shared conversation
  */
-export const getSharedConversation = async (shareToken: string): Promise<Conversation> => {
-  const { data, error } = await supabase.functions.invoke('conversation-manager?action=get_shared_conversation', {
+export const removeUserFromConversation = async (conversationId: string, email: string): Promise<void> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=remove_user_from_conversation', {
     body: {
-      share_token: shareToken
+      user_id: user.id,
+      conversation_id: conversationId,
+      invitee_email: email
     }
   });
 
   if (error) {
-    console.error('[Conversations] Error getting shared conversation:', error);
-    throw new Error('Failed to get shared conversation');
+    console.error('[Conversations] Error removing user:', error);
+    throw new Error(error.message || 'Failed to remove user');
   }
 
   return data;
 };
 
-// Collaborative actions
-export const joinConversationByToken = async (shareToken: string): Promise<{ conversation_id: string }> => {
+/**
+ * Get list of users who have been invited to a conversation
+ */
+export const getConversationInvitees = async (conversationId: string): Promise<ConversationInvitee[]> => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase.functions.invoke('conversation-manager?action=join_conversation', {
-    body: { user_id: user.id, share_token: shareToken }
-  });
-  if (error) {
-    console.error('[Conversations] Error joining conversation:', error);
-    throw new Error('Failed to join conversation');
+  if (!user) {
+    throw new Error('User not authenticated');
   }
-  return data;
+
+  // Get all shared copies of this conversation (invitees)
+  const { data, error } = await supabase
+    .from('conversations')
+    .select(`
+      user_id,
+      created_at,
+      profiles:user_id (
+        email
+      )
+    `)
+    .eq('id', conversationId)
+    .eq('shared_from_user_id', user.id)
+    .eq('is_shared_copy', true);
+
+  if (error) {
+    console.error('[Conversations] Error getting invitees:', error);
+    throw new Error('Failed to get conversation invitees');
+  }
+
+  return (data || []).map(invitee => ({
+    user_id: invitee.user_id,
+    email: invitee.profiles?.email || '',
+    joined_at: invitee.created_at
+  }));
 };
 
-export const leaveConversation = async (conversationId: string): Promise<void> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { error } = await supabase.functions.invoke('conversation-manager?action=leave_conversation', {
-    body: { user_id: user.id, conversation_id: conversationId }
-  });
-  if (error) {
-    console.error('[Conversations] Error leaving conversation:', error);
-    throw new Error('Failed to leave conversation');
-  }
-};
-
-export const listParticipants = async (conversationId: string): Promise<ConversationParticipant[]> => {
-  const { data, error } = await supabase.functions.invoke('conversation-manager?action=get_conversation_participants', {
-    body: { conversation_id: conversationId }
-  });
-  if (error) {
-    console.error('[Conversations] Error listing participants:', error);
-    throw new Error('Failed to list participants');
-  }
-  return data || [];
-};
-
-export const updateMyParticipantNotes = async (conversationId: string, notes: Record<string, any>): Promise<void> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { error } = await supabase.functions.invoke('conversation-manager?action=update_participant_notes', {
-    body: { user_id: user.id, conversation_id: conversationId, notes }
-  });
-  if (error) {
-    console.error('[Conversations] Error updating notes:', error);
-    throw new Error('Failed to update notes');
-  }
-};
