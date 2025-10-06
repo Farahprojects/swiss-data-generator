@@ -46,8 +46,8 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProviders>
-        <Router>
+      <Router>
+        <AppProviders>
           <Routes>
             {/* Public routes - no auth required */}
             <Route path="/join/:chatId" element={<JoinConversation />} />
@@ -55,9 +55,9 @@ function App() {
             {/* All other routes go through AuthedAppShell */}
             <Route path="/*" element={<AuthedAppShell />} />
           </Routes>
-          <Toaster />
-        </Router>
-      </AppProviders>
+        </AppProviders>
+        <Toaster />
+      </Router>
     </QueryClientProvider>
   )
 }
