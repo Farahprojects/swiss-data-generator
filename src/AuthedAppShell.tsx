@@ -34,7 +34,6 @@ const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
 import Profile from './pages/Profile';
 import Beats from './pages/Beats';
 import PersonProfile from './pages/PersonProfile';
-import JoinConversation from './pages/JoinConversation';
 
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
@@ -92,8 +91,6 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/cancel" element={<SubscriptionPaywall />} />
               <Route path="/stripe" element={<EmbeddedCheckout />} />
               
-              {/* Public join route - NO AUTH REQUIRED */}
-              <Route path="/join/:chatId" element={<JoinConversation />} />
               
               {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
               <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />
