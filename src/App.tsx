@@ -5,6 +5,8 @@ import { Toaster } from 'sonner'
 import AuthedAppShell from '@/AuthedAppShell'
 import JoinConversation from '@/pages/JoinConversation'
 import { AuthProvider } from '@/contexts/AuthContext'
+import NavigationStateProvider from '@/contexts/NavigationStateContext'
+import { ModeProvider } from '@/contexts/ModeContext'
 
 const queryClient = new QueryClient()
 
@@ -13,11 +15,15 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
-          {/* Public routes - no auth required but need AuthProvider */}
+          {/* Public routes - no auth required but need providers used by chat */}
           <Route path="/join/:chatId" element={
-            <AuthProvider>
-              <JoinConversation />
-            </AuthProvider>
+            <NavigationStateProvider>
+              <AuthProvider>
+                <ModeProvider>
+                  <JoinConversation />
+                </ModeProvider>
+              </AuthProvider>
+            </NavigationStateProvider>
           } />
           
           {/* All other routes go through AuthedAppShell */}
