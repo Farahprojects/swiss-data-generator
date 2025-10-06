@@ -14,6 +14,7 @@ class UnifiedWebSocketService {
   private isColdReconnecting: boolean = false;
   private coldReconnectAttempts: number = 0;
   private wakeListenersAttached: boolean = false;
+  private currentConnectionId: string | null = null;
 
   // Callbacks for message fetching only
   private onMessage?: (message: Message) => void;
@@ -129,7 +130,8 @@ class UnifiedWebSocketService {
    */
   resumeRealtimeSubscription() {
     if (this.currentChatId) {
-      this.setupRealtimeSubscription(this.currentChatId);
+      // Fire-and-forget; caller doesn't require await
+      void this.setupRealtimeSubscription(this.currentChatId);
     }
   }
 
@@ -160,7 +162,7 @@ class UnifiedWebSocketService {
     }
 
     // Setup realtime subscription for this specific chat
-    this.setupRealtimeSubscription(chat_id);
+    await this.setupRealtimeSubscription(chat_id);
 
     // Start connection confirmation timer; if not connected, cold reconnect
     this.startConnectConfirmationTimer();
@@ -201,14 +203,22 @@ class UnifiedWebSocketService {
   /**
    * Setup realtime subscription for database changes (message fetching only)
    */
-  private setupRealtimeSubscription(chat_id: string) {
+  private async setupRealtimeSubscription(chat_id: string) {
     try {
       this.subscriptionRetryCount = 0;
 
       // Store callbacks in local variables to preserve context
+      if (typeof this.onMessage !== 'function') {
+        // Ensure callbacks are bound before subscribing
+        await this.initializeCallbacks(this.lastCallbacks);
+      }
       const onMessageCallback = this.onMessage;
       const onErrorCallback = this.onError;
       const onReportCompletedCallback = this.onReportCompleted;
+
+      // Generate a unique connection id; ignore events from stale channels
+      const connectionId = (crypto as any)?.randomUUID?.() || Math.random().toString(36).slice(2);
+      this.currentConnectionId = connectionId;
 
       this.realtimeChannel = supabase
         .channel(`unified-messages:${chat_id}`)
@@ -221,6 +231,10 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            if (connectionId !== this.currentConnectionId) {
+              // Stale channel event - ignore silently
+              return;
+            }
             const newMessage = this.transformDatabaseMessage(payload.new);
             
             // Filter out system messages at WebSocket level (don't touch store)
@@ -250,6 +264,9 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            if (connectionId !== this.currentConnectionId) {
+              return;
+            }
             const updatedMessage = this.transformDatabaseMessage(payload.new);
             if (onMessageCallback && typeof onMessageCallback === 'function') {
               onMessageCallback(updatedMessage);
