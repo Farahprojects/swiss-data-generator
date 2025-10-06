@@ -52,14 +52,14 @@ serve(async (req) => {
     }
     
 
-    // Fetch conversation history (last 6 completed messages, optimized)
-    
+    // Fetch conversation history (last 6 completed non-system messages)
     const HISTORY_LIMIT = 6;
     const { data: history, error: historyError } = await supabase
       .from("messages")
       .select("role, text")
       .eq("chat_id", chat_id)
       .eq("status", "complete")
+      .neq("role", "system")
       .not("text", "is", null)
       .neq("text", "")
       .order("created_at", { ascending: false })
@@ -69,6 +69,32 @@ serve(async (req) => {
       console.error(`[llm-handler-gemini] ❌ History fetch error:`, historyError);
       throw new Error("Failed to fetch conversation history");
     }
+
+    // Fetch earliest system message (astro data) for this chat
+    const { data: systemRows, error: systemError } = await supabase
+      .from("messages")
+      .select("text, created_at")
+      .eq("chat_id", chat_id)
+      .eq("role", "system")
+      .not("text", "is", null)
+      .neq("text", "")
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    if (systemError) {
+      console.error(`[llm-handler-gemini] ❌ System message fetch error:`, systemError);
+    }
+    const systemText = systemRows && systemRows.length > 0 ? String(systemRows[0].text) : null;
+
+    // Log what we fetched for verification
+    console.log(
+      `[llm-handler-gemini] 📥 History fetched (excluding system): count=${history?.length ?? 0}, roles(newest→oldest)=${(history || [])
+        .map(m => m.role)
+        .join(', ')}`
+    );
+    console.log(
+      `[llm-handler-gemini] 📥 System message present=${Boolean(systemText)}, chars=${systemText ? systemText.length : 0}, preview="${systemText ? systemText.substring(0, 140) : ''}"`
+    );
     
 
     const requestStartTime = Date.now();
@@ -109,6 +135,11 @@ Check-in: Close with a simple, open question.`;
     // Add current user message
     contents.push({ role: 'user', parts: [{ text: String(text) }] });
 
+    // Log what will be sent in contents
+    console.log(
+      `[llm-handler-gemini] 📤 Contents prepared: count=${contents.length}, roles(oldest→newest)=${contents.map(c => c.role).join(', ')}`
+    );
+
     // Create AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -117,13 +148,21 @@ Check-in: Close with a simple, open question.`;
     
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
+    const combinedSystemInstruction = systemText
+      ? `${systemPrompt}\n\n[System Data]\n${systemText}`
+      : systemPrompt;
+
     const requestBody = {
-      system_instruction: { role: 'system', parts: [{ text: systemPrompt }] },
+      system_instruction: { role: 'system', parts: [{ text: combinedSystemInstruction }] },
       contents,
       generationConfig: {
         temperature: 0.7,
       },
     };
+
+    console.log(
+      `[llm-handler-gemini] 📤 Sending to Gemini: system_chars=${combinedSystemInstruction.length}, contents_count=${contents.length}`
+    );
     
     
 
