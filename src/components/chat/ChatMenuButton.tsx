@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { MoreHorizontal, UserPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MoreHorizontal, Share2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { InviteUserModal } from './InviteUserModal';
+import { ShareConversationModal } from './ShareConversationModal';
 import { useChatStore } from '@/core/store';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChatMenuButtonProps {
   className?: string;
@@ -15,7 +16,33 @@ interface ChatMenuButtonProps {
 
 export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }) => {
   const { chat_id } = useChatStore();
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [isShared, setIsShared] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareMode, setShareMode] = useState<'view_only' | 'join_conversation'>('view_only');
+
+  // Check if conversation is shared
+  useEffect(() => {
+    // Sharing feature has been removed - set defaults
+    setIsShared(false);
+    setShareToken(null);
+    setShareMode('view_only');
+  }, [chat_id]);
+
+  const handleShareClick = () => {
+    setShowShareModal(true);
+  };
+
+  const handleShareSuccess = (token: string) => {
+    setIsShared(true);
+    setShareToken(token);
+    // Don't close modal - let user see the link and copy it
+  };
+
+  const handleUnshare = () => {
+    setIsShared(false);
+    setShareToken(null);
+  };
 
   return (
     <>
@@ -27,13 +54,10 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
         </DropdownMenuTrigger>
         
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem 
-            className="cursor-pointer" 
-            onClick={() => setShowInviteModal(true)}
-          >
+          <DropdownMenuItem className="cursor-pointer" onClick={handleShareClick}>
             <div className="flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              <span>Invite Users</span>
+              <Share2 className="w-4 h-4" />
+              <span>{isShared ? 'Manage Share' : 'Share Conversation'}</span>
             </div>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
@@ -45,11 +69,16 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Invite Modal */}
-      {showInviteModal && chat_id && (
-        <InviteUserModal
+      {/* Share Modal */}
+      {showShareModal && (
+        <ShareConversationModal
           conversationId={chat_id}
-          onClose={() => setShowInviteModal(false)}
+          isShared={isShared}
+          shareToken={shareToken}
+          initialMode={shareMode}
+          onSuccess={handleShareSuccess}
+          onUnshare={handleUnshare}
+          onClose={() => setShowShareModal(false)}
         />
       )}
     </>

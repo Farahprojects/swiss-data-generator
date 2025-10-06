@@ -33,6 +33,8 @@ import NavigationStateProvider from '@/contexts/NavigationStateContext';
 const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
 import Profile from './pages/Profile';
 import Beats from './pages/Beats';
+import SharedConversationView from './pages/SharedConversationView';
+import JoinConversation from './pages/JoinConversation';
 import PersonProfile from './pages/PersonProfile';
 
 
@@ -91,6 +93,10 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/cancel" element={<SubscriptionPaywall />} />
               <Route path="/stripe" element={<EmbeddedCheckout />} />
               
+              {/* Public shared conversation route */}
+              <Route path="/shared/:shareToken" element={<SharedConversationView />} />
+              {/* Join conversation route */}
+              <Route path="/join/:shareToken" element={<JoinConversation />} />
               
               {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
               <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />

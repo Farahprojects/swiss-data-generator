@@ -5,7 +5,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
 import { useThreads } from '@/contexts/ThreadsContext';
-import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown, Users } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
@@ -542,17 +542,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                         className={`flex-1 min-w-0 ${isPending ? 'cursor-default' : 'cursor-pointer'}`}
                         onClick={() => !isPending && handleSwitchToChat(conversation.id)}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-medium text-gray-900 truncate" title={conversation.title || 'New Chat'}>
-                            {conversation.title || 'New Chat'}
-                          </div>
-                          {/* Shared conversation indicator */}
-                          {conversation.is_shared_copy && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                              <Users className="w-3 h-3" />
-                              Shared
-                            </div>
-                          )}
+                        <div className="text-sm font-medium text-gray-900 truncate" title={conversation.title || 'New Chat'}>
+                          {conversation.title || 'New Chat'}
                         </div>
                       </div>
                       

@@ -30,10 +30,10 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { user_id, conversation_id, title, invitee_email } = requestBody;
+    const { user_id, conversation_id, title, share_token, share_mode, notes } = requestBody;
 
-    // All actions require user_id
-    if (!user_id) {
+    // Most actions require user_id, except get_shared_conversation which is public
+    if (!user_id && action !== 'get_shared_conversation') {
       return new Response('user_id is required', { 
         status: 400, 
         headers: corsHeaders 
@@ -185,135 +185,142 @@ serve(async (req) => {
         result = { success: true, conversation_id };
         break;
 
-      case 'invite_user_to_conversation':
-        // Invite a user to a conversation by email
+      case 'share_conversation':
+        // Share a conversation publicly by generating a share token
         if (!conversation_id) {
-          return new Response('conversation_id is required', { 
+          return new Response('conversation_id is required for sharing', { 
             status: 400, 
             headers: corsHeaders 
           });
         }
 
-        if (!invitee_email) {
-          return new Response('invitee_email is required', { 
-            status: 400, 
-            headers: corsHeaders 
-          });
-        }
+        // Generate a unique share token
+        const shareToken = crypto.randomUUID();
+        // Default to view_only if not specified
+        const effectiveShareMode = share_mode || 'view_only';
 
-        // First verify the conversation belongs to the inviter
-        const { data: conversation, error: convError } = await supabaseClient
+        const { error: shareError } = await supabaseClient
           .from('conversations')
-          .select('id, user_id, title')
-          .eq('id', conversation_id)
-          .eq('user_id', user_id)
-          .single();
-
-        if (convError || !conversation) {
-          return new Response('Conversation not found or access denied', { 
-            status: 404, 
-            headers: corsHeaders 
-          });
-        }
-
-        // Look up the invitee by email in auth.users
-        const { data: inviteeUser, error: userError } = await supabaseClient.auth.admin.getUserByEmail(invitee_email);
-
-        if (userError || !inviteeUser?.user) {
-          return new Response('User not found with that email address', { 
-            status: 404, 
-            headers: corsHeaders 
-          });
-        }
-
-        const inviteeUserId = inviteeUser.user.id;
-
-        // Check if user is trying to invite themselves
-        if (inviteeUserId === user_id) {
-          return new Response('Cannot invite yourself to a conversation', { 
-            status: 400, 
-            headers: corsHeaders 
-          });
-        }
-
-        // Check if invitee already has access to this conversation
-        const { data: existingAccess } = await supabaseClient
-          .from('conversations')
-          .select('id')
-          .eq('id', conversation_id)
-          .eq('user_id', inviteeUserId)
-          .single();
-
-        if (existingAccess) {
-          return new Response('User already has access to this conversation', { 
-            status: 409, 
-            headers: corsHeaders 
-          });
-        }
-
-        // Create shared conversation record for the invitee
-        const { data: sharedConv, error: shareError } = await supabaseClient
-          .from('conversations')
-          .insert({
-            id: conversation_id, // Same chat_id as original
-            user_id: inviteeUserId,
-            title: conversation.title,
-            shared_from_user_id: user_id,
-            is_shared_copy: true,
-            created_at: new Date().toISOString(),
+          .update({ 
+            is_public: true,
+            share_token: shareToken,
+            share_mode: effectiveShareMode,
             updated_at: new Date().toISOString()
           })
-          .select()
-          .single();
+          .eq('id', conversation_id)
+          .eq('user_id', user_id);
 
         if (shareError) throw shareError;
-
-        result = { 
-          success: true, 
-          conversation_id, 
-          invitee_user_id: inviteeUserId,
-          invitee_email 
-        };
+        result = { share_token: shareToken, conversation_id, share_mode: effectiveShareMode };
         break;
 
       case 'unshare_conversation':
-        // Remove shared access to a conversation
+        // Stop sharing a conversation
         if (!conversation_id) {
-          return new Response('conversation_id is required', { 
+          return new Response('conversation_id is required for unsharing', { 
             status: 400, 
             headers: corsHeaders 
           });
         }
 
-        // Verify the conversation belongs to the user
-        const { data: ownerConv, error: ownerError } = await supabaseClient
-          .from('conversations')
-          .select('id')
-          .eq('id', conversation_id)
-          .eq('user_id', user_id)
-          .single();
-
-        if (ownerError || !ownerConv) {
-          return new Response('Conversation not found or access denied', { 
-            status: 404, 
-            headers: corsHeaders 
-          });
-        }
-
-        // Delete all shared copies of this conversation
         const { error: unshareError } = await supabaseClient
           .from('conversations')
-          .delete()
+          .update({ 
+            is_public: false,
+            share_token: null,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', conversation_id)
-          .eq('shared_from_user_id', user_id);
+          .eq('user_id', user_id);
 
         if (unshareError) throw unshareError;
-
         result = { success: true, conversation_id };
         break;
 
-      case 'remove_user_from_conversation':
-        // Remove a specific user from a shared conversation
+      case 'get_shared_conversation':
+        // Get a shared conversation by share token (public access)
+        if (!share_token) {
+          return new Response('share_token is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { data: sharedConversation, error: getSharedError } = await supabaseClient
+          .from('conversations')
+          .select('id, user_id, title, created_at, updated_at, meta, share_mode')
+          .eq('share_token', share_token)
+          .eq('is_public', true)
+          .single();
+
+        if (getSharedError || !sharedConversation) {
+          return new Response('Shared conversation not found', { 
+            status: 404, 
+            headers: corsHeaders 
+          });
+        }
+
+        result = sharedConversation;
+        break;
+
+      case 'join_conversation':
+        // Join a shared conversation as a participant (requires auth)
+        if (!share_token) {
+          return new Response('share_token is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Verify the conversation exists and is shared with join_conversation mode
+        const { data: convToJoin, error: joinCheckError } = await supabaseClient
+          .from('conversations')
+          .select('id, share_mode')
+          .eq('share_token', share_token)
+          .eq('is_public', true)
+          .single();
+
+        if (joinCheckError || !convToJoin) {
+          return new Response('Shared conversation not found', { 
+            status: 404, 
+            headers: corsHeaders 
+          });
+        }
+
+        if (convToJoin.share_mode !== 'join_conversation') {
+          return new Response('This conversation is not accepting participants', { 
+            status: 403, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Check if user is already a participant
+        const { data: existingParticipant } = await supabaseClient
+          .from('conversation_participants')
+          .select('id')
+          .eq('conversation_id', convToJoin.id)
+          .eq('user_id', user_id)
+          .single();
+
+        if (!existingParticipant) {
+          // Add user as participant
+          const { error: joinError } = await supabaseClient
+            .from('conversation_participants')
+            .insert({
+              conversation_id: convToJoin.id,
+              user_id,
+              role: 'participant',
+              notes: {}
+            });
+
+          if (joinError) throw joinError;
+        }
+
+        result = { conversation_id: convToJoin.id, success: true };
+        break;
+
+      case 'leave_conversation':
+        // Leave a conversation as a participant
         if (!conversation_id) {
           return new Response('conversation_id is required', { 
             status: 400, 
@@ -321,53 +328,62 @@ serve(async (req) => {
           });
         }
 
-        if (!invitee_email) {
-          return new Response('invitee_email is required', { 
+        const { error: leaveError } = await supabaseClient
+          .from('conversation_participants')
+          .delete()
+          .eq('conversation_id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (leaveError) throw leaveError;
+        result = { success: true, conversation_id };
+        break;
+
+      case 'get_conversation_participants':
+        // Get all participants in a conversation
+        if (!conversation_id) {
+          return new Response('conversation_id is required', { 
             status: 400, 
             headers: corsHeaders 
           });
         }
 
-        // Verify the conversation belongs to the user
-        const { data: ownerConv2, error: ownerError2 } = await supabaseClient
-          .from('conversations')
-          .select('id')
-          .eq('id', conversation_id)
-          .eq('user_id', user_id)
-          .single();
+        const { data: participants, error: participantsError } = await supabaseClient
+          .from('conversation_participants')
+          .select('id, user_id, role, joined_at, last_seen_at')
+          .eq('conversation_id', conversation_id)
+          .order('joined_at', { ascending: true });
 
-        if (ownerError2 || !ownerConv2) {
-          return new Response('Conversation not found or access denied', { 
-            status: 404, 
+        if (participantsError) throw participantsError;
+        result = participants || [];
+        break;
+
+      case 'update_participant_notes':
+        // Update coach notes for a participant (private to the coach)
+        if (!conversation_id) {
+          return new Response('conversation_id is required', { 
+            status: 400, 
             headers: corsHeaders 
           });
         }
 
-        // Look up the user to remove by email
-        const { data: userToRemove, error: removeUserError } = await supabaseClient.auth.admin.getUserByEmail(invitee_email);
-
-        if (removeUserError || !userToRemove?.user) {
-          return new Response('User not found with that email address', { 
-            status: 404, 
+        if (notes === undefined) {
+          return new Response('notes is required', { 
+            status: 400, 
             headers: corsHeaders 
           });
         }
 
-        // Delete the shared conversation record for this user
-        const { error: removeError } = await supabaseClient
-          .from('conversations')
-          .delete()
-          .eq('id', conversation_id)
-          .eq('user_id', userToRemove.user.id)
-          .eq('shared_from_user_id', user_id);
+        const { error: notesError } = await supabaseClient
+          .from('conversation_participants')
+          .update({ 
+            notes,
+            last_seen_at: new Date().toISOString()
+          })
+          .eq('conversation_id', conversation_id)
+          .eq('user_id', user_id);
 
-        if (removeError) throw removeError;
-
-        result = { 
-          success: true, 
-          conversation_id, 
-          removed_user_email: invitee_email 
-        };
+        if (notesError) throw notesError;
+        result = { success: true, conversation_id };
         break;
 
       default:
