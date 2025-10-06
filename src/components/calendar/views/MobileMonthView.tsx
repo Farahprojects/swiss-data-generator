@@ -1,13 +1,11 @@
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 
-type ClientMap = Record<string, { id: string; name: string }>;
 type Props = {
   date: Date;
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
-  clients?: ClientMap;
-  onDayClick?: (date: Date) => void; // NEW
+  onDayClick?: (date: Date) => void;
 };
 
 // Generate a 5x7 grid for the month, showing prev/next month days as needed
@@ -56,7 +54,7 @@ const isToday = (d: Date) => {
   return d?.toDateString() === now.toDateString();
 };
 
-const MobileMonthView = ({ date, sessions, onSessionClick, clients = {}, onDayClick }: Props) => {
+const MobileMonthView = ({ date, sessions, onSessionClick, onDayClick }: Props) => {
   const grid = getMonthGrid(date);
   const viewMonth = date.getMonth();
 

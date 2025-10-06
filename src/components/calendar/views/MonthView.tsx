@@ -4,13 +4,11 @@ import { CalendarSession } from "@/types/calendar";
 // Dots will use color_tag, fallback is a nice color
 const getDotColor = (tag?: string) => tag || "#a5b4fc";
 
-type ClientMap = Record<string, { id: string; name: string }>;
 type Props = {
   date: Date;
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
-  clients?: ClientMap;
-  onDayClick?: (date: Date) => void; // NEW
+  onDayClick?: (date: Date) => void;
 };
 
 // Helper: Generate a 5x7 grid, all real dates for prev/this/next month
@@ -64,7 +62,6 @@ const MonthView = ({
   date,
   sessions,
   onSessionClick,
-  clients = {},
   onDayClick,
 }: Props) => {
   const grid = getMonthGrid(date);

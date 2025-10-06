@@ -2,15 +2,12 @@
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
-import { formatClientNameForMobile } from "@/utils/clientsFormatters";
 
-type ClientMap = Record<string, { id: string; name: string }>;
 type Props = {
   date: Date;
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
   onMoveSession: (id: string, newStart: Date, newEnd: Date) => void;
-  clients?: ClientMap;
 };
 
 const getStartOfWeek = (date: Date) => {
@@ -27,7 +24,7 @@ const isToday = (d: Date) => {
 
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 
-export default function WeekView({ date, sessions, onSessionClick, clients = {} }: Props) {
+export default function WeekView({ date, sessions, onSessionClick }: Props) {
   const startOfWeek = getStartOfWeek(date);
   const days = [...Array(7)].map((_, i) => new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + i));
 
@@ -62,20 +59,13 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
             >
               {daySessions.length === 0
                 ? null
-                : daySessions.map(sess => {
-                    let clientName: string | undefined;
-                    if (sess.client_id && clients[sess.client_id]) {
-                      clientName = formatClientNameForMobile(clients[sess.client_id].name);
-                    }
-                    return (
-                      <EventCard
-                        key={sess.id}
-                        session={sess}
-                        onClick={() => onSessionClick(sess)}
-                        clientName={clientName}
-                      />
-                    );
-                  })}
+                : daySessions.map(sess => (
+                    <EventCard
+                      key={sess.id}
+                      session={sess}
+                      onClick={() => onSessionClick(sess)}
+                    />
+                  ))}
             </div>
           );
         })}
