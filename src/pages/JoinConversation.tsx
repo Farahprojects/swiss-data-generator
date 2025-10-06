@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation } from '@/services/conversations';
+import ChatContainer from './ChatContainer';
 
 const JoinConversation: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -111,7 +112,7 @@ const JoinConversation: React.FC = () => {
   };
 
   const handleSignIn = () => {
-    navigate('/therai', { replace: true });
+    navigate('/therai');
   };
 
   if (loading) {
@@ -148,9 +149,9 @@ const JoinConversation: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="border-b border-gray-100 px-4 py-3">
+    <div className="h-screen flex flex-col">
+      {/* Header with Join Button */}
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -163,65 +164,45 @@ const JoinConversation: React.FC = () => {
               <p className="text-sm text-gray-500">{conversation.title || 'Untitled'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
-            Shared
+          
+          {/* Join Button */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Shared
+            </div>
+            
+            {!isAuthenticated ? (
+              <button
+                onClick={handleSignIn}
+                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Sign in to join
+              </button>
+            ) : isJoined ? (
+              <button
+                onClick={() => navigate(`/c/${chatId}`, { replace: true })}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Open conversation
+              </button>
+            ) : (
+              <button
+                onClick={handleJoin}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Join this conversation
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </div>
-            
-            <div>
-              <h2 className="text-xl font-medium text-gray-900 mb-2">Join this conversation</h2>
-              <p className="text-gray-600">
-                This conversation has been shared with you. {isAuthenticated ? 'Click below to join and participate.' : 'Sign in to join and participate.'}
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {!isAuthenticated ? (
-                <button
-                  onClick={handleSignIn}
-                  className="px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  Sign in to join
-                </button>
-              ) : isJoined ? (
-                <button
-                  onClick={() => navigate(`/c/${chatId}`, { replace: true })}
-                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  Open conversation
-                </button>
-              ) : (
-                <button
-                  onClick={handleJoin}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  Join this conversation
-                </button>
-              )}
-              
-              <button
-                onClick={() => navigate('/', { replace: true })}
-                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors"
-              >
-                Go home
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Chat Container - Full Height */}
+      <div className="flex-1 overflow-hidden">
+        <ChatContainer />
       </div>
     </div>
   );
