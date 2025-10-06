@@ -212,7 +212,6 @@ class UnifiedWebSocketService {
         // Ensure callbacks are bound before subscribing
         await this.initializeCallbacks(this.lastCallbacks);
       }
-      const onMessageCallback = this.onMessage;
       const onErrorCallback = this.onError;
       const onReportCompletedCallback = this.onReportCompleted;
 
@@ -248,10 +247,10 @@ class UnifiedWebSocketService {
             }
             
             // Dispatch pure action to store for user messages only
-            if (onMessageCallback && typeof onMessageCallback === 'function') {
-              onMessageCallback(newMessage);
+            if (this.onMessage && typeof this.onMessage === 'function') {
+              this.onMessage(newMessage);
             } else {
-              console.warn('[UnifiedWebSocket] onMessage callback not set or not a function, message ignored');
+              // No handler bound; skip without noisy logs
             }
           }
         )
@@ -268,10 +267,10 @@ class UnifiedWebSocketService {
               return;
             }
             const updatedMessage = this.transformDatabaseMessage(payload.new);
-            if (onMessageCallback && typeof onMessageCallback === 'function') {
-              onMessageCallback(updatedMessage);
+            if (this.onMessage && typeof this.onMessage === 'function') {
+              this.onMessage(updatedMessage);
             } else {
-              console.warn('[UnifiedWebSocket] onMessage callback not set or not a function, update ignored');
+              // No handler bound; skip
             }
           }
         )
