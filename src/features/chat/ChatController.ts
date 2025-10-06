@@ -21,6 +21,7 @@ class ChatController {
   private isUnlocked = false; // New flag to control microphone access
   // Using unified message store for all message management
   private isProcessingRef = false;
+  private isInitializing = false; // Guard against concurrent initializations
 
 
   constructor() {
@@ -78,20 +79,32 @@ class ChatController {
       throw new Error('chat_id is required for conversation initialization');
     }
     
-    // Set chat_id in store (single source of truth) - this will persist to sessionStorage
-    useChatStore.getState().startConversation(chat_id);
+    // Guard against concurrent initializations
+    if (this.isInitializing) {
+      console.log('[ChatController] Initialization already in progress, skipping duplicate call');
+      return;
+    }
     
-    // Initialize unified WebSocket service
-    await unifiedWebSocketService.initialize(chat_id, {
-      onMessageReceived: this.handleMessageReceived.bind(this),
-      onMessageUpdated: this.handleMessageUpdated.bind(this),
-      onStatusChange: this.handleStatusChange.bind(this),
-      onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-      onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
-      onSystemMessage: this.handleSystemMessage.bind(this)
-    });
-    
-    await this.loadExistingMessages(chat_id);
+    try {
+      this.isInitializing = true;
+      
+      // Set chat_id in store (single source of truth) - this will persist to sessionStorage
+      useChatStore.getState().startConversation(chat_id);
+      
+      // Initialize unified WebSocket service
+      await unifiedWebSocketService.initialize(chat_id, {
+        onMessageReceived: this.handleMessageReceived.bind(this),
+        onMessageUpdated: this.handleMessageUpdated.bind(this),
+        onStatusChange: this.handleStatusChange.bind(this),
+        onOptimisticMessage: this.handleOptimisticMessage.bind(this),
+        onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
+        onSystemMessage: this.handleSystemMessage.bind(this)
+      });
+      
+      await this.loadExistingMessages(chat_id);
+    } finally {
+      this.isInitializing = false;
+    }
   }
 
   /**
@@ -242,24 +255,11 @@ class ChatController {
     unifiedWebSocketService.resumeRealtimeSubscription();
   }
 
-
   /**
-   * Initialize conversation (called when modal closes)
+   * Alias for backward compatibility
    */
   async initializeConversation(chat_id: string): Promise<void> {
-    useChatStore.getState().startConversation(chat_id);
-    
-    // Initialize unified WebSocket service
-    await unifiedWebSocketService.initialize(chat_id, {
-      onMessageReceived: this.handleMessageReceived.bind(this),
-      onMessageUpdated: this.handleMessageUpdated.bind(this),
-      onStatusChange: this.handleStatusChange.bind(this),
-      onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-      onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
-      onSystemMessage: this.handleSystemMessage.bind(this)
-    });
-    
-    this.loadExistingMessages(); // Load conversation history - will use store chat_id
+    return this.initializeForConversation(chat_id);
   }
 
   // sendTextMessage removed - using unifiedWebSocketService.sendMessageDirect() directly
@@ -315,6 +315,7 @@ class ChatController {
     this.conversationServiceInitialized = false;
     this.isUnlocked = false; // Lock on reset
     this.isProcessingRef = false;
+    this.isInitializing = false; // Reset initialization guard
     useChatStore.getState().setStatus('idle');
 
     this.resetTimeout = setTimeout(() => {
@@ -336,6 +337,7 @@ class ChatController {
     
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
+    this.isInitializing = false; // Reset initialization guard
     console.log('[ChatController] 🔥 CLEANUP: ChatController cleanup complete');
   }
 
