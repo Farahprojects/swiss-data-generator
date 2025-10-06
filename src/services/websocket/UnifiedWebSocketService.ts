@@ -70,12 +70,20 @@ class UnifiedWebSocketService {
       try {
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
+            console.log('[UnifiedWebSocket] 👁️ Tab visible - ensuring connection');
             this.ensureConnected();
           }
         });
       } catch (_) {}
       try {
         window.addEventListener('online', () => {
+          console.log('[UnifiedWebSocket] 🌐 Network online - ensuring connection');
+          this.ensureConnected();
+        });
+      } catch (_) {}
+      try {
+        window.addEventListener('focus', () => {
+          console.log('[UnifiedWebSocket] 🎯 Window focused - ensuring connection');
           this.ensureConnected();
         });
       } catch (_) {}
@@ -252,13 +260,18 @@ class UnifiedWebSocketService {
           this.realtimeStatus = status as any;
           
           if (status === 'SUBSCRIBED') {
+            console.log('[UnifiedWebSocket] ✅ SUBSCRIBED successfully');
             this.subscriptionRetryCount = 0;
             this.coldReconnectAttempts = 0;
             if (this.connectTimeoutId !== null) {
               clearTimeout(this.connectTimeoutId);
               this.connectTimeoutId = null;
             }
+            if (this.onStatusChange && typeof this.onStatusChange === 'function') {
+              this.onStatusChange('CONNECTED');
+            }
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+            console.warn('[UnifiedWebSocket] ⚠️ Connection failed:', status, '- triggering cold reconnect');
             // Simple, professional recovery: cold reconnect once
             this.coldReconnect();
           }
@@ -276,9 +289,16 @@ class UnifiedWebSocketService {
    * Ensure WS is connected; if not, perform a cold reconnect.
    */
   async ensureConnected() {
-    if (!this.currentChatId) return;
+    if (!this.currentChatId) {
+      console.log('[UnifiedWebSocket] ensureConnected: no chat_id, skipping');
+      return;
+    }
+    
     if (this.realtimeStatus !== 'SUBSCRIBED' || !this.realtimeChannel) {
+      console.log('[UnifiedWebSocket] ⚠️ Not connected (status:', this.realtimeStatus, 'channel:', !!this.realtimeChannel, ') - triggering cold reconnect');
       await this.coldReconnect();
+    } else {
+      console.log('[UnifiedWebSocket] ✓ Already connected');
     }
   }
 
@@ -290,24 +310,49 @@ class UnifiedWebSocketService {
     if (this.isColdReconnecting) return;
     this.isColdReconnecting = true;
     try {
+      console.log('[UnifiedWebSocket] 🔄 Cold reconnect starting...');
       if (this.onStatusChange && typeof this.onStatusChange === 'function') {
         this.onStatusChange('REFRESHING');
       }
 
-      // Hard teardown
-      if (this.realtimeChannel) {
-        supabase.removeChannel(this.realtimeChannel);
-        this.realtimeChannel = null;
+      // Step 1: Refresh auth session (critical - ensures fresh tokens)
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.error('[UnifiedWebSocket] Auth refresh failed:', error);
+        } else {
+          console.log('[UnifiedWebSocket] ✓ Auth session refreshed');
+        }
+      } catch (err) {
+        console.error('[UnifiedWebSocket] Auth refresh error:', err);
       }
 
-      // Re-bind callbacks (refresh closures)
-      await this.initializeCallbacks(this.lastCallbacks);
+      // Step 2: Hard teardown - remove old channel and wait for cleanup
+      if (this.realtimeChannel) {
+        const channelToRemove = this.realtimeChannel;
+        this.realtimeChannel = null;
+        
+        try {
+          await supabase.removeChannel(channelToRemove);
+          console.log('[UnifiedWebSocket] ✓ Old channel removed');
+        } catch (err) {
+          console.error('[UnifiedWebSocket] Channel removal error:', err);
+        }
+        
+        // Brief pause to ensure cleanup completes
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
-      // Resubscribe if chat is known
+      // Step 3: Re-bind callbacks (refresh closures)
+      await this.initializeCallbacks(this.lastCallbacks);
+      console.log('[UnifiedWebSocket] ✓ Callbacks rebound');
+
+      // Step 4: Resubscribe if chat is known
       if (this.currentChatId) {
         this.setupRealtimeSubscription(this.currentChatId);
         this.startConnectConfirmationTimer(() => {
           // If still not connected, surface reload recommendation
+          console.warn('[UnifiedWebSocket] ⚠️ Cold reconnect failed, reload required');
           if (this.onStatusChange && typeof this.onStatusChange === 'function') {
             this.onStatusChange('RELOAD_REQUIRED');
           }

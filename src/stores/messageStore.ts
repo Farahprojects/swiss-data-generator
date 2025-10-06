@@ -377,44 +377,16 @@ export const triggerMessageStoreSelfClean = async () => {
 // Initialize message store - no auth check needed
 // AuthContext will handle clearing when user logs out
 if (typeof window !== 'undefined') {
-  // Removed redundant auth.getUser() call
-  // MessageStore lifecycle is managed by AuthContext and ChatController
-
-  // Add event hooks for self-healing
-  // Browser focus - resync when user comes back to tab
-  window.addEventListener('focus', () => {
-    const { chat_id } = useMessageStore.getState();
-    if (chat_id) {
-      useMessageStore.getState().forceResync();
-    }
-  });
-
-  // Tab becomes visible again - resync to avoid stale state after backgrounding
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      const { chat_id } = useMessageStore.getState();
-      if (chat_id) {
-        useMessageStore.getState().forceResync();
-      }
-    }
-  });
-
-  // Network comes back online - resubscribe and resync
-  window.addEventListener('online', () => {
-    const { chat_id } = useMessageStore.getState();
-    if (chat_id) {
-      useMessageStore.getState().forceResync();
-    }
-  });
-
-  // WebSocket close - resync when connection is lost
+  // Wake event handling removed - now managed by UnifiedWebSocketService
+  // WS service will handle reconnect on visibility/online/focus, then trigger data resync via callbacks
+  // This prevents race conditions between WS reconnect and data fetch
+  
+  // Keep beforeunload for cleanup only
   window.addEventListener('beforeunload', () => {
     const { chat_id } = useMessageStore.getState();
     if (chat_id) {
+      // Final cleanup before page unload
       useMessageStore.getState().forceResync();
     }
   });
-
-  // Removed periodic validation - unnecessary with proper refresh/hydrate logic
-  // Message order and count are validated on refresh and resync events only
 }
