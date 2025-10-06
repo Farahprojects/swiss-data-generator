@@ -14,24 +14,16 @@ class UnifiedWebSocketService {
   private isColdReconnecting: boolean = false;
   private coldReconnectAttempts: number = 0;
   private wakeListenersAttached: boolean = false;
+  private currentConnectionId: string | null = null;
 
   // Callbacks for message fetching only
-  private onMessage?: (message: Message) => void;
+  private onMessage!: (message: Message) => void;
   private onMessageUpdated?: (message: Message) => void;
   private onStatusChange?: (status: string) => void;
   private onOptimisticMessage?: (message: Message) => void;
   private onAssistantMessage?: (message: Message) => void;
   private onSystemMessage?: (message: Message) => void;
   private onError?: (error: string) => void;
-  private lastCallbacks?: {
-    onMessageReceived: (message: Message) => void;
-    onMessageUpdated?: (message: Message) => void;
-    onStatusChange?: (status: string) => void;
-    onOptimisticMessage?: (message: Message) => void;
-    onAssistantMessage?: (message: Message) => void;
-    onSystemMessage?: (message: Message) => void;
-    onReportCompleted?: (reportData: any) => void;
-  };
   
   // Callbacks for report completion events
   private onReportCompleted?: (reportData: any) => void;
@@ -57,8 +49,7 @@ class UnifiedWebSocketService {
       throw new Error('[UnifiedWebSocket] onMessageReceived callback is required');
     }
     
-    this.lastCallbacks = callbacks;
-    this.onMessage = callbacks?.onMessageReceived;
+    this.onMessage = callbacks.onMessageReceived;
     this.onMessageUpdated = callbacks?.onMessageUpdated;
     this.onStatusChange = callbacks?.onStatusChange;
     this.onOptimisticMessage = callbacks?.onOptimisticMessage;
@@ -245,7 +236,7 @@ class UnifiedWebSocketService {
             }
             
             console.log(`[UnifiedWebSocket] ✅ Dispatching ${newMessage.role} message to onMessage callback:`, newMessage.text?.substring(0, 50));
-            this.onMessage!(newMessage);
+            this.onMessage(newMessage);
           }
         )
         .on(
@@ -262,7 +253,7 @@ class UnifiedWebSocketService {
             const updatedMessage = this.transformDatabaseMessage(payload.new);
             
             console.log(`[UnifiedWebSocket] ✅ Dispatching UPDATE for ${updatedMessage.role} message to onMessage callback`);
-            this.onMessage!(updatedMessage);
+            this.onMessage(updatedMessage);
           }
         )
         .subscribe((status) => {
@@ -288,8 +279,9 @@ class UnifiedWebSocketService {
         });
     } catch (error) {
       console.error('[UnifiedWebSocket] Failed to setup realtime subscription:', error);
-      if (this.onError && typeof this.onError === 'function') {
-        this.onError(error.message || 'Failed to setup WebSocket connection');
+      const onErrorCallback = this.onError;
+      if (onErrorCallback && typeof onErrorCallback === 'function') {
+        onErrorCallback(error.message || 'Failed to setup WebSocket connection');
       }
     }
   }
@@ -352,13 +344,7 @@ class UnifiedWebSocketService {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // Step 3: Re-bind callbacks (refresh closures) - only if callbacks were previously set
-      if (this.lastCallbacks) {
-        await this.initializeCallbacks(this.lastCallbacks);
-        console.log('[UnifiedWebSocket] ✓ Callbacks rebound');
-      } else {
-        console.warn('[UnifiedWebSocket] ⚠️ No callbacks to rebind - skipping');
-      }
+      // Step 3: Callbacks remain bound (no rebinding needed)
 
       // Step 4: Resubscribe if chat is known
       if (this.currentChatId) {
