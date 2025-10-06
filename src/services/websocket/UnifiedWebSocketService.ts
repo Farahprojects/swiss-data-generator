@@ -231,15 +231,17 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            console.log(`[UnifiedWebSocket] 📥 Received INSERT broadcast for chat_id: ${chat_id}, message_id: ${payload.new?.id}`);
+            
             if (connectionId !== this.currentConnectionId) {
-              // Stale channel event - ignore silently
+              console.log('[UnifiedWebSocket] 🚫 Ignoring stale channel event');
               return;
             }
             const newMessage = this.transformDatabaseMessage(payload.new);
             
             // Filter out system messages at WebSocket level (don't touch store)
             if (newMessage.role === 'system') {
-              
+              console.log(`[UnifiedWebSocket] 🔧 System message detected - routing to onSystemMessage callback`);
               // Handle system message business logic via callback
               if (this.onSystemMessage && typeof this.onSystemMessage === 'function') {
                 this.onSystemMessage(newMessage);
@@ -247,11 +249,12 @@ class UnifiedWebSocketService {
               return; // Don't process further for UI display
             }
             
+            console.log(`[UnifiedWebSocket] ✅ Dispatching ${newMessage.role} message to onMessage callback:`, newMessage.text?.substring(0, 50));
             // Dispatch pure action to store for user messages only
             if (this.onMessage && typeof this.onMessage === 'function') {
               this.onMessage(newMessage);
             } else {
-              // No handler bound; skip without noisy logs
+              console.warn('[UnifiedWebSocket] ⚠️ No onMessage handler bound - message not dispatched');
             }
           }
         )
@@ -264,14 +267,19 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            console.log(`[UnifiedWebSocket] 📥 Received UPDATE broadcast for chat_id: ${chat_id}, message_id: ${payload.new?.id}`);
+            
             if (connectionId !== this.currentConnectionId) {
+              console.log('[UnifiedWebSocket] 🚫 Ignoring stale channel event');
               return;
             }
             const updatedMessage = this.transformDatabaseMessage(payload.new);
+            
+            console.log(`[UnifiedWebSocket] ✅ Dispatching UPDATE for ${updatedMessage.role} message to onMessage callback`);
             if (this.onMessage && typeof this.onMessage === 'function') {
               this.onMessage(updatedMessage);
             } else {
-              // No handler bound; skip
+              console.warn('[UnifiedWebSocket] ⚠️ No onMessage handler bound - update not dispatched');
             }
           }
         )
