@@ -192,16 +192,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && supaSession) {
         // Handle pending join after user signs in
         try {
-          const pendingToken = typeof window !== 'undefined' ? localStorage.getItem('pending_join_token') : null;
-          if (pendingToken) {
-            localStorage.removeItem('pending_join_token');
-            // Call edge to join and then route to conversation
-            const { joinConversationByToken } = await import('@/services/conversations');
-            const { conversation_id } = await joinConversationByToken(pendingToken);
-            const { useNavigate } = await import('react-router-dom');
-            // Fallback navigation if useNavigate is unavailable here
+          const pendingChatId = typeof window !== 'undefined' ? localStorage.getItem('pending_join_chat_id') : null;
+          if (pendingChatId) {
+            localStorage.removeItem('pending_join_chat_id');
+            // Ensure conversation exists for this user; if not, create it by copying title
+            const { data: existing } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('id', pendingChatId)
+              .eq('user_id', supaSession.user.id)
+              .single();
+
+            if (!existing) {
+              // Fetch original conversation title for display purposes
+              const { data: source } = await supabase
+                .from('conversations')
+                .select('title')
+                .eq('id', pendingChatId)
+                .single();
+
+              await supabase
+                .from('conversations')
+                .insert({
+                  id: pendingChatId,
+                  user_id: supaSession.user.id,
+                  title: source?.title || 'Shared Conversation',
+                  meta: { is_shared_copy: true },
+                });
+            }
+
+            // Navigate to the conversation
             try {
-              window.location.replace(`/c/${conversation_id}`);
+              window.location.replace(`/c/${pendingChatId}`);
             } catch (_) {}
           }
         } catch (e) {

@@ -112,6 +112,11 @@ const JoinConversation: React.FC = () => {
   };
 
   const handleSignIn = () => {
+    try {
+      if (chatId) {
+        localStorage.setItem('pending_join_chat_id', chatId);
+      }
+    } catch {}
     navigate('/therai');
   };
 
