@@ -120,20 +120,6 @@ alter table "public"."conversation_broadcasts" enable row level security;
 alter table "public"."conversation_folders" enable row level security;
 
 
-  create table "public"."conversation_participants" (
-    "id" uuid not null default gen_random_uuid(),
-    "conversation_id" uuid,
-    "user_id" uuid,
-    "role" text default 'participant'::text,
-    "joined_at" timestamp with time zone default now(),
-    "last_seen_at" timestamp with time zone default now(),
-    "notes" jsonb default '{}'::jsonb
-      );
-
-
-alter table "public"."conversation_participants" enable row level security;
-
-
   create table "public"."conversations" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid not null,
@@ -822,10 +808,6 @@ CREATE UNIQUE INDEX conversation_broadcasts_pkey ON public.conversation_broadcas
 
 CREATE UNIQUE INDEX conversation_folders_pkey ON public.conversation_folders USING btree (id);
 
-CREATE UNIQUE INDEX conversation_participants_conversation_id_user_id_key ON public.conversation_participants USING btree (conversation_id, user_id);
-
-CREATE UNIQUE INDEX conversation_participants_pkey ON public.conversation_participants USING btree (id);
-
 CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id);
 
 CREATE UNIQUE INDEX conversations_share_token_key ON public.conversations USING btree (share_token);
@@ -865,10 +847,6 @@ CREATE INDEX idx_cf_conversation_id ON public.conversation_folders USING btree (
 CREATE INDEX idx_cf_folder_id ON public.conversation_folders USING btree (folder_id);
 
 CREATE INDEX idx_chat_audio_clips_chat_id ON public.chat_audio_clips USING btree (chat_id);
-
-CREATE INDEX idx_conversation_participants_conversation_id ON public.conversation_participants USING btree (conversation_id);
-
-CREATE INDEX idx_conversation_participants_user_id ON public.conversation_participants USING btree (user_id);
 
 CREATE INDEX idx_conversations_created_at ON public.conversations USING btree (created_at DESC);
 
@@ -1082,8 +1060,6 @@ alter table "public"."conversation_broadcasts" add constraint "conversation_broa
 
 alter table "public"."conversation_folders" add constraint "conversation_folders_pkey" PRIMARY KEY using index "conversation_folders_pkey";
 
-alter table "public"."conversation_participants" add constraint "conversation_participants_pkey" PRIMARY KEY using index "conversation_participants_pkey";
-
 alter table "public"."conversations" add constraint "conversations_pkey" PRIMARY KEY using index "conversations_pkey";
 
 alter table "public"."debug_logs" add constraint "debug_logs_pkey" PRIMARY KEY using index "debug_logs_pkey";
@@ -1187,16 +1163,6 @@ alter table "public"."conversation_folders" add constraint "fk_cf_folder" FOREIG
 alter table "public"."conversation_folders" validate constraint "fk_cf_folder";
 
 alter table "public"."conversation_folders" add constraint "uq_conversation_folder" UNIQUE using index "uq_conversation_folder";
-
-alter table "public"."conversation_participants" add constraint "conversation_participants_conversation_id_fkey" FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE not valid;
-
-alter table "public"."conversation_participants" validate constraint "conversation_participants_conversation_id_fkey";
-
-alter table "public"."conversation_participants" add constraint "conversation_participants_conversation_id_user_id_key" UNIQUE using index "conversation_participants_conversation_id_user_id_key";
-
-alter table "public"."conversation_participants" add constraint "conversation_participants_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE not valid;
-
-alter table "public"."conversation_participants" validate constraint "conversation_participants_user_id_fkey";
 
 alter table "public"."conversations" add constraint "conversations_share_token_key" UNIQUE using index "conversations_share_token_key";
 
@@ -2668,53 +2634,6 @@ using (((EXISTS ( SELECT 1
 
 
 
-  create policy "Service role can insert participants"
-  on "public"."conversation_participants"
-  as permissive
-  for insert
-  to public
-with check ((auth.role() = 'service_role'::text));
-
-
-
-  create policy "Service role can manage all participants"
-  on "public"."conversation_participants"
-  as permissive
-  for all
-  to public
-using ((auth.role() = 'service_role'::text));
-
-
-
-  create policy "Users can delete their own participant record"
-  on "public"."conversation_participants"
-  as permissive
-  for delete
-  to public
-using ((user_id = auth.uid()));
-
-
-
-  create policy "Users can update their own participant record"
-  on "public"."conversation_participants"
-  as permissive
-  for update
-  to public
-using ((user_id = auth.uid()));
-
-
-
-  create policy "Users can view participants in their conversations"
-  on "public"."conversation_participants"
-  as permissive
-  for select
-  to public
-using (((EXISTS ( SELECT 1
-   FROM conversations
-  WHERE ((conversations.id = conversation_participants.conversation_id) AND (conversations.user_id = auth.uid())))) OR (user_id = auth.uid())));
-
-
-
   create policy "Public can view shared conversations"
   on "public"."conversations"
   as permissive
@@ -3091,50 +3010,6 @@ using ((chat_id IN ( SELECT c.id
   to public
 using ((auth.role() = 'service_role'::text))
 with check ((auth.role() = 'service_role'::text));
-
-
-
-  create policy "Participants can read messages"
-  on "public"."messages"
-  as permissive
-  for select
-  to public
-using ((chat_id IN ( SELECT conversation_participants.conversation_id
-   FROM conversation_participants
-  WHERE (conversation_participants.user_id = auth.uid()))));
-
-
-
-  create policy "Participants can send messages"
-  on "public"."messages"
-  as permissive
-  for insert
-  to public
-with check ((chat_id IN ( SELECT conversation_participants.conversation_id
-   FROM conversation_participants
-  WHERE (conversation_participants.user_id = auth.uid()))));
-
-
-
-  create policy "participants_read_messages"
-  on "public"."messages"
-  as permissive
-  for select
-  to public
-using ((chat_id IN ( SELECT conversation_participants.conversation_id
-   FROM conversation_participants
-  WHERE (conversation_participants.user_id = auth.uid()))));
-
-
-
-  create policy "participants_send_messages"
-  on "public"."messages"
-  as permissive
-  for insert
-  to public
-with check ((chat_id IN ( SELECT conversation_participants.conversation_id
-   FROM conversation_participants
-  WHERE (conversation_participants.user_id = auth.uid()))));
 
 
 
