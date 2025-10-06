@@ -6,7 +6,7 @@ import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
-import { TypewriterText } from '@/components/ui/TypewriterText';
+// TypewriterText removed - keeping source field logic for future use
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,16 +49,9 @@ const renderMessages = (messages: Message[]) => {
         <div key={`msg-${message.message_number ?? message.id}`} className="flex items-end gap-3 justify-start mb-8">
           <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
             <p className="text-base font-light leading-relaxed text-left selectable-text">
-              {message.source === 'websocket' ? (
-                <TypewriterText 
-                  text={message.text || ''} 
-                  msPerWord={32}
-                />
-              ) : (
-                <span className="whitespace-pre-wrap">
-                  {message.text || ''}
-                </span>
-              )}
+              <span className="whitespace-pre-wrap">
+                {message.text || ''}
+              </span>
             </p>
           </div>
         </div>

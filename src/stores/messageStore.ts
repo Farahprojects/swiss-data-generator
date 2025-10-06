@@ -58,6 +58,7 @@ const mapDbToMessage = (db: any): Message => ({
   status: db.status,
   context_injected: db.context_injected,
   message_number: db.message_number,
+  source: 'fetch', // All DB-fetched messages are explicitly 'fetch' - no animation
 });
 
 export const useMessageStore = create<MessageStore>()((set, get) => ({
@@ -119,12 +120,19 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         m.id === message.id
       );
       if (exists) {
-        // Update existing message (remove pending status if it was optimistic)
-        const updatedMessages = state.messages.map(m => 
-          (m.message_number === message.message_number || m.id === message.id)
-            ? { ...m, ...message, pending: false }
-            : m
-        );
+        // Update existing - CRITICAL: Preserve WebSocket source if incoming message has it
+        const updatedMessages = state.messages.map(m => {
+          if (m.message_number === message.message_number || m.id === message.id) {
+            // WebSocket source always wins (for animations), otherwise preserve existing
+            return { 
+              ...m, 
+              ...message, 
+              pending: false,
+              source: message.source || m.source // Incoming source takes priority
+            };
+          }
+          return m;
+        });
         return { messages: updatedMessages };
       }
       
@@ -148,7 +156,8 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         ...message,
         message_number: nextOptimisticNumber,
         pending: true,
-        tempId: message.id // Keep original ID for reconciliation
+        tempId: message.id, // Keep original ID for reconciliation
+        source: 'fetch' as const // Optimistic messages don't animate (user's own text)
       };
       
       // Add optimistic message and sort
@@ -159,10 +168,14 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     });
   },
 
-  // Update existing message
+  // Update existing message - preserve source field
   updateMessage: (id: string, updates: Partial<Message>) => {
     set((state) => ({
-      messages: state.messages.map(m => m.id === id ? { ...m, ...updates } : m)
+      messages: state.messages.map(m => 
+        m.id === id 
+          ? { ...m, ...updates, source: updates.source || m.source } // Preserve source
+          : m
+      )
     }));
   },
 
@@ -245,15 +258,23 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
   handleWebSocketMessage: (message: Message) => {
     const { latestMessageNumber } = get();
     
+    // ALWAYS ensure WebSocket messages have source='websocket' for animations
+    const messageWithSource = { ...message, source: 'websocket' as const };
+    
     // Check for gap in message sequence
     if (message.message_number && message.message_number !== latestMessageNumber + 1) {
+      // Add this WebSocket message FIRST (with animation)
+      set({ latestMessageNumber: Math.max(latestMessageNumber, message.message_number ?? 0) });
+      get().addMessage(messageWithSource);
+      
+      // Then resync older messages (they'll have source='fetch', no animation)
       get().forceResync();
       return;
     }
     
-    // Update latest message number and add message
+    // Update latest message number and add message with WebSocket source
     set({ latestMessageNumber: Math.max(latestMessageNumber, message.message_number ?? 0) });
-    get().addMessage(message);
+    get().addMessage(messageWithSource);
   },
 
   // Order validation - ensures message sequence integrity

@@ -168,7 +168,8 @@ class ChatController {
     // Find existing message and update, or add if missing
     const existingMessage = messages.find(m => m.id === message.id);
     if (existingMessage) {
-      updateMessage(message.id, message);
+      // Preserve WebSocket source if this is an assistant message update
+      updateMessage(message.id, { ...message, source: message.role === 'assistant' ? 'websocket' : existingMessage.source });
     } else {
       // Message not in store yet, add it
       addMessage({ ...message, source: 'websocket' });
