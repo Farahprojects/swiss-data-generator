@@ -376,6 +376,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     return threads.slice(0, visibleThreads);
   }, [threads, visibleThreads]);
 
+  const isSharedThread = (thread: any) => {
+    try {
+      return thread?.meta?.is_shared_copy === true;
+    } catch {
+      return false;
+    }
+  };
+
   // Check if there are more threads to load
   const hasMoreThreads = threads.length > visibleThreads;
 
@@ -542,8 +550,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                         className={`flex-1 min-w-0 ${isPending ? 'cursor-default' : 'cursor-pointer'}`}
                         onClick={() => !isPending && handleSwitchToChat(conversation.id)}
                       >
-                        <div className="text-sm font-medium text-gray-900 truncate" title={conversation.title || 'New Chat'}>
-                          {conversation.title || 'New Chat'}
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900 truncate" title={conversation.title || 'New Chat'}>
+                            {conversation.title || 'New Chat'}
+                          </div>
+                          {isSharedThread(conversation) && (
+                            <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                              Shared
+                            </span>
+                          )}
                         </div>
                       </div>
                       
