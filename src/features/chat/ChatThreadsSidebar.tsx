@@ -182,7 +182,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
-    console.log('[ChatThreadsSidebar] Setting up dedicated report completion listener');
     
     // Create dedicated channel for ALL report completions (not tied to UnifiedWebSocketService)
     const reportChannel = supabase
@@ -208,13 +207,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[ChatThreadsSidebar] Report listener status:', status);
-      });
+      .subscribe();
 
     // Cleanup on unmount
     return () => {
-      console.log('[ChatThreadsSidebar] Cleaning up report listener');
       supabase.removeChannel(reportChannel);
     };
   }, [isAuthenticated, user?.id]);

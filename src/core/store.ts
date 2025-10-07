@@ -428,7 +428,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       }
 
       if (!insights || insights.length === 0) {
-        console.log('[Store] No insights to reconcile');
         return; // Already loaded threads above, so we can return early
       }
 

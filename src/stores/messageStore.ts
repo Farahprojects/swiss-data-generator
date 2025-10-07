@@ -70,11 +70,6 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     const currentState = get();
     const currentChatId = currentState.chat_id;
     
-    console.log('[MessageStore] setChatId called:', { 
-      from: currentChatId, 
-      to: id, 
-      currentMessageCount: currentState.messages.length 
-    });
     
     // If switching to a different chat_id, clear messages
     // But preserve optimistic messages if they're for the new chat_id
@@ -89,26 +84,18 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       const optimisticMessages = currentState.messages.filter(m => m.status === 'thinking');
       const shouldPreserveOptimistic = optimisticMessages.some(m => m.chat_id === id);
       
-      console.log('[MessageStore] Switching chats:', { 
-        optimisticCount: optimisticMessages.length, 
-        shouldPreserve: shouldPreserveOptimistic 
-      });
       
       if (shouldPreserveOptimistic) {
         // Keep optimistic messages for the new chat_id
         set({ chat_id: id, messages: optimisticMessages, error: null });
       } else {
         // Clear all messages when switching chats
-        console.log('[MessageStore] Clearing messages for new chat');
         set({ chat_id: id, messages: [], error: null });
       }
-    } else {
-      console.log('[MessageStore] Same chat_id, not clearing messages');
     }
     
     if (id) {
       // Just fetch messages - WebSocket handles real-time updates
-      console.log('[MessageStore] Triggering fetchMessages for:', id);
       get().fetchMessages();
     }
   },
@@ -199,16 +186,11 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
           return;
         }
 
-    console.log('[MessageStore] fetchMessages START:', { 
-      chat_id, 
-      currentMessageCount: currentMessages.length 
-    });
 
     set({ loading: true, error: null });
 
     try {
       // FIRST: Validate conversation exists in DB (prevents stale chat_id)
-      console.log('[MessageStore] Validating conversation exists:', chat_id);
       const { data: conversationCheck, error: checkError } = await supabase
         .from('conversations')
         .select('id')
@@ -236,7 +218,6 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         return;
       }
       
-      console.log('[MessageStore] ✓ Conversation exists, fetching messages');
 
       // NOW: Fetch messages since conversation is valid
       const { data, error } = await supabase
@@ -248,18 +229,9 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
       if (error) throw error;
 
-      console.log('[MessageStore] fetchMessages DB response:', { 
-        chat_id,
-        rowCount: data?.length || 0,
-        roles: data?.map(m => m.role) || []
-      });
 
       const messages = (data || []).map(mapDbToMessage);
       
-      console.log('[MessageStore] fetchMessages SETTING state:', { 
-        messageCount: messages.length,
-        messageIds: messages.map(m => m.id)
-      });
       
       set({ 
         messages, 
@@ -267,9 +239,6 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         hasOlder: (data?.length || 0) === 50
       });
       
-      console.log('[MessageStore] fetchMessages COMPLETE:', { 
-        finalCount: get().messages.length 
-      });
     } catch (e: any) {
       console.error('[MessageStore] Failed to fetch messages:', e.message, e);
       set({ error: e.message, loading: false });

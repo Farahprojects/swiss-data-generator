@@ -22,10 +22,9 @@ class UnifiedWebSocketService {
     // Attach wake listeners once
     if (!this.wakeListenersAttached) {
       this.wakeListenersAttached = true;
-      const wakeReconnect = this.debounce(() => {
-        console.log('[UnifiedWebSocket] 🔔 Wake signal received - forcing cold reconnect');
-        this.coldReconnect();
-      }, 250);
+             const wakeReconnect = this.debounce(() => {
+               this.coldReconnect();
+             }, 250);
 
       try {
         document.addEventListener('visibilitychange', () => {
@@ -107,7 +106,6 @@ class UnifiedWebSocketService {
    */
   private async setupRealtimeSubscription(chat_id: string) {
     try {
-      console.log(`[UnifiedWebSocket] 📡 Subscribing to chat_id: ${chat_id}`);
       this.subscriptionRetryCount = 0;
 
       this.realtimeChannel = supabase
@@ -142,9 +140,8 @@ class UnifiedWebSocketService {
         .subscribe((status) => {
           this.realtimeStatus = status as any;
           
-          if (status === 'SUBSCRIBED') {
-            console.log(`[UnifiedWebSocket] ✅ SUBSCRIBED to chat_id: ${chat_id}`);
-            this.subscriptionRetryCount = 0;
+                 if (status === 'SUBSCRIBED') {
+                   this.subscriptionRetryCount = 0;
             this.coldReconnectAttempts = 0;
             if (this.connectTimeoutId !== null) {
               clearTimeout(this.connectTimeoutId);
@@ -181,20 +178,17 @@ class UnifiedWebSocketService {
    * Cold reconnect = teardown + rebind callbacks + resubscribe.
    * Mirrors a lightweight browser refresh for WS stack.
    */
-  private async coldReconnect() {
-    if (this.isColdReconnecting) return;
-    this.isColdReconnecting = true;
-    try {
-      console.log('[UnifiedWebSocket] 🔄 Cold reconnect starting...');
+         private async coldReconnect() {
+           if (this.isColdReconnecting) return;
+           this.isColdReconnecting = true;
+           try {
 
       // Step 1: Refresh auth session
       try {
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
           console.error('[UnifiedWebSocket] Auth refresh failed:', error);
-        } else {
-          console.log('[UnifiedWebSocket] ✓ Auth session refreshed');
-        }
+               }
       } catch (err) {
         console.error('[UnifiedWebSocket] Auth refresh error:', err);
       }
@@ -204,10 +198,9 @@ class UnifiedWebSocketService {
         const channelToRemove = this.realtimeChannel;
         this.realtimeChannel = null;
         
-        try {
-          await supabase.removeChannel(channelToRemove);
-          console.log('[UnifiedWebSocket] ✓ Old channel removed');
-        } catch (err) {
+               try {
+                 await supabase.removeChannel(channelToRemove);
+               } catch (err) {
           console.error('[UnifiedWebSocket] Channel removal error:', err);
         }
         
