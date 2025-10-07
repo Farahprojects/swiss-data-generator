@@ -303,7 +303,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         
         if (!exists) {
           console.log('[MessageStore] Adding new assistant message to store');
-          get().addMessage(messageWithSource);
+          useMessageStore.getState().addMessage(messageWithSource);
           console.log('[MessageStore] Store now has', get().messages.length, 'messages');
         } else {
           console.log('[MessageStore] Message already in store, skipping');
@@ -404,7 +404,7 @@ if (typeof window !== 'undefined') {
             const { messages } = useMessageStore.getState();
             const exists = messages.some(m => m.id === data.id);
             if (!exists) {
-              get().addMessage(messageWithSource);
+              useMessageStore.getState().addMessage(messageWithSource);
             }
           }
         } catch (e) {
