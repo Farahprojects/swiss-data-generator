@@ -414,7 +414,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       // Always load threads first
       await get().loadThreads(userId);
 
-      // Get all ready insights for this user
+      // Get all ready insights for this user (sort by created_at for consistency)
       const { data: insights, error: insightsError } = await supabase
         .from('insights')
         .select('id, report_type, created_at')
@@ -458,26 +458,50 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
       if (createdCount > 0) {
         console.log(`[Store] Found ${createdCount} insights without conversations, creating them...`);
+        const now = new Date().toISOString();
+        
         for (const insight of missingConversations) {
-          await supabase.from('conversations').insert({
-            id: insight.id,
-            user_id: userId,
-            title: `${insight.report_type} - Insight`,
-            meta: {
-              type: 'insight_chat',
-              insight_report_id: insight.id,
-              parent_report_type: insight.report_type
+          try {
+            const { error: insertError } = await supabase.from('conversations').insert({
+              id: insight.id,
+              user_id: userId,
+              title: `${insight.report_type} - Insight`,
+              created_at: insight.created_at, // Use insight's created_at for consistency
+              updated_at: now, // Set updated_at to now for proper sorting
+              meta: {
+                type: 'insight_chat',
+                insight_report_id: insight.id,
+                parent_report_type: insight.report_type
+              }
+            });
+            
+            if (insertError) {
+              console.error(`[Store] Failed to create conversation for insight ${insight.id}:`, insertError);
+            } else {
+              console.log(`[Store] ✅ Created conversation for insight: ${insight.id}`);
             }
-          });
+          } catch (error) {
+            console.error(`[Store] Error creating conversation for insight ${insight.id}:`, error);
+          }
         }
       }
 
       if (deletedCount > 0) {
         console.log(`[Store] Found ${deletedCount} orphan insight conversations, deleting them...`);
         for (const conv of orphanConversations) {
-          await supabase.from('conversations').delete().eq('id', conv.id).eq('user_id', userId);
-          // Also remove locally to keep UI in sync immediately
-          get().removeConversation(conv.id);
+          try {
+            const { error: deleteError } = await supabase.from('conversations').delete().eq('id', conv.id).eq('user_id', userId);
+            
+            if (deleteError) {
+              console.error(`[Store] Failed to delete orphan conversation ${conv.id}:`, deleteError);
+            } else {
+              console.log(`[Store] ✅ Deleted orphan conversation: ${conv.id}`);
+              // Also remove locally to keep UI in sync immediately
+              get().removeConversation(conv.id);
+            }
+          } catch (error) {
+            console.error(`[Store] Error deleting orphan conversation ${conv.id}:`, error);
+          }
         }
       }
 
