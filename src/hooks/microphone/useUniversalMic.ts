@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { UniversalSTTRecorder } from '@/services/audio/UniversalSTTRecorder';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserData } from '@/hooks/useUserData';
 
 interface UseUniversalMicOptions {
   onTranscriptReady?: (transcript: string) => void;
@@ -15,6 +16,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
+  const { displayName } = useUserData();
   const [audioLevel, setAudioLevel] = useState(0);
   const recorderRef = useRef<UniversalSTTRecorder | null>(null);
   const levelRef = useRef(0);
@@ -100,7 +102,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         silenceMargin: 0.15, // 15% below baseline
         silenceHangover: 600, // 600ms silence detection (slight hang)
         user_id: user?.id, // Add user_id for message attribution
-        user_name: user?.email?.split('@')[0] || 'User', // Add user_name for message attribution
+        user_name: displayName || 'User', // Add user_name for message attribution
       });
 
       await recorderRef.current.start();

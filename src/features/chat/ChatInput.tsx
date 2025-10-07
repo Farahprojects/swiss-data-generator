@@ -6,6 +6,7 @@ import { chatController } from './ChatController';
 import { useUniversalMic } from '@/hooks/microphone/useUniversalMic';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserData } from '@/hooks/useUserData';
 import { useSearchParams } from 'react-router-dom';
 import { useMode } from '@/contexts/ModeContext';
 import { useChatInputState } from '@/hooks/useChatInputState';
@@ -47,6 +48,7 @@ export const ChatInput = () => {
   
   // Auth detection (still needed for user-specific logic)
   const { user } = useAuth();
+  const { displayName } = useUserData();
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('user_id');
   const isAuthenticated = !!user;
@@ -121,7 +123,7 @@ export const ChatInput = () => {
             client_msg_id,
             mode: mode,
             user_id: user?.id,
-            user_name: user?.email?.split('@')[0] || 'User'
+            user_name: displayName || 'User'
           }
         }).catch((error) => {
           console.error('[ChatInput] Message send failed:', error);
