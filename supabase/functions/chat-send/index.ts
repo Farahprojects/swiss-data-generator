@@ -71,7 +71,7 @@ serve(async (req) => {
         status: "complete",
         mode: mode || 'chat',
         meta: {}
-        // message_number omitted - DB trigger assigns it
+        // message_number assigned by DB trigger (backend use only)
       };
 
       console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB (trigger will assign message_number)`);
@@ -113,7 +113,7 @@ serve(async (req) => {
       status: "complete",
       mode: mode || 'chat',
       meta: {}
-      // message_number omitted - DB trigger assigns it
+      // message_number assigned by DB trigger (backend use only)
     };
 
     console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB (trigger will assign message_number)`);

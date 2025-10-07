@@ -30,7 +30,6 @@ interface MessageStore {
   loading: boolean;
   error: string | null;
   hasOlder: boolean;
-  latestMessageNumber: number; // Track latest message number for gap detection
   
   // Actions
   setChatId: (id: string | null) => void;
@@ -39,13 +38,9 @@ interface MessageStore {
   updateMessage: (id: string, updates: Partial<Message>) => void;
   clearMessages: () => void;
   fetchMessages: () => Promise<void>;
-  fetchLatestAssistantMessage: (chat_id: string) => Promise<void>; // Fetch single latest assistant message
+  fetchLatestAssistantMessage: (chat_id: string) => Promise<void>;
   loadOlder: () => Promise<void>;
-  selfClean: () => void; // Self-cleaning method
-  forceResync: () => Promise<void>; // Force resync when gap detected
-  handleWebSocketMessage: (message: Message) => void; // Gap detection wrapper
-  validateMessageOrder: () => Promise<void>; // Order validation
-  validateMessageCount: () => Promise<void>; // Invisible count validator
+  selfClean: () => void;
 }
 
 const mapDbToMessage = (db: any): Message => ({
@@ -69,7 +64,6 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
   loading: false,
   error: null,
   hasOlder: false,
-  latestMessageNumber: 0,
 
   // Set chat ID and auto-fetch messages
   setChatId: (id: string | null) => {
@@ -127,25 +121,22 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         }
       },
 
-      // Add message with deduplication by message_number and optimistic handling
+      // Add message with deduplication and timestamp ordering
       addMessage: (message: Message) => {
         set((state) => {
       
-      // Check if message already exists by message_number or id
-      const exists = state.messages.some(m => 
-        m.message_number === message.message_number || 
-        m.id === message.id
-      );
+      // Check if message already exists by id
+      const exists = state.messages.some(m => m.id === message.id);
+      
       if (exists) {
-        // Update existing - CRITICAL: Preserve WebSocket source if incoming message has it
+        // Update existing - preserve WebSocket source
         const updatedMessages = state.messages.map(m => {
-          if (m.message_number === message.message_number || m.id === message.id) {
-            // WebSocket source always wins (for animations), otherwise preserve existing
+          if (m.id === message.id) {
             return { 
               ...m, 
               ...message, 
               pending: false,
-              source: message.source || m.source // Incoming source takes priority
+              source: message.source || m.source
             };
           }
           return m;
@@ -153,33 +144,32 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         return { messages: updatedMessages };
       }
       
-      // Add new message and sort by message_number
+      // Add new message and sort by timestamp
       const newMessages = [...state.messages, message];
-      newMessages.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
+      newMessages.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
       
       return { messages: newMessages };
     });
   },
 
-      // Add optimistic message with temporary number for instant UI
+      // Add optimistic message with current timestamp
       addOptimisticMessage: (message: Message) => {
         set((state) => {
       
-      // Get next optimistic number
-      const currentMax = state.messages.reduce((max, m) => Math.max(max, m.message_number ?? 0), 0);
-      const nextOptimisticNumber = currentMax + 1;
-      
       const optimisticMessage = {
         ...message,
-        message_number: nextOptimisticNumber,
         pending: true,
         tempId: message.id, // Keep original ID for reconciliation
         source: 'fetch' as const // Optimistic messages don't animate (user's own text)
       };
       
-      // Add optimistic message and sort
+      // Add optimistic message and sort by timestamp
       const newMessages = [...state.messages, optimisticMessage];
-      newMessages.sort((a, b) => (a.message_number ?? 0) - (b.message_number ?? 0));
+      newMessages.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
       
       return { messages: newMessages };
     });
@@ -238,8 +228,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
           messages: [], 
           loading: false, 
           error: null,
-          hasOlder: false,
-          latestMessageNumber: 0
+          hasOlder: false
         });
         // Clear from sessionStorage too
         sessionStorage.removeItem('chat_id');
@@ -254,7 +243,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         .from('messages')
         .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
         .eq('chat_id', chat_id)
-        .order('message_number', { ascending: true })
+        .order('created_at', { ascending: true })
         .limit(50);
 
       if (error) throw error;
@@ -266,19 +255,16 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       });
 
       const messages = (data || []).map(mapDbToMessage);
-      const latestMessage = messages[messages.length - 1];
       
       console.log('[MessageStore] fetchMessages SETTING state:', { 
         messageCount: messages.length,
-        latestMessageNumber: latestMessage?.message_number ?? 0,
         messageIds: messages.map(m => m.id)
       });
       
       set({ 
         messages, 
         loading: false,
-        hasOlder: (data?.length || 0) === 50,
-        latestMessageNumber: latestMessage?.message_number ?? 0
+        hasOlder: (data?.length || 0) === 50
       });
       
       console.log('[MessageStore] fetchMessages COMPLETE:', { 
@@ -302,7 +288,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
         .eq('chat_id', chat_id)
         .eq('role', 'assistant')
-        .order('message_number', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
@@ -317,8 +303,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
       if (data) {
         console.log('[MessageStore] Found assistant message:', { 
-          id: data.id, 
-          message_number: data.message_number,
+          id: data.id,
           text_preview: data.text?.substring(0, 50) 
         });
         
@@ -326,22 +311,16 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         // Mark as WebSocket source for animation
         const messageWithSource = { ...message, source: 'websocket' as const };
         
-        // Check if we already have this message
+        // Check if we already have this message by ID
         const { messages } = get();
-        const exists = messages.some(m => m.id === data.id || m.message_number === data.message_number);
+        const exists = messages.some(m => m.id === data.id);
         
         console.log('[MessageStore] Message exists in store?', exists);
         
         if (!exists) {
           console.log('[MessageStore] Adding new assistant message to store');
           get().addMessage(messageWithSource);
-          
-          // Update latest message number
-          const { messages: updatedMessages } = get();
-          const latestMessage = updatedMessages[updatedMessages.length - 1];
-          set({ latestMessageNumber: latestMessage?.message_number ?? 0 });
-          
-          console.log('[MessageStore] Store now has', updatedMessages.length, 'messages');
+          console.log('[MessageStore] Store now has', get().messages.length, 'messages');
         } else {
           console.log('[MessageStore] Message already in store, skipping');
         }
@@ -353,21 +332,21 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
 
 
-  // Load older messages
+  // Load older messages (use timestamp ordering)
   loadOlder: async () => {
     const { chat_id, messages } = get();
     if (!chat_id || messages.length === 0) return;
 
     const oldestMessage = messages[0];
-    if (!oldestMessage?.message_number) return;
+    if (!oldestMessage?.createdAt) return;
 
     try {
       const { data, error } = await supabase
         .from('messages')
         .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
         .eq('chat_id', chat_id)
-        .lt('message_number', oldestMessage.message_number)
-        .order('message_number', { ascending: true })
+        .lt('created_at', oldestMessage.createdAt)
+        .order('created_at', { ascending: true })
         .limit(50);
 
       if (error) throw error;
@@ -382,137 +361,6 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     }
   },
 
-  // Force resync when gap detected
-  forceResync: async () => {
-    // Preserve WebSocket messages that might not be in DB yet (replication lag)
-    const { messages: currentMessages } = get();
-    const recentWebSocketMessages = currentMessages.filter(m => 
-      m.source === 'websocket' && 
-      Date.now() - new Date(m.createdAt).getTime() < 5000 // Last 5 seconds
-    );
-    
-    await get().fetchMessages();
-    
-    // Re-add recent WebSocket messages if they're missing from fetch
-    const { messages: fetchedMessages } = get();
-    recentWebSocketMessages.forEach(wsMessage => {
-      const exists = fetchedMessages.some(m => m.id === wsMessage.id || m.message_number === wsMessage.message_number);
-      if (!exists) {
-        get().addMessage(wsMessage);
-      }
-    });
-    
-    const { messages } = get();
-    const latestMessage = messages[messages.length - 1];
-    set({ latestMessageNumber: latestMessage?.message_number ?? 0 });
-  },
-
-  // Gap detection wrapper for WebSocket messages
-  handleWebSocketMessage: (message: Message) => {
-    const { latestMessageNumber } = get();
-    
-    // ALWAYS ensure WebSocket messages have source='websocket' for animations
-    const messageWithSource = { ...message, source: 'websocket' as const };
-    
-    // Check for gap in message sequence
-    if (message.message_number && message.message_number !== latestMessageNumber + 1) {
-      // Add this WebSocket message FIRST (with animation)
-      set({ latestMessageNumber: Math.max(latestMessageNumber, message.message_number ?? 0) });
-      get().addMessage(messageWithSource);
-      
-      // Resync after a delay to allow DB replication to catch up
-      // This prevents the "flash and disappear" issue where broadcast arrives before DB SELECT returns the message
-      setTimeout(() => {
-        get().forceResync();
-      }, 500); // 500ms delay for DB replication
-      return;
-    }
-    
-    // Update latest message number and add message with WebSocket source
-    set({ latestMessageNumber: Math.max(latestMessageNumber, message.message_number ?? 0) });
-    get().addMessage(messageWithSource);
-  },
-
-  // Order validation - ensures message sequence integrity
-  validateMessageOrder: async () => {
-    const { chat_id, messages } = get();
-    if (!chat_id || messages.length === 0) return;
-
-    try {
-      // Get messages from database in correct order
-      const { data: dbMessages, error } = await supabase
-        .from('messages')
-        .select('id, message_number, created_at')
-        .eq('chat_id', chat_id)
-        .not('context_injected', 'is', true)
-        .order('message_number', { ascending: true });
-
-      if (error) {
-        console.warn('[MessageStore] Order validation failed:', error);
-        return;
-      }
-
-      if (!dbMessages || dbMessages.length === 0) return;
-
-      // Check if store messages are in correct order
-      const storeOrder = messages.map(m => ({ id: m.id, message_number: m.message_number, created_at: m.createdAt }));
-      const dbOrder = dbMessages.map(m => ({ id: m.id, message_number: m.message_number, created_at: m.created_at }));
-
-      // Compare sequences
-      const isOrderCorrect = storeOrder.every((storeMsg, index) => {
-        const dbMsg = dbOrder[index];
-        return dbMsg && 
-               storeMsg.id === dbMsg.id && 
-               storeMsg.message_number === dbMsg.message_number;
-      });
-
-      // Check for sequence gaps
-      const hasSequenceGaps = storeOrder.some((msg, index) => {
-        if (index === 0) return false;
-        const prevMsg = storeOrder[index - 1];
-        return msg.message_number !== prevMsg.message_number + 1;
-      });
-
-      // If order is wrong or has gaps, force complete refresh
-      if (!isOrderCorrect || hasSequenceGaps) {
-        // Refresh messages without temporarily clearing to avoid UI flicker
-        await get().fetchMessages();
-      }
-    } catch (error) {
-      console.warn('[MessageStore] Order validation error:', error);
-    }
-  },
-
-  // Invisible count validator - detects sync issues
-  validateMessageCount: async () => {
-    const { chat_id, messages } = get();
-    if (!chat_id || messages.length === 0) return;
-
-    try {
-      // Get actual count from database
-      const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('chat_id', chat_id)
-        .not('context_injected', 'is', true); // Exclude system messages
-
-      if (error) {
-        console.warn('[MessageStore] Count validation failed:', error);
-        return;
-      }
-
-      const dbCount = count || 0;
-      const storeCount = messages.length;
-
-      // If counts don't match, force complete refresh
-      if (dbCount !== storeCount) {
-        // Refresh messages without temporarily clearing to avoid UI flicker
-        await get().fetchMessages();
-      }
-    } catch (error) {
-      console.warn('[MessageStore] Count validation error:', error);
-    }
-  },
 
 }));
 
