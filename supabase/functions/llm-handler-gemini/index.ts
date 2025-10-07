@@ -34,7 +34,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, mode, chattype, voice } = body;
+    const { chat_id, text, mode, chattype, voice, user_id } = body;
 
     console.log(`[llm-handler-gemini] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, mode: ${mode || 'default'}, text: ${typeof text === 'string' ? text.substring(0, 50) : ''}...`);
 
@@ -249,7 +249,8 @@ Check-in: Close with a simple, open question.`;
           client_msg_id: assistantClientId,
           role: 'assistant',
           chattype: 'voice',
-          mode: mode
+          mode: mode,
+          user_id: user_id
         })
       }).then((response) => {
         console.log(`[llm-handler-gemini] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
@@ -273,7 +274,8 @@ Check-in: Close with a simple, open question.`;
           text: sanitizedText,
           client_msg_id: assistantClientId,
           role: 'assistant',
-          mode: mode
+          mode: mode,
+          user_id: user_id
         })
       }).then((response) => {
         console.log(`[llm-handler-gemini] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);

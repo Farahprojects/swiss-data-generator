@@ -39,7 +39,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, client_msg_id, mode, chattype, role, sessionId } = body;
+    const { chat_id, text, client_msg_id, mode, chattype, role, sessionId, user_id } = body;
 
     console.log(`[chat-send] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, role: ${role || 'user'}, mode: ${mode || 'default'}`);
     console.log(`[chat-send] 📥 REQUEST BODY DEBUG:`, JSON.stringify({ chat_id, text: text?.substring(0, 50), client_msg_id, mode, role, sessionId }, null, 2));
@@ -70,6 +70,7 @@ serve(async (req) => {
         client_msg_id: client_msg_id || crypto.randomUUID(),
         status: "complete",
         mode: mode || 'chat',
+        user_id: user_id, // Add user_id for assistant messages too
         meta: {}
         // message_number assigned by DB trigger (backend use only)
       };
@@ -112,6 +113,7 @@ serve(async (req) => {
       client_msg_id: client_msg_id || crypto.randomUUID(),
       status: "complete",
       mode: mode || 'chat',
+      user_id: user_id, // Add user_id for user messages
       meta: {}
       // message_number assigned by DB trigger (backend use only)
     };
@@ -161,7 +163,8 @@ serve(async (req) => {
       body: JSON.stringify({
         chat_id,
         text: text,
-        mode: mode
+        mode: mode,
+        user_id: user_id
       })
     }).then((response) => {
       console.log(`[chat-send] ✅ LLM HANDLER CALLED SUCCESSFULLY - status: ${response.status}`);

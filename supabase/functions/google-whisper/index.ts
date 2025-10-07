@@ -117,6 +117,7 @@ serve(async (req) => {
     const mode = (form.get('mode') as string) || undefined;
     const language = (form.get('language') as string) || 'en';
     const voice = (form.get('voice') as string) || undefined;
+    const user_id = (form.get('user_id') as string) || undefined;
 
     if (!file) {
       throw new Error('Missing file in form-data');
@@ -179,7 +180,8 @@ serve(async (req) => {
           text: transcript,
           client_msg_id: crypto.randomUUID(),
           chattype: 'voice',
-          mode: mode
+          mode: mode,
+          user_id: user_id
         })
       }).catch((error) => {
         console.error('[google-whisper] ❌ User message save failed:', error);
@@ -197,7 +199,8 @@ serve(async (req) => {
           text: transcript,
           chattype: 'voice',
           mode: mode,
-          voice
+          voice,
+          user_id: user_id
         })
       }).catch((error) => {
         console.error('[google-whisper] ❌ LLM call failed:', error);
