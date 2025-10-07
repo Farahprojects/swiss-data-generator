@@ -22,6 +22,7 @@ class LlmService {
     chat_id: string; 
     text: string; 
     client_msg_id?: string;
+    user_id?: string;
   }): Promise<Message> {
     // Fire-and-forget invoke (no await) to minimize perceived latency
     try {
@@ -32,6 +33,7 @@ class LlmService {
               chat_id: request.chat_id,
               text: request.text,
               client_msg_id: request.client_msg_id,
+              user_id: request.user_id,
             },
           }).catch((error) => {
             networkErrorHandler.handleError(error, 'LlmService.sendMessage');
@@ -44,6 +46,7 @@ class LlmService {
               chat_id: request.chat_id,
               text: request.text,
               client_msg_id: request.client_msg_id,
+              user_id: request.user_id,
             },
           }).catch((error) => {
             networkErrorHandler.handleError(error, 'LlmService.sendMessage');

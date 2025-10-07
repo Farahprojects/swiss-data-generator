@@ -4,6 +4,7 @@ import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
 import { useAudioStore } from '@/stores/audioStore';
 import { useMode } from '@/contexts/ModeContext';
+import { useAuth } from '@/contexts/AuthContext';
 // Old audio level hook removed - using AudioWorklet + WebWorker pipeline
 import { VoiceBubble } from './VoiceBubble';
 // Universal audio pipeline
@@ -22,6 +23,7 @@ export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
   const { mode } = useMode();
+  const { user } = useAuth();
   const [state, setState] = useState<ConversationState>('connecting');
   
   // Audio context management
@@ -264,6 +266,7 @@ export const ConversationOverlay: React.FC = () => {
         chattype: 'voice',
         mode: mode,
         silenceHangover: 600,
+        user_id: user?.id,
         onTranscriptReady: (transcript: string) => {
           if (isShuttingDown.current || isProcessingRef.current) {
             return;

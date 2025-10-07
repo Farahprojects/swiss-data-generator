@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 
 class SttService {
-  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, chattype?: string, mode?: string): Promise<{ transcript: string }> {
+  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, chattype?: string, mode?: string, user_id?: string): Promise<{ transcript: string }> {
     
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
@@ -33,6 +33,7 @@ class SttService {
     if (chattype) form.append('chattype', chattype);
     if (selectedVoice) form.append('voice', selectedVoice);
     if (mode) form.append('mode', mode);
+    if (user_id) form.append('user_id', user_id);
     form.append('language', 'en');
 
     const { data, error } = await supabase.functions.invoke('google-whisper', {

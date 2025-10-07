@@ -119,7 +119,8 @@ export const ChatInput = () => {
             chat_id: currentChatId!,
             text: messageText,
             client_msg_id,
-            mode: mode
+            mode: mode,
+            user_id: user?.id
           }
         }).catch((error) => {
           console.error('[ChatInput] Message send failed:', error);
