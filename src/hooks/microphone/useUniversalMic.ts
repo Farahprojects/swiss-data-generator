@@ -100,6 +100,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         silenceMargin: 0.15, // 15% below baseline
         silenceHangover: 600, // 600ms silence detection (slight hang)
         user_id: user?.id, // Add user_id for message attribution
+        user_name: user?.email?.split('@')[0] || 'User', // Add user_name for message attribution
       });
 
       await recorderRef.current.start();

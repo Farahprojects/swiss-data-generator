@@ -267,6 +267,7 @@ export const ConversationOverlay: React.FC = () => {
         mode: mode,
         silenceHangover: 600,
         user_id: user?.id,
+        user_name: user?.email?.split('@')[0] || 'User',
         onTranscriptReady: (transcript: string) => {
           if (isShuttingDown.current || isProcessingRef.current) {
             return;

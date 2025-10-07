@@ -13,6 +13,7 @@ export interface STTRecorderOptions {
   triggerPercent?: number; // percentage above baseline to start capture (default: 0.2)
   preRollMs?: number; // how much audio before trigger to include (default: 300)
   user_id?: string; // user ID for message attribution
+  user_name?: string; // user name for message attribution
 }
 
 export class UniversalSTTRecorder {
@@ -485,7 +486,7 @@ export class UniversalSTTRecorder {
         }
         
         // Fire-and-forget STT call - backend handles everything
-        sttService.transcribe(audioBlob, chat_id, {}, this.options.chattype, this.options.mode, this.options.user_id).catch((error) => {
+        sttService.transcribe(audioBlob, chat_id, {}, this.options.chattype, this.options.mode, this.options.user_id, this.options.user_name).catch((error) => {
           console.error('[UniversalSTTRecorder] STT fire-and-forget failed:', error);
           this.options.onError?.(error as Error);
         });
@@ -499,7 +500,8 @@ export class UniversalSTTRecorder {
         {},
         this.options.chattype,
         this.options.mode,
-        this.options.user_id
+        this.options.user_id,
+        this.options.user_name
       );
       
       if (transcript && transcript.trim().length > 0 && this.options.onTranscriptReady) {

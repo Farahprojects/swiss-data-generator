@@ -120,7 +120,8 @@ export const ChatInput = () => {
             text: messageText,
             client_msg_id,
             mode: mode,
-            user_id: user?.id
+            user_id: user?.id,
+            user_name: user?.email?.split('@')[0] || 'User'
           }
         }).catch((error) => {
           console.error('[ChatInput] Message send failed:', error);
