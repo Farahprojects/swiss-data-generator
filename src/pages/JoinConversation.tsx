@@ -59,24 +59,32 @@ const JoinConversation: React.FC = () => {
 
         setConversation(data);
 
-        // If user is signed in, ensure it's in their history; then redirect to /c/:chatId                                                                      
+        // If user is signed in, add them as a participant; then redirect to /c/:chatId                                                                      
         if (isAuthenticated && user) {
-          const { data: userConversation } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('id', chatId)
+          // Check if user is already a participant
+          const { data: existingParticipant } = await supabase
+            .from('conversations_participants')
+            .select('conversation_id')
+            .eq('conversation_id', chatId)
             .eq('user_id', user.id)
             .maybeSingle();
 
-          if (!userConversation) {
-            await supabase
-              .from('conversations')
+          if (!existingParticipant) {
+            // Add user as a participant
+            const { error: insertError } = await supabase
+              .from('conversations_participants')
               .insert({
-                id: chatId,
+                conversation_id: chatId,
                 user_id: user.id,
-                title: data.title,
-                meta: { ...(data.meta || {}), is_shared_copy: true },
+                role: 'member', // Default to member role
               });
+
+            if (insertError) {
+              console.error('Error adding user as participant:', insertError);
+              setError('Failed to join conversation');
+              setLoading(false);
+              return;
+            }
           }
 
           setIsJoined(true);

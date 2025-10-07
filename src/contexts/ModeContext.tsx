@@ -46,6 +46,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .from('conversations')
             .select('id')
             .eq('id', chat_id)
+            .eq('user_id', user.id)
             .maybeSingle();
           
           if (checkError) {
@@ -68,6 +69,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .from('conversations')
             .select('meta')
             .eq('id', chat_id)
+            .eq('user_id', user.id)
             .maybeSingle();
 
           if (error) {
@@ -138,6 +140,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .from('conversations')
             .select('meta')
             .eq('id', chat_id)
+            .eq('user_id', user?.id as string)
             .maybeSingle();
 
           const existingMeta = (existingData?.meta as { mode?: ChatMode } | null) || {};

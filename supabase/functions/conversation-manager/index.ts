@@ -45,10 +45,14 @@ serve(async (req) => {
     switch (action) {
       case 'create_conversation':
         // Create a new conversation for authenticated user
+        const newChatId = crypto.randomUUID();
+        
+        // Create conversation
         const { data: newConversation, error: createError } = await supabaseClient
           .from('conversations')
           .insert({
-            user_id,
+            id: newChatId,
+            owner_user_id: user_id,
             title: title || 'New Conversation',
             meta: {}
           })
@@ -56,6 +60,16 @@ serve(async (req) => {
           .single();
 
         if (createError) throw createError;
+
+        // Add owner as participant
+        await supabaseClient
+          .from('conversations_participants')
+          .insert({
+            conversation_id: newChatId,
+            user_id: user_id,
+            role: 'owner'
+          });
+
         result = newConversation;
         break;
 
@@ -117,11 +131,14 @@ serve(async (req) => {
         break;
 
       case 'list_conversations':
-        // List all conversations for authenticated user
+        // List all conversations user is a participant in
         const { data: conversations, error: listError } = await supabaseClient
           .from('conversations')
-          .select('id, user_id, title, created_at, updated_at, meta, is_public')
-          .eq('user_id', user_id)
+          .select(`
+            id, title, created_at, updated_at, meta, is_public,
+            conversations_participants!inner(role)
+          `)
+          .eq('conversations_participants.user_id', user_id)
           .order('updated_at', { ascending: false });
 
         if (listError) throw listError;
@@ -201,7 +218,7 @@ serve(async (req) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', conversation_id)
-          .eq('user_id', user_id);
+          .eq('owner_user_id', user_id);
 
         if (shareError) throw shareError;
         result = { success: true, conversation_id, is_public: true };
@@ -223,10 +240,48 @@ serve(async (req) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', conversation_id)
-          .eq('user_id', user_id);
+          .eq('owner_user_id', user_id);
 
         if (unshareError) throw unshareError;
         result = { success: true, conversation_id, is_public: false };
+        break;
+
+      case 'join_conversation':
+        // Join a public conversation as a participant
+        if (!conversation_id) {
+          return new Response('conversation_id is required for joining', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Verify conversation is public
+        const { data: publicConv, error: publicError } = await supabaseClient
+          .from('conversations')
+          .select('id, is_public')
+          .eq('id', conversation_id)
+          .eq('is_public', true)
+          .single();
+
+        if (publicError || !publicConv) {
+          return new Response('Conversation not found or not public', { 
+            status: 404, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Add user as participant (ignore if already exists)
+        await supabaseClient
+          .from('conversations_participants')
+          .insert({
+            conversation_id: conversation_id,
+            user_id: user_id,
+            role: 'member'
+          })
+          .onConflict('conversation_id,user_id')
+          .ignoreDuplicates();
+
+        result = { success: true, conversation_id };
         break;
 
 

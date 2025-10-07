@@ -172,32 +172,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const pendingChatId = typeof window !== 'undefined' ? localStorage.getItem('pending_join_chat_id') : null;
           if (pendingChatId) {
             localStorage.removeItem('pending_join_chat_id');
-            // Ensure conversation exists for this user; if not, create it by copying title
-            const { data: existing } = await supabase
-              .from('conversations')
-              .select('id')
-              .eq('id', pendingChatId)
+            // Check if user is already a participant
+            const { data: existingParticipant } = await supabase
+              .from('conversations_participants')
+              .select('conversation_id')
+              .eq('conversation_id', pendingChatId)
               .eq('user_id', supaSession.user.id)
               .maybeSingle();
 
-            if (!existing) {
-              // Fetch original conversation title for display purposes
-              const sb: any = supabase;
-              const { data: source } = await sb
+            if (!existingParticipant) {
+              // Verify the conversation exists and is public
+              const { data: source } = await supabase
                 .from('conversations')
-                .select('title')
+                .select('title, is_public')
                 .eq('id', pendingChatId)
                 .eq('is_public', true)
                 .maybeSingle();
 
-              await supabase
-                .from('conversations')
+              if (!source) {
+                console.error('[AuthContext] Public conversation not found:', pendingChatId);
+                return;
+              }
+
+              // Add user as a participant
+              const { error: insertError } = await supabase
+                .from('conversations_participants')
                 .insert({
-                  id: pendingChatId,
+                  conversation_id: pendingChatId,
                   user_id: supaSession.user.id,
-                  title: source?.title || 'Shared Conversation',
-                  meta: { is_shared_copy: true },
+                  role: 'member', // Default to member role
                 });
+
+              if (insertError) {
+                console.error('[AuthContext] Error adding user as participant:', insertError);
+                return;
+              }
             }
 
             // Navigate to the conversation

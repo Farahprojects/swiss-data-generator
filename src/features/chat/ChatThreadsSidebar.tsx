@@ -395,7 +395,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   const isSharedThread = (thread: any) => {
     try {
-      return thread?.meta?.is_shared_copy === true;
+      // Check if user is a member (not owner) of this conversation
+      const participant = thread?.conversations_participants?.[0];
+      return participant?.role === 'member';
     } catch {
       return false;
     }

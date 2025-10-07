@@ -148,3 +148,26 @@ export const unshareConversation = async (conversationId: string): Promise<void>
   }
 };
 
+/**
+ * Join a public conversation using edge function
+ */
+export const joinConversation = async (conversationId: string): Promise<void> => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { error } = await supabase.functions.invoke('conversation-manager?action=join_conversation', {
+    body: {
+      user_id: user.id,
+      conversation_id: conversationId
+    }
+  });
+
+  if (error) {
+    console.error('[Conversations] Error joining conversation:', error);
+    throw new Error('Failed to join conversation');
+  }
+};
+
