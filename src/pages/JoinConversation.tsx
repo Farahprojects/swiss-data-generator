@@ -49,7 +49,7 @@ const JoinConversation: React.FC = () => {
           .select('id, user_id, title, created_at, updated_at, meta, is_public')
           .eq('id', chatId)
           .eq('is_public', true)
-          .single();
+          .maybeSingle();
 
         if (fetchError || !data) {
           setError('Conversation not found or not shared');
@@ -66,7 +66,7 @@ const JoinConversation: React.FC = () => {
             .select('id')
             .eq('id', chatId)
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
           if (!userConversation) {
             await supabase

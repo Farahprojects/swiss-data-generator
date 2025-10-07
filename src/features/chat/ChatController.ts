@@ -123,7 +123,7 @@ class ChatController {
         .from('conversations')
         .select('id')
         .eq('id', chat_id)
-        .single();
+        .maybeSingle();
       
       if (error || !data) {
         return false;

@@ -244,7 +244,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         .from('conversations')
         .select('id')
         .eq('id', reportId) // Use reportId as chat_id
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (existingChat) {
         // Navigate to existing insight chat thread
@@ -293,7 +294,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           .from('conversations')
           .select('meta')
           .eq('id', conversationToDelete)
-          .single();
+          .maybeSingle();
 
         const isInsightChat = (conversation?.meta as any)?.type === 'insight_chat';
 

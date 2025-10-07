@@ -190,12 +190,24 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // FIRST: Validate conversation exists in DB (prevents stale chat_id)
-      const { data: conversationCheck, error: checkError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('id', chat_id)
-        .maybeSingle();
+      // Determine auth context once for scoping
+      const { data: authData } = await supabase.auth.getUser();
+      const authUserId = authData?.user?.id;
+
+      // FIRST: Validate conversation exists in DB (prevents stale chat_id) for authed users only
+      // Public viewers don't own a row in conversations yet; skip this check for them
+      let conversationCheck: any = true;
+      let checkError: any = null;
+      if (authUserId) {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('id', chat_id)
+          .eq('user_id', authUserId)
+          .maybeSingle();
+        conversationCheck = data;
+        checkError = error;
+      }
       
       if (checkError) {
         console.error('[MessageStore] Error checking conversation:', checkError);

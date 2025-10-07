@@ -68,7 +68,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .from('conversations')
             .select('meta')
             .eq('id', chat_id)
-            .single();
+            .maybeSingle();
 
           if (error) {
             console.error('[ModeContext] Error loading conversation mode:', error);
@@ -138,7 +138,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .from('conversations')
             .select('meta')
             .eq('id', chat_id)
-            .single();
+            .maybeSingle();
 
           const existingMeta = (existingData?.meta as { mode?: ChatMode } | null) || {};
           

@@ -178,15 +178,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .select('id')
               .eq('id', pendingChatId)
               .eq('user_id', supaSession.user.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               // Fetch original conversation title for display purposes
-              const { data: source } = await supabase
+              const sb: any = supabase;
+              const { data: source } = await sb
                 .from('conversations')
                 .select('title')
                 .eq('id', pendingChatId)
-                .single();
+                .eq('is_public', true)
+                .maybeSingle();
 
               await supabase
                 .from('conversations')
