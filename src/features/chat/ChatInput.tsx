@@ -91,44 +91,40 @@ export const ChatInput = () => {
         }
       }
       
-      // Immediately show stop icon when sending message (will auto-flip off when assistant text arrives)
-      setAssistantTyping(true);
-      
-      // DIRECT INVOKE - No service layers, fastest possible
+      const messageText = text.trim();
       const client_msg_id = crypto.randomUUID();
       
-      // Clear input immediately for instant feedback
-      setText('');
+      // INSTANT UI UPDATES (no delays)
+      setText(''); // Clear input instantly
+      setAssistantTyping(true); // Show stop icon
       
-      // Show optimistic message immediately in UI - instant display
+      // Show optimistic message immediately in UI
       const optimisticMessage: Message = {
         id: client_msg_id,
         chat_id: currentChatId!,
         role: 'user',
-        text: text.trim(),
+        text: messageText,
         createdAt: new Date().toISOString(),
         status: 'thinking',
         client_msg_id
       };
       
-      // Add optimistic message instantly with temporary number
       const { addOptimisticMessage } = useMessageStore.getState();
       addOptimisticMessage(optimisticMessage);
       
-      // Fire-and-forget direct invoke - no queueMicrotask delay
-      supabase.functions.invoke('chat-send', {
-        body: {
-          chat_id: currentChatId!,
-          text: text.trim(),
-          client_msg_id,
-          mode: mode
-        }
-      }).catch((error) => {
-        console.error('[ChatInput] Direct invoke failed:', error);
+      // Fire-and-forget invoke (truly non-blocking via queueMicrotask)
+      queueMicrotask(() => {
+        supabase.functions.invoke('chat-send', {
+          body: {
+            chat_id: currentChatId!,
+            text: messageText,
+            client_msg_id,
+            mode: mode
+          }
+        }).catch((error) => {
+          console.error('[ChatInput] Message send failed:', error);
+        });
       });
-      
-      // Clear the text immediately
-      setText('');
     }
   };
 

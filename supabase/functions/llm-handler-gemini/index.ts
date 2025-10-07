@@ -52,39 +52,34 @@ serve(async (req) => {
     }
     
 
-    // Fetch conversation history (last 6 completed non-system messages)
+    // OPTIMIZED: Single query to fetch both history and system message
+    // Fetch recent messages (includes both history and system in one round trip)
     const HISTORY_LIMIT = 6;
-    const { data: history, error: historyError } = await supabase
+    const { data: allMessages, error: messagesError } = await supabase
       .from("messages")
-      .select("role, text")
+      .select("role, text, created_at")
       .eq("chat_id", chat_id)
       .eq("status", "complete")
-      .neq("role", "system")
       .not("text", "is", null)
       .neq("text", "")
       .order("created_at", { ascending: false })
-      .limit(HISTORY_LIMIT);
+      .limit(20); // Fetch enough to get history + system message
 
-    if (historyError) {
-      console.error(`[llm-handler-gemini] ❌ History fetch error:`, historyError);
-      throw new Error("Failed to fetch conversation history");
+    if (messagesError) {
+      console.error(`[llm-handler-gemini] ❌ Messages fetch error:`, messagesError);
+      throw new Error("Failed to fetch conversation messages");
     }
 
-    // Fetch earliest system message (astro data) for this chat
-    const { data: systemRows, error: systemError } = await supabase
-      .from("messages")
-      .select("text, created_at")
-      .eq("chat_id", chat_id)
-      .eq("role", "system")
-      .not("text", "is", null)
-      .neq("text", "")
-      .order("created_at", { ascending: true })
-      .limit(1);
-
-    if (systemError) {
-      console.error(`[llm-handler-gemini] ❌ System message fetch error:`, systemError);
-    }
-    const systemText = systemRows && systemRows.length > 0 ? String(systemRows[0].text) : null;
+    // Split results: history (last 6 non-system) and earliest system message
+    const history = (allMessages || [])
+      .filter(m => m.role !== 'system')
+      .slice(0, HISTORY_LIMIT);
+    
+    const systemMessages = (allMessages || [])
+      .filter(m => m.role === 'system')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    
+    const systemText = systemMessages.length > 0 ? String(systemMessages[0].text) : null;
 
     // Log what we fetched for verification
     console.log(
