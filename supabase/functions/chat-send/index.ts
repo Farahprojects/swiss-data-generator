@@ -116,7 +116,7 @@ serve(async (req) => {
       // message_number assigned by DB trigger (backend use only)
     };
 
-    console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB (trigger will assign message_number)`);
+    console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB (fire-and-forget)`);
     
     // Fire-and-forget: Save user message to database
     supabase
@@ -150,7 +150,7 @@ serve(async (req) => {
 
     // (Assistant path handled above)
 
-    // For non-conversation: Fire-and-forget LLM call; LLM will save assistant via chat-send
+    // For non-voice: Now call LLM handler (user message is committed)
     console.log(`[chat-send] 🤖 CALLING LLM HANDLER - chat_id: ${chat_id}`);
     fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
       method: 'POST',
