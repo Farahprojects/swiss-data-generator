@@ -10,13 +10,16 @@ export type ActivityLogsFilterState = {
 };
 
 export function buildLogQuery(userId: string, filters: ActivityLogsFilterState) {
+  // translator_logs doesn't have user_id, it has chat_id which links to insights
+  // We need to join through insights table to filter by user
   let query = supabase
     .from('translator_logs')
     .select(`
       *,
-      api_usage!translator_log_id(total_cost_usd)
+      api_usage!translator_log_id(total_cost_usd),
+      insights!chat_id(user_id)
     `)
-    .eq('user_id', userId)
+    .eq('insights.user_id', userId)
     .order('created_at', { ascending: false });
   
   // Apply filters

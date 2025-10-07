@@ -313,10 +313,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         if (isInsightChat) {
           // Delete from insights table
           await supabase.from('insights').delete().eq('id', conversationToDelete);
-          // Delete from report_logs
-          await supabase.from('report_logs').delete().eq('user_id', conversationToDelete);
-          // Delete from translator_logs
-          await supabase.from('translator_logs').delete().eq('user_id', conversationToDelete);
+          // Delete from report_logs - uses chat_id not user_id
+          await supabase.from('report_logs').delete().eq('chat_id', conversationToDelete);
+          // Delete from translator_logs - uses chat_id not user_id  
+          await supabase.from('translator_logs').delete().eq('chat_id', conversationToDelete);
         }
 
         // Update UI immediately - remove from local threads state

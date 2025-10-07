@@ -57,9 +57,9 @@ const JoinConversation: React.FC = () => {
           return;
         }
 
-        setConversation(data);
+        setConversation(data as Conversation);
 
-        // If user is signed in, add them as a participant; then redirect to /c/:chatId                                                                      
+        // If user is signed in, add them as a participant; then redirect to /c/:chatId
         if (isAuthenticated && user) {
           // Check if user is already a participant
           const { data: existingParticipant } = await supabase

@@ -94,10 +94,11 @@ export const clientReportsService = {
   },
 
   async getClientReports(clientId: string) {
+    // translator_logs uses chat_id, not client_id
     const { data, error } = await supabase
       .from('translator_logs')
       .select('*')
-      .eq('client_id', clientId)
+      .eq('chat_id', clientId)
       .order('created_at', { ascending: false });
 
     if (error) {

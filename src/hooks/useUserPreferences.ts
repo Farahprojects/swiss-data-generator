@@ -7,18 +7,14 @@ export interface UserPreferences {
   id: string;
   user_id: string;
   email_notifications_enabled: boolean;
-  password_change_notifications: boolean;
-  // email_change_notifications: boolean; // Removed - no longer needed
-  security_alert_notifications: boolean;
   client_view_mode: 'grid' | 'list';
+  tts_voice: string;
   created_at: string;
   updated_at: string;
 }
 
-export type NotificationToggleType =
-  | "password_change_notifications"
-  // | "email_change_notifications" // Removed - no longer needed
-  | "security_alert_notifications";
+// Notification toggles are no longer used - only main email toggle exists
+export type NotificationToggleType = never;
 
 interface UpdateOptions {
   showToast?: boolean;
@@ -29,10 +25,8 @@ const getDefaultPreferences = (userId: string): UserPreferences => ({
   id: '',
   user_id: userId,
   email_notifications_enabled: true,
-  password_change_notifications: true,
-  // email_change_notifications: true, // Removed - no longer needed
-  security_alert_notifications: true,
   client_view_mode: 'grid',
+  tts_voice: 'Puck',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 });
@@ -161,10 +155,8 @@ export function useUserPreferences() {
       const defaultPrefs = {
         user_id: userId,
         email_notifications_enabled: true,
-        password_change_notifications: true,
-        // email_change_notifications: true, // Removed - no longer needed
-        security_alert_notifications: true,
-        client_view_mode: 'grid',
+        client_view_mode: 'grid' as const,
+        tts_voice: 'Puck',
       };
 
       const { data, error } = await supabase
@@ -212,12 +204,8 @@ export function useUserPreferences() {
         {
           user_id: user.id,
           email_notifications_enabled: enabled,
-          password_change_notifications:
-            preferences.password_change_notifications,
-          // email_change_notifications: preferences.email_change_notifications, // Removed - no longer needed
-          security_alert_notifications:
-            preferences.security_alert_notifications,
           client_view_mode: preferences.client_view_mode,
+          tts_voice: preferences.tts_voice,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -271,100 +259,15 @@ export function useUserPreferences() {
     }
   };
 
+  // Notification toggles removed - only main email toggle exists now
   const updateNotificationToggle = async (
     type: NotificationToggleType,
     enabled: boolean,
     options: UpdateOptions = {}
   ) => {
-    if (!user?.id || !preferences || !preferences.email_notifications_enabled)
-      return false;
-
-    const { showToast = true } = options;
-
-    // Record this change as pending
-    pendingChangesRef.current.set(type, enabled);
-    // Record the timestamp of this update
-    lastUpdateTimestampRef.current = Date.now();
-
-    // Optimistically update UI
-    setPreferences((prev) =>
-      prev
-        ? {
-            ...prev,
-            [type]: enabled,
-          }
-        : null
-    );
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.from("user_preferences").upsert(
-        {
-          user_id: user.id,
-          email_notifications_enabled: preferences.email_notifications_enabled,
-          password_change_notifications:
-            type === "password_change_notifications"
-              ? enabled
-              : preferences.password_change_notifications,
-          // email_change_notifications: // Removed - no longer needed
-          security_alert_notifications:
-            type === "security_alert_notifications"
-              ? enabled
-              : preferences.security_alert_notifications,
-          client_view_mode: preferences.client_view_mode,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-
-      if (error) throw error;
-
-      if (showToast) {
-        toast({
-          title: "Preference Saved",
-          description: `${formatNotificationTypeName(type)} ${
-            enabled ? "enabled" : "disabled"
-          }`,
-        });
-      }
-      
-      // After successful update, we can remove this change from pending
-      pendingChangesRef.current.delete(type);
-      
-      return true;
-    } catch (err: any) {
-      console.error("Error updating notification toggle:", err);
-      
-      // Revert optimistic update on error
-      if (isMounted()) {
-        setPreferences((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev, 
-            [type]: !enabled
-          };
-        });
-        
-        if (showToast) {
-          toast({
-            title: "Error",
-            description: "There was an issue saving your preference.",
-            variant: "destructive",
-          });
-        }
-      }
-      
-      // Remove from pending changes on error
-      pendingChangesRef.current.delete(type);
-      
-      return false;
-    } finally {
-      if (isMounted()) {
-        setSaving(false);
-      }
-    }
+    // This function is no longer used but kept for backward compatibility
+    console.warn('updateNotificationToggle is deprecated - use updateMainNotificationsToggle instead');
+    return false;
   };
 
   const updateClientViewMode = async (
@@ -398,10 +301,8 @@ export function useUserPreferences() {
         {
           user_id: user.id,
           email_notifications_enabled: preferences.email_notifications_enabled,
-          password_change_notifications: preferences.password_change_notifications,
-          // email_change_notifications: preferences.email_change_notifications, // Removed - no longer needed
-          security_alert_notifications: preferences.security_alert_notifications,
           client_view_mode: viewMode,
+          tts_voice: preferences.tts_voice,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -464,20 +365,9 @@ export function useUserPreferences() {
   };
 }
 
-// Helper function to format notification type names for display
+// Helper function to format notification type names for display (deprecated)
 export const formatNotificationTypeName = (type: NotificationToggleType): string => {
-  switch (type) {
-    case "password_change_notifications":
-      return "Password change notifications";
-    // case "email_change_notifications": // Removed - no longer needed
-    //   return "Email change notifications";
-    case "security_alert_notifications":
-      return "Security alert notifications";
-    default:
-      // TypeScript type guard to ensure we never reach this case
-      const _exhaustiveCheck: never = type;
-      return _exhaustiveCheck;
-  }
+  return 'Notifications';
 };
 
 export default useUserPreferences;

@@ -42,7 +42,7 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
     
     try {
       const { listConversations } = await import('@/services/conversations');
-      const conversations = await listConversations();
+      const conversations = await listConversations(user.id);
       
       // Sort by updated_at desc for proper ordering
       const sortedConversations = conversations.sort(
