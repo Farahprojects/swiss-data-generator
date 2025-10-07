@@ -142,7 +142,33 @@ serve(async (req) => {
           .order('updated_at', { ascending: false });
 
         if (listError) throw listError;
-        result = conversations || [];
+
+        // Compute has_other_participants for each conversation (owners see pill once someone else joined)
+        let conversationsWithFlag = conversations || [];
+        if (conversationsWithFlag.length > 0) {
+          const conversationIds = conversationsWithFlag.map((c: any) => c.id);
+          const { data: otherParticipants, error: otherErr } = await supabaseClient
+            .from('conversations_participants')
+            .select('conversation_id, user_id')
+            .in('conversation_id', conversationIds)
+            .neq('user_id', user_id);
+
+          if (otherErr) {
+            console.error('[conversation-manager] Failed to load other participants:', otherErr);
+          } else {
+            const otherCountByConversation: Record<string, number> = {};
+            for (const row of otherParticipants || []) {
+              const cid = (row as any).conversation_id;
+              otherCountByConversation[cid] = (otherCountByConversation[cid] || 0) + 1;
+            }
+            conversationsWithFlag = conversationsWithFlag.map((c: any) => ({
+              ...c,
+              has_other_participants: (otherCountByConversation[c.id] || 0) > 0,
+            }));
+          }
+        }
+
+        result = conversationsWithFlag;
         break;
 
       case 'delete_conversation':
