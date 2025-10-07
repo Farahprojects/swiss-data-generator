@@ -30,6 +30,21 @@ function normalizeLanguageCode(language?: string | null): string {
   return language;
 }
 
+// Encode large Uint8Array to base64 without exceeding the call stack by chunking
+function base64EncodeUint8(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 8192; // 8KB chunks to avoid exceeding argument limits
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const sub = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    let chunkStr = '';
+    for (let j = 0; j < sub.length; j++) {
+      chunkStr += String.fromCharCode(sub[j]);
+    }
+    binary += chunkStr;
+  }
+  return btoa(binary);
+}
+
 async function transcribeWithGoogle({
   apiKey,
   audioBytes,
@@ -43,7 +58,7 @@ async function transcribeWithGoogle({
 }): Promise<string> {
   const encodingInfo = mapMimeToGoogleEncoding(mimeType);
 
-  const audioContent = btoa(String.fromCharCode(...audioBytes));
+  const audioContent = base64EncodeUint8(audioBytes);
   const config: Record<string, unknown> = {
     encoding: encodingInfo.encoding,
     languageCode,
