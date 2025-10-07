@@ -48,6 +48,8 @@ const mapDbToMessage = (db: any): Message => ({
   chat_id: db.chat_id,
   role: db.role,
   text: db.text,
+  user_id: db.user_id,
+  user_name: db.user_name,
   createdAt: db.created_at,
   meta: db.meta,
   client_msg_id: db.client_msg_id,
@@ -235,7 +237,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       // NOW: Fetch messages since conversation is valid
       const { data, error } = await supabase
         .from('messages')
-        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
+        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
         .eq('chat_id', chat_id)
         .order('created_at', { ascending: true })
         .limit(50);
@@ -267,7 +269,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
+        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
         .eq('chat_id', chat_id)
         .eq('role', 'assistant')
         .order('created_at', { ascending: false })
@@ -325,7 +327,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number')
+        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
         .eq('chat_id', chat_id)
         .lt('created_at', oldestMessage.createdAt)
         .order('created_at', { ascending: true })

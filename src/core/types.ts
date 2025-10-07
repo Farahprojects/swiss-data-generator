@@ -9,6 +9,8 @@ export interface Message {
   chat_id: string;
   role: MessageRole;
   text: string;
+  user_id?: string;
+  user_name?: string;
   audioUrl?: string;
   createdAt: string;
   meta?: Record<string, any>;

@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/contexts/ModeContext';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
-const renderMessages = (messages: Message[]) => {
+const renderMessages = (messages: Message[], currentUserId?: string) => {
   const elements: React.ReactNode[] = [];
   
   for (let i = 0; i < messages.length; i++) {
@@ -25,20 +25,27 @@ const renderMessages = (messages: Message[]) => {
       continue;
     }
     
-    // Render user messages
+    // Render user messages (own vs other user)
     if (message.role === 'user') {
+      const isOwn = currentUserId && message.user_id && message.user_id === currentUserId;
+      const bubble = (
+        <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
+          message.pending ? (isOwn ? 'bg-gray-200 opacity-75' : 'bg-blue-100 opacity-75') : (isOwn ? 'bg-gray-200' : 'bg-blue-100')
+        }`}>
+          {(!isOwn && message.user_name) && (
+            <div className="text-xs font-medium text-blue-700 mb-1">{message.user_name}</div>
+          )}
+          <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
+            {message.text || ''}
+          </p>
+          {message.pending && (
+            <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
+          )}
+        </div>
+      );
       elements.push(
-        <div key={message.id} className="flex items-end gap-3 justify-end mb-4">
-          <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
-            message.pending ? 'bg-gray-200 opacity-75' : 'bg-gray-200'
-          }`}>
-            <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
-              {message.text || ''}
-            </p>
-            {message.pending && (
-              <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
-            )}
-          </div>
+        <div key={message.id} className={`flex items-end gap-3 ${isOwn ? 'justify-end' : 'justify-end'} mb-4`}>
+          {bubble}
         </div>
       );
     }
@@ -215,7 +222,7 @@ export const MessageList = () => {
             <div className="flex flex-col p-4">
               {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
-              {renderMessages(messages)}
+              {renderMessages(messages, user?.id)}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
               <div style={{ height: '80px' }} />
