@@ -364,11 +364,12 @@ export const triggerMessageStoreSelfClean = async () => {
 
 // Initialize message store - listen for WebSocket events
 if (typeof window !== 'undefined') {
-  // Listen for assistant message events from WebSocket
+  // Listen for message events from WebSocket
   window.addEventListener('assistant-message', async (event: any) => {
-    const { chat_id } = event.detail;
+    const { chat_id, role } = event.detail;
     console.log('[MessageStore] 🔔 Assistant message event received:', { 
-      event_chat_id: chat_id 
+      event_chat_id: chat_id,
+      role
     });
     
     // Fetch from DB (source of truth)
@@ -382,8 +383,34 @@ if (typeof window !== 'undefined') {
     
     // Only fetch if this is for the current chat
     if (chat_id === currentChatId) {
-      console.log('[MessageStore] Chat IDs match, fetching latest assistant message');
-      await fetchLatestAssistantMessage(chat_id);
+      console.log('[MessageStore] Chat IDs match, fetching latest message');
+      if (role === 'assistant') {
+        await fetchLatestAssistantMessage(chat_id);
+      } else {
+        // Fetch latest user message
+        try {
+          const { data, error } = await supabase
+            .from('messages')
+            .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
+            .eq('chat_id', chat_id)
+            .eq('role', 'user')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (!error && data) {
+            const message = mapDbToMessage(data);
+            const messageWithSource = { ...message, source: 'websocket' as const };
+            const { messages } = useMessageStore.getState();
+            const exists = messages.some(m => m.id === data.id);
+            if (!exists) {
+              get().addMessage(messageWithSource);
+            }
+          }
+        } catch (e) {
+          console.error('[MessageStore] Failed to fetch latest user message', e);
+        }
+      }
       
       // Handle side-effects
       const { setAssistantTyping } = useChatStore.getState();

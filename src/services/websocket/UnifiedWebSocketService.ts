@@ -131,7 +131,7 @@ class UnifiedWebSocketService {
             // For both assistant and user messages, notify the store to fetch latest from DB
             console.log(`[UnifiedWebSocket] 🔔 Emitting message event for chat_id:`, chat_id);
             window.dispatchEvent(new CustomEvent('assistant-message', { 
-              detail: { chat_id } 
+              detail: { chat_id, role }
             }));
             console.log(`[UnifiedWebSocket] ✅ Event dispatched`);
           }
