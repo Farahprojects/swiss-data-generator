@@ -181,50 +181,15 @@ export type Database = {
         }
         Relationships: []
       }
-      conversation_folders: {
-        Row: {
-          conversation_id: string
-          created_at: string
-          folder_id: string
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          conversation_id: string
-          created_at?: string
-          folder_id: string
-          id?: string
-          updated_at?: string
-        }
-        Update: {
-          conversation_id?: string
-          created_at?: string
-          folder_id?: string
-          id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_cf_conversation"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_cf_folder"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       conversations: {
         Row: {
           created_at: string | null
           id: string
+          is_public: boolean | null
           meta: Json | null
+          owner_user_id: string | null
+          share_mode: string | null
+          share_token: string | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -232,7 +197,11 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          is_public?: boolean | null
           meta?: Json | null
+          owner_user_id?: string | null
+          share_mode?: string | null
+          share_token?: string | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -240,12 +209,48 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          is_public?: boolean | null
           meta?: Json | null
+          owner_user_id?: string | null
+          share_mode?: string | null
+          share_token?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      conversations_participants: {
+        Row: {
+          conversation_id: string
+          invited_by: string | null
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          invited_by?: string | null
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          invited_by?: string | null
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       debug_logs: {
         Row: {
@@ -418,36 +423,6 @@ export type Database = {
           subject?: string
           template_type?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      folders: {
-        Row: {
-          ai_summary: string | null
-          created_at: string
-          custom_report: Json | null
-          folder_name: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ai_summary?: string | null
-          created_at?: string
-          custom_report?: Json | null
-          folder_name: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ai_summary?: string | null
-          created_at?: string
-          custom_report?: Json | null
-          folder_name?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -689,6 +664,8 @@ export type Database = {
           text: string | null
           token_count: number | null
           updated_at: string | null
+          user_id: string | null
+          user_name: string | null
         }
         Insert: {
           chat_id: string
@@ -708,6 +685,8 @@ export type Database = {
           text?: string | null
           token_count?: number | null
           updated_at?: string | null
+          user_id?: string | null
+          user_name?: string | null
         }
         Update: {
           chat_id?: string
@@ -727,6 +706,8 @@ export type Database = {
           text?: string | null
           token_count?: number | null
           updated_at?: string | null
+          user_id?: string | null
+          user_name?: string | null
         }
         Relationships: [
           {
@@ -909,6 +890,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          display_name: string | null
           email: string | null
           email_verified: boolean | null
           features: Json | null
@@ -930,6 +912,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           email?: string | null
           email_verified?: boolean | null
           features?: Json | null
@@ -951,6 +934,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           email?: string | null
           email_verified?: boolean | null
           features?: Json | null
@@ -1004,6 +988,7 @@ export type Database = {
       }
       report_logs: {
         Row: {
+          chat_id: string | null
           created_at: string | null
           duration_ms: number | null
           endpoint: string | null
@@ -1016,9 +1001,9 @@ export type Database = {
           report_text: string | null
           report_type: string | null
           status: string | null
-          user_id: string | null
         }
         Insert: {
+          chat_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           endpoint?: string | null
@@ -1031,9 +1016,9 @@ export type Database = {
           report_text?: string | null
           report_type?: string | null
           status?: string | null
-          user_id?: string | null
         }
         Update: {
+          chat_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           endpoint?: string | null
@@ -1046,7 +1031,6 @@ export type Database = {
           report_text?: string | null
           report_type?: string | null
           status?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -1352,7 +1336,7 @@ export type Database = {
       }
       translator_logs: {
         Row: {
-          client_id: string | null
+          chat_id: string | null
           created_at: string | null
           error_message: string | null
           google_geo: boolean | null
@@ -1367,10 +1351,9 @@ export type Database = {
           swiss_data: Json | null
           swiss_error: boolean | null
           translator_payload: Json | null
-          user_id: string | null
         }
         Insert: {
-          client_id?: string | null
+          chat_id?: string | null
           created_at?: string | null
           error_message?: string | null
           google_geo?: boolean | null
@@ -1385,10 +1368,9 @@ export type Database = {
           swiss_data?: Json | null
           swiss_error?: boolean | null
           translator_payload?: Json | null
-          user_id?: string | null
         }
         Update: {
-          client_id?: string | null
+          chat_id?: string | null
           created_at?: string | null
           error_message?: string | null
           google_geo?: boolean | null
@@ -1403,7 +1385,6 @@ export type Database = {
           swiss_data?: Json | null
           swiss_error?: boolean | null
           translator_payload?: Json | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -1471,33 +1452,81 @@ export type Database = {
         Row: {
           client_view_mode: string | null
           created_at: string
-          email_change_notifications: boolean | null
           email_notifications_enabled: boolean | null
           id: string
-          password_change_notifications: boolean | null
-          security_alert_notifications: boolean | null
+          tts_voice: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           client_view_mode?: string | null
           created_at?: string
-          email_change_notifications?: boolean | null
           email_notifications_enabled?: boolean | null
           id?: string
-          password_change_notifications?: boolean | null
-          security_alert_notifications?: boolean | null
+          tts_voice?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           client_view_mode?: string | null
           created_at?: string
-          email_change_notifications?: boolean | null
           email_notifications_enabled?: boolean | null
           id?: string
-          password_change_notifications?: boolean | null
-          security_alert_notifications?: boolean | null
+          tts_voice?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profile_list: {
+        Row: {
+          birth_date: string
+          birth_latitude: number | null
+          birth_location: string
+          birth_longitude: number | null
+          birth_place_id: string | null
+          birth_time: string
+          created_at: string
+          house_system: string | null
+          id: string
+          name: string
+          notes: string | null
+          profile_name: string
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_date: string
+          birth_latitude?: number | null
+          birth_location: string
+          birth_longitude?: number | null
+          birth_place_id?: string | null
+          birth_time: string
+          created_at?: string
+          house_system?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          profile_name: string
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_date?: string
+          birth_latitude?: number | null
+          birth_location?: string
+          birth_longitude?: number | null
+          birth_place_id?: string | null
+          birth_time?: string
+          created_at?: string
+          house_system?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          profile_name?: string
+          timezone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1635,10 +1664,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
-      get_next_message_number: {
-        Args: { p_chat_id: string }
-        Returns: number
-      }
       get_stripe_customer_id_for_user: {
         Args: { user_id_param: string }
         Returns: {
@@ -1743,6 +1768,10 @@ export type Database = {
       urlencode: {
         Args: { data: Json } | { string: string } | { string: string }
         Returns: string
+      }
+      user_owns_insight: {
+        Args: { report_id: string }
+        Returns: boolean
       }
     }
     Enums: {
