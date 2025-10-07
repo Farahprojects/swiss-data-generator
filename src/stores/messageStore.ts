@@ -199,10 +199,11 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       let conversationCheck: any = true;
       let checkError: any = null;
       if (authUserId) {
+        // Check if user is a participant in this conversation
         const { data, error } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('id', chat_id)
+          .from('conversations_participants')
+          .select('conversation_id')
+          .eq('conversation_id', chat_id)
           .eq('user_id', authUserId)
           .maybeSingle();
         conversationCheck = data;

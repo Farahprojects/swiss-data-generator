@@ -41,35 +41,34 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
       setIsLoading(true);
       const loadModeFromConversation = async () => {
         try {
-          // First check if conversation exists (avoid 406 RLS errors)
-          const { data: conversationData, error: checkError } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('id', chat_id)
+          // First check if user is a participant in this conversation
+          const { data: participantData, error: checkError } = await supabase
+            .from('conversations_participants')
+            .select('conversation_id')
+            .eq('conversation_id', chat_id)
             .eq('user_id', user.id)
             .maybeSingle();
           
           if (checkError) {
-            console.error('[ModeContext] Error checking conversation:', checkError);
+            console.error('[ModeContext] Error checking conversation participation:', checkError);
             setMode('chat');
             setIsLoading(false);
             return;
           }
           
-          // If conversation doesn't exist yet, default to chat mode
-          if (!conversationData) {
-            console.log('[ModeContext] Conversation not created yet, defaulting to chat mode');
+          // If user is not a participant, default to chat mode
+          if (!participantData) {
+            console.log('[ModeContext] User not a participant in this conversation, defaulting to chat mode');
             setMode('chat');
             setIsLoading(false);
             return;
           }
           
-          // Conversation exists, fetch the meta
+          // User is a participant, fetch the conversation meta
           const { data, error } = await supabase
             .from('conversations')
             .select('meta')
             .eq('id', chat_id)
-            .eq('user_id', user.id)
             .maybeSingle();
 
           if (error) {
