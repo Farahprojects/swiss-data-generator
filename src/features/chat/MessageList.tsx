@@ -27,7 +27,8 @@ const renderMessages = (messages: Message[], currentUserId?: string) => {
     
     // Render user messages (own vs other user)
     if (message.role === 'user') {
-      const isOwn = currentUserId && message.user_id && message.user_id === currentUserId;
+      // Treat missing user_id as own message to avoid mis-coloring older rows
+      const isOwn = message.user_id ? (currentUserId === message.user_id) : true;
       const bubble = (
         <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
           message.pending ? (isOwn ? 'bg-gray-200 opacity-75' : 'bg-blue-100 opacity-75') : (isOwn ? 'bg-gray-200' : 'bg-blue-100')
