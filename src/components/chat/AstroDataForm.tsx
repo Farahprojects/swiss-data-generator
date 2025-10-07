@@ -22,7 +22,6 @@ import { useMode } from '@/contexts/ModeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
-import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -191,10 +190,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         addPendingInsightThread(reportId, reportType);
       }
 
-      // Subscribe to WebSocket for report completion if we have a report_id
-      if (reportId) {
-        await unifiedWebSocketService.subscribeToReport(reportId);
-      }
+      // Note: Report completion listening is handled globally in ChatThreadsSidebar
+      // No need to subscribe here - it will automatically detect when reports are ready
       
       // Build payload for initiate-auth-report
       const payload = buildAuthReportPayload(data, currentChatId);

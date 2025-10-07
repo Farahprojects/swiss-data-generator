@@ -5,10 +5,6 @@ import { useMessageStore } from '@/stores/messageStore';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
-// Using unified message store for all message management
-
-
-import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 import { networkErrorHandler } from '@/utils/networkErrorHandler';
@@ -32,13 +28,16 @@ class ChatController {
     window.addEventListener('network-retry', this.handleNetworkRetry.bind(this));
   }
 
-  private async loadExistingMessages(chat_id?: string, retryCount = 0) {
+  private async loadExistingMessages(chat_id?: string) {
     const { setMessageLoadError } = useChatStore.getState();
-    const { setChatId, addMessage } = useMessageStore.getState();
+    const { setChatId, fetchMessages, messages: currentMessages } = useMessageStore.getState();
     
     // Use provided chat_id or fallback to store
     const targetChatId = chat_id || useChatStore.getState().chat_id;
-    if (!targetChatId) return;
+    if (!targetChatId) {
+      console.log('[ChatController] loadExistingMessages: No chat_id provided');
+      return;
+    }
     
     // CRITICAL: Block invalid chat_id values
     if (targetChatId === "1" || targetChatId.length < 10) {
@@ -47,29 +46,27 @@ class ChatController {
       return;
     }
 
-    const maxRetries = 3;
-    const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
-
     try {
+      console.log('[ChatController] loadExistingMessages START:', { 
+        chat_id: targetChatId,
+        currentMessageCount: currentMessages.length 
+      });
       
-      // 🚀 LAZY LOAD: Fetch messages and load them directly
-      const messages = await getMessagesForConversation(targetChatId);
-      
-      // Set chat_id in message store first
+      // Set chat_id first (triggers fetchMessages automatically via setChatId)
+      console.log('[ChatController] Calling setChatId:', targetChatId);
       setChatId(targetChatId);
       
-      // Then add the fetched messages to the store
-      messages.forEach(message => {
-        addMessage({ ...message, source: 'fetch' });
+      // Explicitly fetch to ensure we have latest data
+      console.log('[ChatController] Calling fetchMessages');
+      await fetchMessages();
+      
+      const { messages: finalMessages } = useMessageStore.getState();
+      console.log('[ChatController] loadExistingMessages COMPLETE:', { 
+        finalMessageCount: finalMessages.length 
       });
     } catch (error) {
-      console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
-      
-      if (retryCount < maxRetries) {
-        setTimeout(() => this.loadExistingMessages(targetChatId, retryCount + 1), retryDelay);
-      } else {
-        setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
-      }
+      console.error('[ChatController] Error loading existing messages:', error);
+      setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
     }
   }
 
@@ -88,22 +85,21 @@ class ChatController {
     try {
       this.isInitializing = true;
       
+      console.log('[ChatController] initializeForConversation START:', { chat_id });
+      
       // Set chat_id in store (single source of truth) - this will persist to sessionStorage
       useChatStore.getState().startConversation(chat_id);
       
-      // Initialize unified WebSocket service
-      await unifiedWebSocketService.initialize(chat_id, {
-        onMessageReceived: this.handleMessageReceived.bind(this),
-        onMessageUpdated: this.handleMessageUpdated.bind(this),
-        onStatusChange: this.handleStatusChange.bind(this),
-        onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-        onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
-        onSystemMessage: this.handleSystemMessage.bind(this)
-      });
+      // Subscribe WebSocket to this chat (just listens, emits events)
+      console.log('[ChatController] Subscribing WebSocket to:', chat_id);
+      await unifiedWebSocketService.subscribe(chat_id);
       
       // Check if conversation exists before fetching messages
+      console.log('[ChatController] Checking if conversation exists');
       const conversationExists = await this.verifyConversationExists(chat_id);
+      
       if (conversationExists) {
+        console.log('[ChatController] Conversation exists, loading messages');
         await this.loadExistingMessages(chat_id);
       } else {
         console.log(`[ChatController] Conversation ${chat_id} does not exist yet, skipping message fetch (new conversation)`);
@@ -111,6 +107,8 @@ class ChatController {
         const { setChatId } = useMessageStore.getState();
         setChatId(chat_id);
       }
+      
+      console.log('[ChatController] initializeForConversation COMPLETE');
     } finally {
       this.isInitializing = false;
     }
@@ -141,130 +139,14 @@ class ChatController {
   /**
    * Initialize WebSocket callbacks once (without specific chat_id)
    */
-  async initializeWebSocketCallbacks() {
-    await unifiedWebSocketService.initializeCallbacks({
-      onMessageReceived: this.handleMessageReceived.bind(this),
-      onMessageUpdated: this.handleMessageUpdated.bind(this),
-      onStatusChange: this.handleStatusChange.bind(this),
-      onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-      onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
-      onSystemMessage: this.handleSystemMessage.bind(this)
-    });
-  }
 
   /**
    * Switch WebSocket subscription to different chat_id
    */
   async switchToChat(chat_id: string) {
-    await unifiedWebSocketService.subscribeToChat(chat_id);
+    await unifiedWebSocketService.subscribe(chat_id);
   }
 
-  /**
-   * Handle incoming messages from unified WebSocket
-   */
-  private handleMessageReceived(message: Message) {
-    const { messages, updateMessage, handleWebSocketMessage } = useMessageStore.getState();
-    
-    // Reconciliation logic: check if this is updating an optimistic message
-    if (message.role === 'user' && message.client_msg_id) {
-      // Find and update the optimistic user message
-      const optimisticMessage = messages.find(m => m.id === message.client_msg_id);
-      if (optimisticMessage) {
-        updateMessage(message.client_msg_id, { ...message });
-        return;
-      }
-    }
-    
-    // Use gap detection wrapper for WebSocket messages
-    handleWebSocketMessage({ ...message, source: 'websocket' });
-    
-    // Handle side-effects after adding to store
-    if (message.role === 'assistant') {
-      const { setAssistantTyping } = useChatStore.getState();
-      setAssistantTyping(false);
-      
-      // Remove pending status from user messages when assistant responds
-      const { messages: currentMessages, updateMessage } = useMessageStore.getState();
-      currentMessages.forEach(userMsg => {
-        if (userMsg.role === 'user' && userMsg.pending) {
-          updateMessage(userMsg.id, { pending: false });
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle message updates from unified WebSocket
-   */
-  private handleMessageUpdated(message: Message) {
-    console.log('[ChatController] ♻️ UPDATE message received from unified WebSocket');
-    const { messages, updateMessage, addMessage } = useMessageStore.getState();
-    
-    // Skip context_injected system updates
-    if (message.role === 'assistant' && message.context_injected) {
-      return;
-    }
-    
-    // Find existing message and update, or add if missing
-    const existingMessage = messages.find(m => m.id === message.id);
-    if (existingMessage) {
-      // Preserve WebSocket source if this is an assistant message update
-      updateMessage(message.id, { ...message, source: message.role === 'assistant' ? 'websocket' : existingMessage.source });
-    } else {
-      // Message not in store yet, add it
-      addMessage({ ...message, source: 'websocket' });
-    }
-  }
-
-  /**
-   * Handle system messages with context injection (report ready)
-   */
-  private handleSystemMessage(message: Message) {
-    console.log('[ChatController] 🎯 System message with context detected - triggering report ready!');
-    
-    
-    // Stop generating state (flip stop button back to wave icon)
-    const { setAssistantTyping } = useChatStore.getState();
-    setAssistantTyping(false);
-    
-    console.log('[ChatController] ✅ Report ready state triggered and stop button flipped!');
-  }
-
-  /**
-   * Handle assistant messages directly to UI - no store delay
-   */
-  private handleAssistantMessageDirect(message: Message) {
-    console.log('[ChatController] 🚀 DIRECT assistant message to UI:', message.id);
-    
-    // Direct UI update - bypass store completely
-    // This will trigger immediate TypewriterText animation
-    const event = new CustomEvent('assistantMessage', { 
-      detail: message 
-    });
-    window.dispatchEvent(event);
-
-    // Stop button flip-back is now handled in useMessageStore when assistant messages are added
-  }
-
-  /**
-   * Handle WebSocket status changes
-   */
-  private handleStatusChange(status: string) {
-    if (status === 'SUBSCRIBED') {
-      console.log('[ChatController] WebSocket subscribed successfully');
-    } else if (status === 'CLOSED') {
-      console.warn('[ChatController] Unified WebSocket channel closed.');
-    }
-  }
-
-  /**
-   * Handle optimistic messages (immediate UI updates)
-   */
-  private handleOptimisticMessage(message: Message) {
-    const { addMessage } = useMessageStore.getState();
-    addMessage(message);
-    console.log('[ChatController] Added optimistic message:', message.text);
-  }
 
   private async ensureRealtimeReady(chat_id: string): Promise<void> {
     try {

@@ -178,25 +178,45 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   };
 
   // Set up report completion listener for authenticated users
+  // ISOLATED: Own channel, doesn't interfere with chat message subscriptions
   useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      const setupReportListener = async () => {
-        try {
-          // Initialize the WebSocket service with report completion callback
-          await unifiedWebSocketService.initializeCallbacks({
-            onReportCompleted: async (reportData: any) => {
-              // Complete the pending insight thread (creates conversation in DB)
-              const { completePendingInsightThread } = useChatStore.getState();
-              await completePendingInsightThread(reportData.id);
-            }
-          });
-        } catch (error) {
-          console.error('[ChatThreadsSidebar] Failed to setup report listener:', error);
-        }
-      };
+    if (!isAuthenticated || !user?.id) return;
 
-      setupReportListener();
-    }
+    console.log('[ChatThreadsSidebar] Setting up dedicated report completion listener');
+    
+    // Create dedicated channel for ALL report completions (not tied to UnifiedWebSocketService)
+    const reportChannel = supabase
+      .channel('report-completions')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'insights',
+          filter: `user_id=eq.${user.id}` // Only this user's reports
+        },
+        async (payload) => {
+          const insight = payload.new;
+          
+          // Check if the insight is marked as ready
+          if (insight.is_ready === true) {
+            console.log('[ChatThreadsSidebar] Report completed:', insight.id);
+            
+            // Complete the pending insight thread (creates conversation in DB)
+            const { completePendingInsightThread } = useChatStore.getState();
+            await completePendingInsightThread(insight.id);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[ChatThreadsSidebar] Report listener status:', status);
+      });
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[ChatThreadsSidebar] Cleaning up report listener');
+      supabase.removeChannel(reportChannel);
+    };
   }, [isAuthenticated, user?.id]);
 
 

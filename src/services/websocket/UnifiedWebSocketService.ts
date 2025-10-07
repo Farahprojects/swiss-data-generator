@@ -15,58 +15,10 @@ class UnifiedWebSocketService {
   private coldReconnectAttempts: number = 0;
   private wakeListenersAttached: boolean = false;
 
-  // Callbacks for message fetching only
-  private onMessage?: (message: Message) => void;
-  private onMessageUpdated?: (message: Message) => void;
-  private onStatusChange?: (status: string) => void;
-  private onOptimisticMessage?: (message: Message) => void;
-  private onAssistantMessage?: (message: Message) => void;
-  private onSystemMessage?: (message: Message) => void;
-  private onError?: (error: string) => void;
-  private lastCallbacks?: {
-    onMessageReceived: (message: Message) => void;
-    onMessageUpdated?: (message: Message) => void;
-    onStatusChange?: (status: string) => void;
-    onOptimisticMessage?: (message: Message) => void;
-    onAssistantMessage?: (message: Message) => void;
-    onSystemMessage?: (message: Message) => void;
-    onReportCompleted?: (reportData: any) => void;
-  };
-  
-  // Callbacks for report completion events
-  private onReportCompleted?: (reportData: any) => void;
+  // No callbacks - just emit events
+
 
   constructor() {
-    // No content area watching - only message fetching
-  }
-
-  /**
-   * Initialize the WebSocket service with callbacks (without subscribing to specific chat)
-   * This creates a hot connection that can be used for any chat
-   */
-  async initializeCallbacks(callbacks: {
-    onMessageReceived: (message: Message) => void;
-    onMessageUpdated?: (message: Message) => void;
-    onStatusChange?: (status: string) => void;
-    onOptimisticMessage?: (message: Message) => void;
-    onAssistantMessage?: (message: Message) => void;
-    onSystemMessage?: (message: Message) => void;
-    onReportCompleted?: (reportData: any) => void;
-  }) {
-    if (!callbacks.onMessageReceived) {
-      throw new Error('[UnifiedWebSocket] onMessageReceived callback is required');
-    }
-    
-    this.lastCallbacks = callbacks;
-    this.onMessage = callbacks?.onMessageReceived;
-    this.onMessageUpdated = callbacks?.onMessageUpdated;
-    this.onStatusChange = callbacks?.onStatusChange;
-    this.onOptimisticMessage = callbacks?.onOptimisticMessage;
-    this.onAssistantMessage = callbacks?.onAssistantMessage;
-    this.onSystemMessage = callbacks?.onSystemMessage;
-    this.onReportCompleted = callbacks?.onReportCompleted;
-    this.onError = (error: string) => console.error('[UnifiedWebSocket] Error:', error);
-
     // Attach wake listeners once
     if (!this.wakeListenersAttached) {
       this.wakeListenersAttached = true;
@@ -96,29 +48,22 @@ class UnifiedWebSocketService {
   }
 
   /**
-   * Initialize the WebSocket service and subscribe to specific chat
+   * Subscribe to a specific chat - just listen, emit events
    */
-  async initialize(
-    chat_id: string,
-    callbacks: {
-      onMessageReceived: (message: Message) => void;
-      onMessageUpdated?: (message: Message) => void;
-      onStatusChange?: (status: string) => void;
-      onOptimisticMessage?: (message: Message) => void;
-      onAssistantMessage?: (message: Message) => void;
-      onSystemMessage?: (message: Message) => void;
-      onReportCompleted?: (reportData: any) => void;
-    }
-  ) {
-    if (!callbacks.onMessageReceived) {
-      throw new Error('[UnifiedWebSocket] onMessageReceived callback is required for initialization');
-    }
+  async subscribe(chat_id: string) {
+    this.currentChatId = chat_id;
     
-    // Initialize callbacks first
-    await this.initializeCallbacks(callbacks);
-    
-    // Then subscribe to the specific chat
-    await this.subscribeToChat(chat_id);
+    // Clean up existing subscription
+    if (this.realtimeChannel) {
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+
+    // Setup realtime subscription for this specific chat
+    await this.setupRealtimeSubscription(chat_id);
+
+    // Start connection confirmation timer
+    this.startConnectConfirmationTimer();
   }
 
   /**
@@ -155,69 +100,15 @@ class UnifiedWebSocketService {
     // This is a stub - TTS mode handling should be done elsewhere
   }
 
-  /**
-   * Subscribe to a specific chat (called when chat_id is known)
-   */
-  async subscribeToChat(chat_id: string) {
-    this.currentChatId = chat_id;
-    
-    // Clean up existing subscription
-    if (this.realtimeChannel) {
-      supabase.removeChannel(this.realtimeChannel);
-      this.realtimeChannel = null;
-    }
 
-    // Setup realtime subscription for this specific chat
-    await this.setupRealtimeSubscription(chat_id);
-
-    // Start connection confirmation timer; if not connected, cold reconnect
-    this.startConnectConfirmationTimer();
-  }
 
   /**
-   * Subscribe to a specific report by report_id
-   * Listens to the insights table for when a report is marked as ready
-   */
-  async subscribeToReport(report_id: string) {
-    const reportChannel = supabase
-      .channel(`report:${report_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'insights',
-          filter: `id=eq.${report_id}` // Listen for updates to this specific insight
-        },
-        (payload) => {
-          const insight = payload.new;
-          
-          // Check if the insight is marked as ready
-          if (insight.is_ready === true) {
-            
-            if (this.onReportCompleted && typeof this.onReportCompleted === 'function') {
-              this.onReportCompleted(insight);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return reportChannel;
-  }
-
-  /**
-   * Setup realtime subscription for database changes (message fetching only)
+   * Setup realtime subscription - just listen and emit events
    */
   private async setupRealtimeSubscription(chat_id: string) {
     try {
-      console.log(`[UnifiedWebSocket] 📡 Subscribing to messages for chat_id: ${chat_id}`);
+      console.log(`[UnifiedWebSocket] 📡 Subscribing to chat_id: ${chat_id}`);
       this.subscriptionRetryCount = 0;
-
-      // onMessage must already be bound; fail fast if not
-      if (typeof this.onMessage !== 'function') {
-        throw new Error('[UnifiedWebSocket] Cannot subscribe: onMessage callback not bound');
-      }
 
       this.realtimeChannel = supabase
         .channel(`unified-messages:${chat_id}`)
@@ -230,67 +121,42 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
-            console.log(`[UnifiedWebSocket] 📥 Received INSERT broadcast for chat_id: ${chat_id}, message_id: ${payload.new?.id}`);
+            const role = payload.new?.role;
+            const messageId = payload.new?.id;
+            console.log(`[UnifiedWebSocket] 📥 ${role} message INSERT:`, { 
+              chat_id, 
+              message_id: messageId,
+              text_preview: payload.new?.text?.substring(0, 50)
+            });
             
-            const newMessage = this.transformDatabaseMessage(payload.new);
-            
-            // Filter out system messages at WebSocket level (don't touch store)
-            if (newMessage.role === 'system') {
-              console.log(`[UnifiedWebSocket] 🔧 System message detected - routing to onSystemMessage callback`);
-              // Handle system message business logic via callback
-              if (this.onSystemMessage && typeof this.onSystemMessage === 'function') {
-                this.onSystemMessage(newMessage);
-              }
-              return; // Don't process further for UI display
+            // Emit global event - no callbacks
+            if (role === 'assistant') {
+              console.log(`[UnifiedWebSocket] 🔔 Emitting assistant-message event for chat_id:`, chat_id);
+              window.dispatchEvent(new CustomEvent('assistant-message', { 
+                detail: { chat_id } 
+              }));
+              console.log(`[UnifiedWebSocket] ✅ Event dispatched`);
             }
-            
-            console.log(`[UnifiedWebSocket] ✅ Dispatching ${newMessage.role} message to onMessage callback:`, newMessage.text?.substring(0, 50));
-            this.onMessage!(newMessage);
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chat_id}`
-          },
-          (payload) => {
-            console.log(`[UnifiedWebSocket] 📥 Received UPDATE broadcast for chat_id: ${chat_id}, message_id: ${payload.new?.id}`);
-            
-            const updatedMessage = this.transformDatabaseMessage(payload.new);
-            
-            console.log(`[UnifiedWebSocket] ✅ Dispatching UPDATE for ${updatedMessage.role} message to onMessage callback`);
-            this.onMessage!(updatedMessage);
           }
         )
         .subscribe((status) => {
           this.realtimeStatus = status as any;
           
           if (status === 'SUBSCRIBED') {
-            console.log(`[UnifiedWebSocket] ✅ SUBSCRIBED successfully to chat_id: ${chat_id}`);
-            console.log(`[UnifiedWebSocket] 🎯 Listening for INSERT/UPDATE on messages where chat_id=eq.${chat_id}`);
+            console.log(`[UnifiedWebSocket] ✅ SUBSCRIBED to chat_id: ${chat_id}`);
             this.subscriptionRetryCount = 0;
             this.coldReconnectAttempts = 0;
             if (this.connectTimeoutId !== null) {
               clearTimeout(this.connectTimeoutId);
               this.connectTimeoutId = null;
             }
-            if (this.onStatusChange && typeof this.onStatusChange === 'function') {
-              this.onStatusChange('CONNECTED');
-            }
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-            console.warn(`[UnifiedWebSocket] ⚠️ Connection failed for chat_id ${chat_id}:`, status, '- triggering cold reconnect');
-            // Simple, professional recovery: cold reconnect once
+            console.warn(`[UnifiedWebSocket] ⚠️ Connection failed:`, status);
             this.coldReconnect();
           }
         });
     } catch (error) {
-      console.error('[UnifiedWebSocket] Failed to setup realtime subscription:', error);
-      if (this.onError && typeof this.onError === 'function') {
-        this.onError(error.message || 'Failed to setup WebSocket connection');
-      }
+      console.error('[UnifiedWebSocket] Failed to setup subscription:', error);
     }
   }
 
@@ -320,11 +186,8 @@ class UnifiedWebSocketService {
     this.isColdReconnecting = true;
     try {
       console.log('[UnifiedWebSocket] 🔄 Cold reconnect starting...');
-      if (this.onStatusChange && typeof this.onStatusChange === 'function') {
-        this.onStatusChange('REFRESHING');
-      }
 
-      // Step 1: Refresh auth session (critical - ensures fresh tokens)
+      // Step 1: Refresh auth session
       try {
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
@@ -348,27 +211,14 @@ class UnifiedWebSocketService {
           console.error('[UnifiedWebSocket] Channel removal error:', err);
         }
         
-        // Brief pause to ensure cleanup completes
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // Step 3: Re-bind callbacks (refresh closures) - only if callbacks were previously set
-      if (this.lastCallbacks) {
-        await this.initializeCallbacks(this.lastCallbacks);
-        console.log('[UnifiedWebSocket] ✓ Callbacks rebound');
-      } else {
-        console.warn('[UnifiedWebSocket] ⚠️ No callbacks to rebind - skipping');
-      }
-
-      // Step 4: Resubscribe if chat is known
+      // Step 3: Resubscribe if chat is known
       if (this.currentChatId) {
-        this.setupRealtimeSubscription(this.currentChatId);
+        await this.setupRealtimeSubscription(this.currentChatId);
         this.startConnectConfirmationTimer(() => {
-          // If still not connected, surface reload recommendation
-          console.warn('[UnifiedWebSocket] ⚠️ Cold reconnect failed, reload required');
-          if (this.onStatusChange && typeof this.onStatusChange === 'function') {
-            this.onStatusChange('RELOAD_REQUIRED');
-          }
+          console.warn('[UnifiedWebSocket] ⚠️ Cold reconnect failed');
         });
       }
     } finally {
@@ -414,29 +264,7 @@ class UnifiedWebSocketService {
     }) as T;
   }
 
-  // Message fetching only - no sending methods
-
-  /**
-   * Transform database message to UI format
-   */
-  private transformDatabaseMessage(dbMessage: any): Message {
-    return {
-      id: dbMessage.id,
-      chat_id: dbMessage.chat_id,
-      role: dbMessage.role,
-      text: dbMessage.text,
-      // audioUrl omitted (not present in public.messages)
-      // timings omitted (not present / removed)
-      createdAt: dbMessage.created_at,
-      meta: dbMessage.meta,
-      client_msg_id: dbMessage.client_msg_id,
-      status: dbMessage.status,
-      context_injected: dbMessage.context_injected,
-      message_number: dbMessage.message_number
-    };
-  }
-
-  // Message processing handled by messageStore - WebSocket only fetches
+  // WebSocket = notification only, DB = source of truth
 
   /**
    * Cleanup WebSocket connection

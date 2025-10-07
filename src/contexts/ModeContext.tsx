@@ -41,6 +41,29 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
       setIsLoading(true);
       const loadModeFromConversation = async () => {
         try {
+          // First check if conversation exists (avoid 406 RLS errors)
+          const { data: conversationData, error: checkError } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('id', chat_id)
+            .maybeSingle();
+          
+          if (checkError) {
+            console.error('[ModeContext] Error checking conversation:', checkError);
+            setMode('chat');
+            setIsLoading(false);
+            return;
+          }
+          
+          // If conversation doesn't exist yet, default to chat mode
+          if (!conversationData) {
+            console.log('[ModeContext] Conversation not created yet, defaulting to chat mode');
+            setMode('chat');
+            setIsLoading(false);
+            return;
+          }
+          
+          // Conversation exists, fetch the meta
           const { data, error } = await supabase
             .from('conversations')
             .select('meta')
@@ -48,12 +71,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .single();
 
           if (error) {
-            // Handle deleted conversation gracefully
-            if (error.code === 'PGRST116' || error.message?.includes('no rows returned')) {
-              console.log('[ModeContext] Conversation not found (likely deleted), defaulting to chat mode');
-            } else {
-              console.error('[ModeContext] Error loading conversation mode:', error);
-            }
+            console.error('[ModeContext] Error loading conversation mode:', error);
             setMode('chat');
             setIsLoading(false);
             return;
