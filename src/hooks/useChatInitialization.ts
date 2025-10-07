@@ -23,12 +23,7 @@ export const useChatInitialization = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Initialize WebSocket callbacks once on app startup
-    const initializeWebSocket = async () => {
-      await chatController.initializeWebSocketCallbacks();
-    };
-    
-    initializeWebSocket();
+    // WebSocket initialization happens per-chat in ChatController.initializeForConversation()
 
     // Load threads when user signs in (useChatStore needs this for ChatThreadsSidebar)
     if (user) {

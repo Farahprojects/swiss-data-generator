@@ -93,12 +93,7 @@ class ChatController {
       
       // Initialize unified WebSocket service
       await unifiedWebSocketService.initialize(chat_id, {
-        onMessageReceived: this.handleMessageReceived.bind(this),
-        onMessageUpdated: this.handleMessageUpdated.bind(this),
-        onStatusChange: this.handleStatusChange.bind(this),
-        onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-        onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
-        onSystemMessage: this.handleSystemMessage.bind(this)
+        onMessage: this.handleMessageReceived.bind(this)
       });
       
       // Check if conversation exists before fetching messages
@@ -139,24 +134,12 @@ class ChatController {
   }
 
   /**
-   * Initialize WebSocket callbacks once (without specific chat_id)
-   */
-  async initializeWebSocketCallbacks() {
-    await unifiedWebSocketService.initializeCallbacks({
-      onMessageReceived: this.handleMessageReceived.bind(this),
-      onMessageUpdated: this.handleMessageUpdated.bind(this),
-      onStatusChange: this.handleStatusChange.bind(this),
-      onOptimisticMessage: this.handleOptimisticMessage.bind(this),
-      onAssistantMessage: this.handleAssistantMessageDirect.bind(this),
-      onSystemMessage: this.handleSystemMessage.bind(this)
-    });
-  }
-
-  /**
    * Switch WebSocket subscription to different chat_id
    */
   async switchToChat(chat_id: string) {
-    await unifiedWebSocketService.subscribeToChat(chat_id);
+    await unifiedWebSocketService.initialize(chat_id, {
+      onMessage: this.handleMessageReceived.bind(this)
+    });
   }
 
   /**
