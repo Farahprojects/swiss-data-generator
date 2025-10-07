@@ -56,25 +56,8 @@ serve(async (req) => {
       });
     }
 
-
-
-    // Get the next message number for this chat using the database function (must await for proper ordering)
-    const { data: userMessageNumber, error: userNumberError } = await supabase
-      .rpc('get_next_message_number', { p_chat_id: chat_id });
-
-    if (userNumberError) {
-      return new Response(JSON.stringify({
-        error: "Failed to get message number"
-      }), {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
-    }
-
-    const nextMessageNumber = userMessageNumber;
+    // message_number assigned automatically by DB trigger (assign_message_number)
+    // No need to await RPC - trigger handles sequencing
 
     // If this is an assistant message (e.g., from LLM in voice mode), save assistant only
     if (role === 'assistant') {
@@ -86,12 +69,12 @@ serve(async (req) => {
         text: text,
         client_msg_id: client_msg_id || crypto.randomUUID(),
         status: "complete",
-        message_number: nextMessageNumber,
         mode: mode || 'chat',
         meta: {}
+        // message_number omitted - DB trigger assigns it
       };
 
-      console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB - message_number: ${nextMessageNumber}`);
+      console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB (trigger will assign message_number)`);
       
       // Fire-and-forget: Save assistant message to database
       supabase
@@ -105,7 +88,7 @@ serve(async (req) => {
           if (assistantError) {
             console.error('[chat-send] ❌ FAILED TO SAVE ASSISTANT MESSAGE:', assistantError);
           } else {
-            console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, insertData);
+            console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY`);
           }
         })
         .catch((err) => {
@@ -128,12 +111,12 @@ serve(async (req) => {
       text: text,
       client_msg_id: client_msg_id || crypto.randomUUID(),
       status: "complete",
-      message_number: nextMessageNumber,
       mode: mode || 'chat',
       meta: {}
+      // message_number omitted - DB trigger assigns it
     };
 
-    console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB - message_number: ${nextMessageNumber}`);
+    console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB (trigger will assign message_number)`);
     
     // Fire-and-forget: Save user message to database
     supabase
@@ -147,7 +130,7 @@ serve(async (req) => {
         if (userError) {
           console.error('[chat-send] ❌ FAILED TO SAVE USER MESSAGE:', userError);
         } else {
-          console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY - message_number: ${nextMessageNumber}, insertData:`, userInsertData);
+          console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY`);
         }
       })
       .catch((err) => {
