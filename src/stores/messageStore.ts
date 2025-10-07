@@ -113,7 +113,28 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       // Add message with deduplication and timestamp ordering
       addMessage: (message: Message) => {
         set((state) => {
-      
+      // First: if a message with the same client_msg_id exists (optimistic), merge/replace it
+      if (message.client_msg_id) {
+        const idx = state.messages.findIndex(m => 
+          m.client_msg_id && 
+          m.client_msg_id === message.client_msg_id &&
+          m.chat_id === message.chat_id &&
+          m.role === message.role
+        );
+        if (idx >= 0) {
+          const updated = [...state.messages];
+          // Replace optimistic with persisted message; clear pending
+          updated[idx] = { 
+            ...updated[idx], 
+            ...message, 
+            pending: false, 
+            source: message.source || updated[idx].source 
+          };
+          updated.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          return { messages: updated };
+        }
+      }
+
       // Check if message already exists by id
       const exists = state.messages.some(m => m.id === message.id);
       
