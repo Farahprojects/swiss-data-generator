@@ -15,11 +15,6 @@ class TTSPlaybackService {
   private listeners = new Set<() => void>();
   private currentUrl: string | null = null;
   private bufferSource: AudioBufferSourceNode | null = null; // fallback path tracking
-  private mediaSource: MediaSource | null = null;
-  private sourceBuffer: SourceBuffer | null = null;
-  private pendingAppends: Uint8Array[] = [];
-  private mediaElForStreaming: HTMLAudioElement | null = null;
-  private isSourceOpen: boolean = false;
 
   private notify() {
     this.listeners.forEach((l) => l());
@@ -313,15 +308,6 @@ class TTSPlaybackService {
     this.currentUrl = null;
     this.currentSource = null;
     this.bufferSource = null;
-    // MediaSource cleanup
-    if (this.sourceBuffer) {
-      try { this.sourceBuffer.onupdateend = null as any; } catch {}
-    }
-    this.sourceBuffer = null;
-    this.mediaSource = null;
-    this.mediaElForStreaming = null;
-    this.pendingAppends = [];
-    this.isSourceOpen = false;
   }
 
   // Consolidated finalize: cleanup + state reset + release control + notify
@@ -352,106 +338,6 @@ class TTSPlaybackService {
     
     // 🎵 RELEASE AUDIO CONTROL on destroy
     audioArbitrator.releaseControl('tts');
-  }
-
-  // --- Streaming API (MediaSource) ---
-  // Call when 'tts-start' received
-  async beginStreaming(mimeType: string = 'audio/mpeg', onEnded?: () => void): Promise<void> {
-    // Request control
-    if (!audioArbitrator.requestControl('tts')) {
-      throw new Error('Cannot start TTS playback - microphone is active');
-    }
-    const ctx = this.ensureAudioContext();
-    if (ctx.state === 'suspended') await ctx.resume();
-
-    // Teardown any existing
-    this.internalStop();
-
-    // Setup MediaSource and HTMLAudioElement
-    this.mediaSource = new MediaSource();
-    const objectUrl = URL.createObjectURL(this.mediaSource);
-    const audioEl = new Audio();
-    audioEl.preload = 'auto';
-    audioEl.muted = false;
-    audioEl.volume = 1.0;
-    (audioEl as any).playsInline = true;
-    audioEl.src = objectUrl;
-
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.8;
-    const mediaNode = ctx.createMediaElementSource(audioEl);
-    mediaNode.connect(analyser);
-    analyser.connect(ctx.destination);
-
-    this.currentSource = audioEl;
-    this.mediaElementNode = mediaNode;
-    this.analyser = analyser;
-    this.currentUrl = objectUrl;
-    this.mediaElForStreaming = audioEl;
-    this.isPlaying = true;
-    this.isPaused = false;
-    this.notify();
-
-    audioEl.onplaying = () => this.startAnimation(analyser);
-    const finalize = () => this.finalizePlayback(onEnded);
-    audioEl.onended = finalize;
-    audioEl.onerror = () => finalize();
-
-    this.mediaSource.addEventListener('sourceopen', () => {
-      try {
-        this.sourceBuffer = this.mediaSource!.addSourceBuffer(mimeType);
-        this.isSourceOpen = true;
-        this.sourceBuffer.mode = 'sequence' as any;
-        this.sourceBuffer.onupdateend = () => {
-          if (!this.sourceBuffer) return;
-          if (this.pendingAppends.length > 0 && !this.sourceBuffer.updating) {
-            const next = this.pendingAppends.shift()!;
-            try { this.sourceBuffer.appendBuffer(next.buffer as ArrayBuffer); } catch {}
-          }
-        };
-        // Kick any pending queued chunks
-        if (this.pendingAppends.length > 0 && !this.sourceBuffer.updating) {
-          const next = this.pendingAppends.shift()!;
-          try { this.sourceBuffer.appendBuffer(next.buffer as ArrayBuffer); } catch {}
-        }
-      } catch (e) {
-        // Fallback to buffer path if MediaSource isn't supported
-        this.playWithBufferAudio([], onEnded).catch(() => finalize());
-      }
-    }, { once: true });
-
-    // Attempt to start playback immediately; audio will begin when data arrives
-    try { await audioEl.play(); } catch {}
-  }
-
-  // Call for each 'tts-chunk'
-  appendStreamingChunk(bytes: number[]): void {
-    if (!this.mediaSource || !this.currentSource) return;
-    // Ensure ArrayBuffer type to satisfy TS 'BufferSource'
-    const chunk = new Uint8Array(bytes).slice().buffer as ArrayBuffer;
-    if (this.sourceBuffer && this.isSourceOpen && !this.sourceBuffer.updating) {
-      try {
-        this.sourceBuffer.appendBuffer(chunk);
-      } catch {
-        this.pendingAppends.push(new Uint8Array(chunk));
-      }
-    } else {
-      this.pendingAppends.push(new Uint8Array(chunk));
-    }
-  }
-
-  // Call when 'tts-end' received
-  endStreaming(): void {
-    try {
-      if (this.sourceBuffer && this.sourceBuffer.updating) {
-        this.sourceBuffer.onupdateend = () => {
-          try { this.mediaSource?.endOfStream(); } catch {}
-        };
-        return;
-      }
-      this.mediaSource?.endOfStream();
-    } catch {}
   }
 }
 

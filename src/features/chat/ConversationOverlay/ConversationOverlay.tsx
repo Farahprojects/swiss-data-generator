@@ -133,49 +133,10 @@ export const ConversationOverlay: React.FC = () => {
       
       const connection = supabase.channel(`conversation:${chat_id}`);
       
-      // Legacy single-blob path
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes && !isShuttingDown.current) {
           playAudioImmediately(payload.audioBytes);
         }
-      });
-
-      // Streaming path: start/append/end
-      connection.on('broadcast', { event: 'tts-start' }, async ({ payload }) => {
-        if (isShuttingDown.current) return;
-        try {
-          setState('replying');
-          await ttsPlaybackService.beginStreaming(payload?.mimeType || 'audio/mpeg', () => {
-            setState('listening');
-            if (!isShuttingDown.current) {
-              setTimeout(() => {
-                if (!isShuttingDown.current) {
-                  try {
-                    recorderRef.current?.resumeInput();
-                    recorderRef.current?.startNewRecording();
-                  } catch {}
-                }
-              }, 200);
-            }
-          });
-        } catch (e) {
-          console.error('[ConversationOverlay] beginStreaming failed', e);
-          resetToTapToStart('Streaming init failed');
-        }
-      });
-
-      connection.on('broadcast', { event: 'tts-chunk' }, ({ payload }) => {
-        if (isShuttingDown.current) return;
-        try {
-          if (payload?.bytes) {
-            ttsPlaybackService.appendStreamingChunk(payload.bytes);
-          }
-        } catch {}
-      });
-
-      connection.on('broadcast', { event: 'tts-end' }, () => {
-        if (isShuttingDown.current) return;
-        try { ttsPlaybackService.endStreaming(); } catch {}
       });
       
       connection.on('broadcast', { event: 'thinking-mode' }, ({ payload }) => {
