@@ -147,14 +147,16 @@ serve(async (req) => {
 
         if (sharedError) throw sharedError;
 
-        // Merge and dedupe by id (in case a conversation appears in both)
+        // Merge and dedupe by id (participants/shared should win over owned when both exist)
         const conversationMap = new Map();
         
-        for (const conv of (ownedConversations || [])) {
+        // First add shared (participants) so they take precedence
+        for (const conv of (sharedConversations || [])) {
           conversationMap.set(conv.id, conv);
         }
         
-        for (const conv of (sharedConversations || [])) {
+        // Then add owned only if not already present
+        for (const conv of (ownedConversations || [])) {
           if (!conversationMap.has(conv.id)) {
             conversationMap.set(conv.id, conv);
           }
