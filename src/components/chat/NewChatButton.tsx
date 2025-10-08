@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
-import { supabase } from '@/integrations/supabase/client';
-import { InsightsModal } from '@/components/insights/InsightsModal';
+import { createConversation } from '@/services/conversations';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,30 +30,19 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
     }
 
     try {
-      // Create new conversation with mode in meta
-      const { data: conversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-          meta: { mode }
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('[NewChatButton] Failed to create conversation:', error);
-        return;
-      }
-
-      const newChatId = conversation.id;
+      // Unified create: conversation with mode + participant
+      const newChatId = await createConversation(
+        user.id,
+        mode === 'insight' ? 'New Insight Chat' : 'New Chat',
+        mode
+      );
       
       // Add to local threads state directly (no DB call needed)
       const newThread = {
         id: newChatId,
         user_id: user.id,
         title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-        meta: { mode },
+        mode: mode,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -81,9 +69,9 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
     }
   };
 
-  // Shared handleOpenInsights function
-  const handleOpenInsights = () => {
-    setShowInsightsModal(true);
+  // Generate Insight now creates an insight-mode conversation (no modal)
+  const handleOpenInsights = async () => {
+    await handleNewChat('insight');
   };
 
   return (
@@ -121,11 +109,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Insights Modal */}
-      <InsightsModal
-        isOpen={showInsightsModal}
-        onClose={() => setShowInsightsModal(false)}
-      />
+      {/* Insights Modal removed for unified flow */}
     </>
   );
 };

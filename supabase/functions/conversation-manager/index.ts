@@ -30,7 +30,7 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { user_id, conversation_id, title } = requestBody;
+    const { user_id, conversation_id, title, mode } = requestBody;
 
     // All actions require user_id
     if (!user_id) {
@@ -52,9 +52,11 @@ serve(async (req) => {
           .from('conversations')
           .insert({
             id: newChatId,
+            user_id: user_id,
             owner_user_id: user_id,
             title: title || 'New Conversation',
-            meta: {}
+            meta: {},
+            mode: (mode && (['chat','astro','insight'].includes(mode))) ? mode : 'chat'
           })
           .select()
           .single();
@@ -68,7 +70,9 @@ serve(async (req) => {
             conversation_id: newChatId,
             user_id: user_id,
             role: 'owner'
-          });
+          })
+          .onConflict('conversation_id,user_id')
+          .ignoreDuplicates();
 
         result = newConversation;
         break;

@@ -31,5 +31,6 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   meta?: Record<string, any>;
+  mode?: 'chat' | 'astro' | 'insight';
   messages: Message[];
 }
