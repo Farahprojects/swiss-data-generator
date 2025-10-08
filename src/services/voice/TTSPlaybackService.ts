@@ -254,6 +254,67 @@ class TTSPlaybackService {
     }
   }
 
+  async playFromUrl(audioUrl: string, onEnded?: () => void): Promise<void> {
+    try {
+      if (!audioArbitrator.requestControl('tts')) {
+        throw new Error('Cannot start TTS playback - microphone is active');
+      }
+
+      const ctx = this.ensureAudioContext();
+      if (ctx.state === 'suspended') await ctx.resume();
+
+      // Teardown any existing playback first
+      this.internalStop();
+
+      const audioEl = new Audio();
+      audioEl.preload = 'auto';
+      audioEl.muted = false;
+      audioEl.volume = 1.0;
+      (audioEl as any).playsInline = true;
+      audioEl.src = audioUrl; // progressive streaming handled by browser
+
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+
+      const mediaNode = ctx.createMediaElementSource(audioEl);
+      mediaNode.connect(analyser);
+      analyser.connect(ctx.destination);
+
+      this.currentSource = audioEl;
+      this.mediaElementNode = mediaNode;
+      this.analyser = analyser;
+      this.currentUrl = null; // external URL; do not revoke
+      this.isPlaying = true;
+      this.isPaused = false;
+      this.notify();
+
+      audioEl.onplaying = () => {
+        this.startAnimation(analyser);
+      };
+
+      const finalize = () => this.finalizePlayback(onEnded);
+      audioEl.onended = finalize;
+      audioEl.onerror = () => finalize();
+
+      try {
+        if (audioEl.readyState < 2) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 30));
+        }
+        await audioEl.play();
+      } catch (e) {
+        // If autoplay block or error, propagate to caller
+        this.internalStop();
+        audioArbitrator.releaseControl('tts');
+        throw e;
+      }
+    } catch (e) {
+      this.internalStop();
+      audioArbitrator.releaseControl('tts');
+      throw e;
+    }
+  }
+
   pause(): void {
     if (this.currentSource) {
       try { this.currentSource.pause(); } catch {}

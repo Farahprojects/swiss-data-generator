@@ -5,7 +5,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
 import { useThreads } from '@/contexts/ThreadsContext';
-import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown, Share2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
@@ -33,6 +33,7 @@ import { NewChatDropdown } from '@/components/chat/NewChatDropdown';
 import { AddPersonButton } from '@/components/person/AddPersonButton';
 import { PersonProfilesList } from '@/components/person/PersonProfilesList';
 import { ProfileModal } from '@/components/person/ProfileModal';
+import { ShareConversationModal } from '@/components/chat/ShareConversationModal';
 
 
 interface ChatThreadsSidebarProps {
@@ -133,6 +134,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [editTitle, setEditTitle] = useState('');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [conversationToShare, setConversationToShare] = useState<string | null>(null);
   
   // Person profiles state (dev-only UI while building)
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -600,14 +603,33 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             }}
                             className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                           >
-                            Astro
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4" />
+                              <span>Astro</span>
+                            </div>
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem
                             onClick={() => handleEditTitle(conversation.id, conversation.title || '')}
                             className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                           >
-                            Edit
+                            <div className="flex items-center gap-2">
+                              <Pencil className="w-4 h-4" />
+                              <span>Edit</span>
+                            </div>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setConversationToShare(conversation.id);
+                              setShowShareModal(true);
+                            }}
+                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Share2 className="w-4 h-4" />
+                              <span>Share</span>
+                            </div>
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem
@@ -617,7 +639,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             }}
                             className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
                           >
-                            Delete
+                            <div className="flex items-center gap-2">
+                              <Trash2 className="w-4 h-4" />
+                              <span>Delete</span>
+                            </div>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -861,6 +886,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
           onCreateProfile={handleCreateProfile}
+        />
+      )}
+
+      {/* Share Conversation Modal */}
+      {showShareModal && conversationToShare && (
+        <ShareConversationModal
+          conversationId={conversationToShare}
+          onClose={() => {
+            setShowShareModal(false);
+            setConversationToShare(null);
+          }}
         />
       )}
     </div>
