@@ -134,12 +134,7 @@ export const ConversationOverlay: React.FC = () => {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        if (isShuttingDown.current) return;
-        if (payload.audioUrl) {
-          playAudioFromUrl(payload.audioUrl);
-          return;
-        }
-        if (payload.audioBytes) {
+        if (payload.audioBytes && !isShuttingDown.current) {
           playAudioImmediately(payload.audioBytes);
         }
       });
@@ -225,29 +220,6 @@ export const ConversationOverlay: React.FC = () => {
       });
     } catch (error) {
       console.error('[ConversationOverlay] ❌ TTS playback failed:', error);
-      resetToTapToStart('TTS playback failed');
-    }
-  }, []);
-
-  const playAudioFromUrl = useCallback(async (audioUrl: string) => {
-    if (isShuttingDown.current) return;
-    try {
-      setState('replying');
-      await ttsPlaybackService.playFromUrl(audioUrl, () => {
-        setState('listening');
-        if (!isShuttingDown.current) {
-          setTimeout(() => {
-            if (!isShuttingDown.current) {
-              try {
-                recorderRef.current?.resumeInput();
-                recorderRef.current?.startNewRecording();
-              } catch {}
-            }
-          }, 200);
-        }
-      });
-    } catch (error) {
-      console.error('[ConversationOverlay] ❌ TTS URL playback failed:', error);
       resetToTapToStart('TTS playback failed');
     }
   }, []);
