@@ -64,10 +64,10 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             return;
           }
           
-          // User is a participant, fetch the conversation mode from dedicated column
+          // User is a participant, fetch the conversation meta
           const { data, error } = await supabase
             .from('conversations')
-            .select('mode')
+            .select('meta')
             .eq('id', chat_id)
             .maybeSingle();
 
@@ -78,8 +78,9 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             return;
           }
 
-          // Use mode from dedicated column; default to 'chat' if null or invalid
-          const savedMode = data?.mode as ChatMode;
+          // If mode exists in meta, use it; otherwise default to 'chat'
+          const metaData = data?.meta as { mode?: ChatMode } | null;
+          const savedMode = metaData?.mode;
           if (savedMode && (savedMode === 'chat' || savedMode === 'astro' || savedMode === 'insight')) {
             setMode(savedMode);
           } else {
@@ -130,14 +131,24 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
     if (!isModeLocked) {
       setMode(newMode);
       
-      // Save mode to conversations.mode column immediately when selected
+      // Save mode to conversations.meta immediately when selected
       if (chat_id) {
         try {
-          // Update mode in dedicated column
+          // First get existing meta to preserve other data
+          const { data: existingData } = await supabase
+            .from('conversations')
+            .select('meta')
+            .eq('id', chat_id)
+            .eq('user_id', user?.id as string)
+            .maybeSingle();
+
+          const existingMeta = (existingData?.meta as { mode?: ChatMode } | null) || {};
+          
+          // Update meta with new mode
           const { error } = await supabase
             .from('conversations')
             .update({ 
-              mode: newMode,
+              meta: { ...existingMeta, mode: newMode },
               updated_at: new Date().toISOString()
             })
             .eq('id', chat_id);
@@ -145,7 +156,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
           if (error) {
             console.error('[ModeContext] Error saving mode to conversation:', error);
           } else {
-            console.log(`[ModeContext] Saved mode '${newMode}' to conversations.mode`);
+            console.log(`[ModeContext] Saved mode '${newMode}' to conversations.meta`);
           }
         } catch (error) {
           console.error('[ModeContext] Error saving mode to conversation:', error);

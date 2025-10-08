@@ -200,10 +200,9 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!modeLoading && !astroChoiceMade ? (
+                {!modeLoading && mode === 'astro' && !astroChoiceMade ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
-                      variant={mode === 'insight' ? 'insights' : 'standalone'}
                       onClose={() => {
                         setAstroChoiceMade(true);
                       }}

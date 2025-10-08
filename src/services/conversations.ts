@@ -7,19 +7,17 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   meta?: Record<string, any> | null;
-  mode?: 'chat' | 'astro' | 'insight';
   is_public?: boolean;
 }
 
 /**
  * Create a new conversation for an authenticated user using edge function
  */
-export const createConversation = async (userId: string, title?: string, mode?: 'chat' | 'astro' | 'insight'): Promise<string> => {
+export const createConversation = async (userId: string, title?: string): Promise<string> => {
   const { data, error } = await supabase.functions.invoke('conversation-manager?action=create_conversation', {
     body: {
       user_id: userId,
-      title: title || 'New Chat',
-      mode: mode || 'chat'
+      title: title || 'New Chat'
     }
   });
 
