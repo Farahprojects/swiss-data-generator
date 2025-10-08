@@ -272,13 +272,11 @@ serve(async (req) => {
         // This allows shared conversations to appear in participants-based queries
         await supabaseClient
           .from('conversations_participants')
-          .insert({
+          .upsert({
             conversation_id: conversation_id,
             user_id: user_id,
             role: 'owner'
-          })
-          .onConflict('conversation_id,user_id')
-          .ignoreDuplicates();
+          }, { onConflict: 'conversation_id,user_id' });
 
         result = { success: true, conversation_id, is_public: true };
         break;
@@ -332,13 +330,11 @@ serve(async (req) => {
         // Add user as participant (ignore if already exists)
         await supabaseClient
           .from('conversations_participants')
-          .insert({
+          .upsert({
             conversation_id: conversation_id,
             user_id: user_id,
             role: 'member'
-          })
-          .onConflict('conversation_id,user_id')
-          .ignoreDuplicates();
+          }, { onConflict: 'conversation_id,user_id' });
 
         result = { success: true, conversation_id };
         break;
