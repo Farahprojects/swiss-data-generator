@@ -189,8 +189,6 @@ export type Database = {
           meta: Json | null
           mode: string | null
           owner_user_id: string | null
-          share_mode: string | null
-          share_token: string | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -202,8 +200,6 @@ export type Database = {
           meta?: Json | null
           mode?: string | null
           owner_user_id?: string | null
-          share_mode?: string | null
-          share_token?: string | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -215,8 +211,6 @@ export type Database = {
           meta?: Json | null
           mode?: string | null
           owner_user_id?: string | null
-          share_mode?: string | null
-          share_token?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
