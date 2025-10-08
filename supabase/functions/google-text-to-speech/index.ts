@@ -134,29 +134,60 @@ if (!audioBytes) {
 
 const processingTime = Date.now() - startTime;
 
-// Fire-and-forget WebSocket broadcast (unchanged payload shape)
-fireAndForget(
-  supabase
-    .channel(`conversation:${chat_id}`)
-    .send({
+// Fire-and-forget WebSocket broadcast (streamed in small chunks)
+fireAndForget((async () => {
+  try {
+    const channel = supabase.channel(`conversation:${chat_id}`);
+
+    // Signal start with metadata
+    const startRes = await channel.send({
       type: "broadcast",
-      event: "tts-ready",
+      event: "tts-start",
       payload: {
-        audioBytes: Array.from(audioBytes), // keep as array; do not change WS payload shape
-        audioUrl: null, // no storage
-        text,
         chat_id,
         mimeType: "audio/mpeg",
         size: audioBytes.length,
       },
-    })
-    .then(({ error: broadcastError }) => {
-      if (broadcastError) {
-        console.error("[google-tts] Failed to broadcast:", broadcastError);
+    });
+    if ((startRes as any)?.error) {
+      console.error("[google-tts] Failed to send tts-start:", (startRes as any).error);
+      return;
+    }
+
+    // Stream chunks
+    const chunkSize = 32 * 1024; // 32KB
+    let seq = 0;
+    for (let offset = 0; offset < audioBytes.length; offset += chunkSize) {
+      const slice = audioBytes.subarray(offset, Math.min(offset + chunkSize, audioBytes.length));
+      const res = await channel.send({
+        type: "broadcast",
+        event: "tts-chunk",
+        payload: {
+          chat_id,
+          seq,
+          bytes: Array.from(slice),
+        },
+      });
+      if ((res as any)?.error) {
+        console.error("[google-tts] Failed to send tts-chunk seq", seq, (res as any).error);
+        return;
       }
-    })
-    .catch((e) => console.error("[google-tts] Broadcast error:", e))
-);
+      seq++;
+    }
+
+    // End signal
+    const endRes = await channel.send({
+      type: "broadcast",
+      event: "tts-end",
+      payload: { chat_id, size: audioBytes.length },
+    });
+    if ((endRes as any)?.error) {
+      console.error("[google-tts] Failed to send tts-end:", (endRes as any).error);
+    }
+  } catch (e) {
+    console.error("[google-tts] Broadcast streaming error:", e);
+  }
+})());
 
 // Minimal response
 const responseData = { success: true, audioUrl: null, storagePath: null };
