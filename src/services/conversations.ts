@@ -7,6 +7,7 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   meta?: Record<string, any> | null;
+  mode?: 'chat' | 'astro' | 'insight';
   is_public?: boolean;
 }
 
