@@ -222,15 +222,30 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       let conversationCheck: any = true;
       let checkError: any = null;
       if (authUserId) {
-        // Check if user is a participant in this conversation
-        const { data, error } = await supabase
-          .from('conversations_participants')
-          .select('conversation_id')
-          .eq('conversation_id', chat_id)
+        // Check if user owns this conversation OR is a participant
+        const { data: ownedData, error: ownedError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('id', chat_id)
           .eq('user_id', authUserId)
           .maybeSingle();
-        conversationCheck = data;
-        checkError = error;
+        
+        if (ownedError) {
+          console.error('[MessageStore] Error checking owned conversation:', ownedError);
+          checkError = ownedError;
+        } else if (ownedData) {
+          conversationCheck = ownedData;
+        } else {
+          // Not owned, check if user is a participant
+          const { data: participantData, error: participantError } = await supabase
+            .from('conversations_participants')
+            .select('conversation_id')
+            .eq('conversation_id', chat_id)
+            .eq('user_id', authUserId)
+            .maybeSingle();
+          conversationCheck = participantData;
+          checkError = participantError;
+        }
       }
       
       if (checkError) {

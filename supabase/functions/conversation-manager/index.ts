@@ -47,11 +47,13 @@ serve(async (req) => {
         // Create a new conversation for authenticated user
         const newChatId = crypto.randomUUID();
         
-        // Create conversation
+        // Create conversation (owned, not shared yet)
+        // No participant row added - participants are only for shared conversations
         const { data: newConversation, error: createError } = await supabaseClient
           .from('conversations')
           .insert({
             id: newChatId,
+            user_id: user_id,
             owner_user_id: user_id,
             title: title || 'New Conversation',
             meta: {}
@@ -60,15 +62,6 @@ serve(async (req) => {
           .single();
 
         if (createError) throw createError;
-
-        // Add owner as participant
-        await supabaseClient
-          .from('conversations_participants')
-          .insert({
-            conversation_id: newChatId,
-            user_id: user_id,
-            role: 'owner'
-          });
 
         result = newConversation;
         break;
@@ -131,8 +124,19 @@ serve(async (req) => {
         break;
 
       case 'list_conversations':
-        // List all conversations user is a participant in
-        const { data: conversations, error: listError } = await supabaseClient
+        // List all conversations: owned (user_id) + shared (via participants)
+        
+        // Fetch owned conversations (user_id = current user, no participant row needed)
+        const { data: ownedConversations, error: ownedError } = await supabaseClient
+          .from('conversations')
+          .select('id, title, created_at, updated_at, meta, is_public')
+          .eq('user_id', user_id)
+          .order('updated_at', { ascending: false });
+
+        if (ownedError) throw ownedError;
+
+        // Fetch shared conversations (via participants table)
+        const { data: sharedConversations, error: sharedError } = await supabaseClient
           .from('conversations')
           .select(`
             id, title, created_at, updated_at, meta, is_public,
@@ -141,7 +145,23 @@ serve(async (req) => {
           .eq('conversations_participants.user_id', user_id)
           .order('updated_at', { ascending: false });
 
-        if (listError) throw listError;
+        if (sharedError) throw sharedError;
+
+        // Merge and dedupe by id (in case a conversation appears in both)
+        const conversationMap = new Map();
+        
+        for (const conv of (ownedConversations || [])) {
+          conversationMap.set(conv.id, conv);
+        }
+        
+        for (const conv of (sharedConversations || [])) {
+          if (!conversationMap.has(conv.id)) {
+            conversationMap.set(conv.id, conv);
+          }
+        }
+        
+        const conversations = Array.from(conversationMap.values())
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
         // Compute has_other_participants for each conversation (owners see pill once someone else joined)
         let conversationsWithFlag = conversations || [];
@@ -247,6 +267,19 @@ serve(async (req) => {
           .eq('owner_user_id', user_id);
 
         if (shareError) throw shareError;
+
+        // Add owner to conversations_participants when sharing
+        // This allows shared conversations to appear in participants-based queries
+        await supabaseClient
+          .from('conversations_participants')
+          .insert({
+            conversation_id: conversation_id,
+            user_id: user_id,
+            role: 'owner'
+          })
+          .onConflict('conversation_id,user_id')
+          .ignoreDuplicates();
+
         result = { success: true, conversation_id, is_public: true };
         break;
 

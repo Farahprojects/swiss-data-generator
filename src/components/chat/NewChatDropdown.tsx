@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Plus, ChevronDown, Sparkles } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { supabase } from '@/integrations/supabase/client';
 import { InsightsModal } from '@/components/insights/InsightsModal';
+import { AstroDataForm } from '@/components/chat/AstroDataForm';
+import { ReportFormData } from '@/types/public-report';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +24,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showAstroModal, setShowAstroModal] = useState(false);
 
   // Shared handleNewChat function
   const handleNewChat = async (mode: 'chat' | 'astro' | 'insight' = 'chat') => {
@@ -86,6 +89,66 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
     setShowInsightsModal(true);
   };
 
+  // Handle Astro modal open
+  const handleOpenAstro = () => {
+    setShowAstroModal(true);
+  };
+
+  // Handle Astro form submission - create conversation and navigate
+  const handleAstroFormSubmit = async (data: ReportFormData) => {
+    if (!user) return;
+
+    try {
+      // Create new conversation with mode in meta
+      const { data: conversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: 'New Astro Chat',
+          meta: { mode: 'astro' }
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('[NewChatDropdown] Failed to create astro conversation:', error);
+        return;
+      }
+
+      const newChatId = conversation.id;
+      
+      // Add to local threads state
+      const newThread = {
+        id: newChatId,
+        user_id: user.id,
+        title: 'New Astro Chat',
+        meta: { mode: 'astro' },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const currentState = useChatStore.getState();
+      useChatStore.setState({ threads: [newThread, ...currentState.threads] });
+      
+      // Set chat_id and start conversation
+      const { setChatId } = useMessageStore.getState();
+      setChatId(newChatId);
+      
+      const { startConversation } = useChatStore.getState();
+      startConversation(newChatId);
+      
+      // Switch WebSocket subscription
+      const { chatController } = await import('@/features/chat/ChatController');
+      await chatController.switchToChat(newChatId);
+      
+      // Close modal and navigate
+      setShowAstroModal(false);
+      navigate(`/c/${newChatId}`, { replace: true });
+    } catch (error) {
+      console.error('[NewChatDropdown] Failed to create astro conversation:', error);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -104,7 +167,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
             Chat
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => handleNewChat('astro')}
+            onClick={handleOpenAstro}
             className="cursor-pointer"
           >
             Astro
@@ -127,6 +190,37 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
         isOpen={showInsightsModal}
         onClose={() => setShowInsightsModal(false)}
       />
+
+      {/* Astro Modal */}
+      {showAstroModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-2xl font-light text-gray-900">Astro Chat</h2>
+                <p className="text-sm text-gray-500 mt-1">Enter your birth details to start</p>
+              </div>
+              <button
+                onClick={() => setShowAstroModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <AstroDataForm
+                onClose={() => setShowAstroModal(false)}
+                onSubmit={handleAstroFormSubmit}
+                variant="standalone"
+                isProfileFlow={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
