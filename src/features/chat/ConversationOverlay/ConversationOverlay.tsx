@@ -136,6 +136,7 @@ export const ConversationOverlay: React.FC = () => {
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (isShuttingDown.current) return;
         if (payload.audioBase64) {
+          setState('replying');
           ttsPlaybackService.playBase64(payload.audioBase64, () => {
             setState('listening');
             if (!isShuttingDown.current) {
@@ -153,6 +154,7 @@ export const ConversationOverlay: React.FC = () => {
             resetToTapToStart('TTS playback failed');
           });
         } else if (payload.audioBytes) {
+          setState('replying');
           playAudioImmediately(payload.audioBytes);
         }
       });
