@@ -282,6 +282,8 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
+    let lastSpeechLikeTs = Date.now();
+    let lowRmsSinceTs: number | null = null;
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -372,8 +374,25 @@ export class UniversalSTTRecorder {
         } else {
           // While active, monitor for silence and hangover before finalizing
           const isSpeaking = rms > stopThreshold;
-          const noiseLike = this.spectralFlatness >= 0.6; // noise gate veto
-          if (!isSpeaking && noiseLike) {
+          const noiseLike = this.spectralFlatness >= 0.4; // relaxed spectral gate
+
+          // Track last speech-like time (either energy above threshold or spectrum speech-like)
+          if (isSpeaking || !noiseLike) {
+            lastSpeechLikeTs = now;
+          }
+
+          // Very-low RMS escape hatch
+          const lowFloor = 0.005;
+          if (rms < lowFloor) {
+            if (lowRmsSinceTs === null) lowRmsSinceTs = now;
+          } else {
+            lowRmsSinceTs = null;
+          }
+
+          const lowFloorSatisfied = lowRmsSinceTs !== null && (now - lowRmsSinceTs >= 180);
+          const spectralOrTimeSatisfied = noiseLike || (now - lastSpeechLikeTs >= 250);
+
+          if (!isSpeaking && (lowFloorSatisfied || spectralOrTimeSatisfied)) {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.finalizeActiveSegment();
@@ -389,7 +408,7 @@ export class UniversalSTTRecorder {
 
         // Baseline adaptation during silence only (freeze while speaking)
         const isSilent = rms <= stopThreshold;
-        const noiseLike = this.spectralFlatness >= 0.6; // adapt baseline only when noise-like
+        const noiseLike = this.spectralFlatness >= 0.4; // adapt baseline only when noise-like (relaxed)
         if (isSilent && noiseLike) {
           // Update ambient EMA
           const ambientAlpha = 0.1; // slow
