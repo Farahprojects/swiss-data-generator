@@ -30,7 +30,7 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
-    const { user_id, conversation_id, title } = requestBody;
+    const { user_id, conversation_id, title, mode } = requestBody;
 
     // All actions require user_id
     if (!user_id) {
@@ -56,6 +56,7 @@ serve(async (req) => {
             user_id: user_id,
             owner_user_id: user_id,
             title: title || 'New Conversation',
+            mode: mode || 'chat',
             meta: {}
           })
           .select()
@@ -91,6 +92,7 @@ serve(async (req) => {
             .insert({
               user_id,
               title: title || 'New Conversation',
+              mode: mode || 'chat',
               meta: {}
             })
             .select()

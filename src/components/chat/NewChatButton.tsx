@@ -31,13 +31,14 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
     }
 
     try {
-      // Create new conversation with mode in meta
+      // Create new conversation with mode in mode column
       const { data: conversation, error } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
           title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-          meta: { mode }
+          mode: mode,
+          meta: {}
         })
         .select('id')
         .single();
@@ -54,7 +55,8 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
         id: newChatId,
         user_id: user.id,
         title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-        meta: { mode },
+        mode: mode,
+        meta: {},
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
