@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 if (!GOOGLE_TTS_API_KEY) {
@@ -20,24 +19,24 @@ const CORS_HEADERS = {
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const CACHE_MAX_ITEMS = 100;
 
-type CacheEntry = { bytes: Uint8Array; expires: number };
+type CacheEntry = { base64: string; expires: number };
 const cache = new Map<string, CacheEntry>();
-const inflight = new Map<string, Promise<Uint8Array>>();
+const inflight = new Map<string, Promise<string>>();
 
 function cacheKey(text: string, voiceName: string) {
 return `${voiceName}::${text}`;
 }
-function getFromCache(key: string): Uint8Array | undefined {
+function getFromCache(key: string): string | undefined {
 const entry = cache.get(key);
 if (!entry) return;
 if (entry.expires < Date.now()) {
 cache.delete(key);
 return;
 }
-return entry.bytes;
+  return entry.base64;
 }
-function setCache(key: string, bytes: Uint8Array) {
-cache.set(key, { bytes, expires: Date.now() + CACHE_TTL_MS });
+function setCache(key: string, base64: string) {
+  cache.set(key, { base64, expires: Date.now() + CACHE_TTL_MS });
 if (cache.size > CACHE_MAX_ITEMS) {
 // drop oldest
 const oldest = [...cache.entries()].sort((a, b) => a[1].expires - b[1].expires);
@@ -46,7 +45,7 @@ for (let i = 0; i < drop; i++) cache.delete(oldest[i][0]);
 }
 }
 
-async function synthesizeMP3(text: string, voiceName: string, signal?: AbortSignal): Promise<Uint8Array> {
+async function synthesizeMP3(text: string, voiceName: string, signal?: AbortSignal): Promise<string> {
   const resp = await fetch(
     `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
 {
@@ -71,8 +70,8 @@ if (!json?.audioContent) {
 throw new Error("Google TTS API returned no audioContent");
 }
 
-// More efficient than atob + charCode loop
-return decodeBase64(json.audioContent);
+  // Return base64 string directly (no decode on server)
+  return json.audioContent as string;
 }
 
 function fireAndForget(p: Promise<unknown>) {
@@ -114,8 +113,8 @@ const voiceName = `en-US-Chirp3-HD-${voice}`;
 
 // cache + inflight de-dup
 const key = cacheKey(text, voiceName);
-let audioBytes = getFromCache(key);
-if (!audioBytes) {
+let audioBase64 = getFromCache(key);
+if (!audioBase64) {
   let pending = inflight.get(key);
   if (!pending) {
     // Optional: timeout to avoid hanging requests
@@ -128,8 +127,8 @@ if (!audioBytes) {
       });
     inflight.set(key, pending);
   }
-  audioBytes = await pending;
-  setCache(key, audioBytes);
+  audioBase64 = await pending;
+  setCache(key, audioBase64);
 }
 
 const processingTime = Date.now() - startTime;
@@ -142,12 +141,11 @@ fireAndForget(
       type: "broadcast",
       event: "tts-ready",
       payload: {
-        audioBytes: Array.from(audioBytes), // keep as array; do not change WS payload shape
+        audioBase64: audioBase64, // base64 MP3 data
         audioUrl: null, // no storage
         text,
         chat_id,
         mimeType: "audio/mpeg",
-        size: audioBytes.length,
       },
     })
     .then(({ error: broadcastError }) => {

@@ -254,6 +254,66 @@ class TTSPlaybackService {
     }
   }
 
+  async playBase64(audioBase64: string, onEnded?: () => void): Promise<void> {
+    try {
+      if (!audioArbitrator.requestControl('tts')) {
+        throw new Error('Cannot start TTS playback - microphone is active');
+      }
+
+      const ctx = this.ensureAudioContext();
+      if (ctx.state === 'suspended') await ctx.resume();
+
+      this.internalStop();
+
+      const audioEl = new Audio();
+      audioEl.preload = 'auto';
+      audioEl.muted = false;
+      audioEl.volume = 1.0;
+      (audioEl as any).playsInline = true;
+      audioEl.src = `data:audio/mpeg;base64,${audioBase64}`;
+
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+
+      const mediaNode = ctx.createMediaElementSource(audioEl);
+      mediaNode.connect(analyser);
+      analyser.connect(ctx.destination);
+
+      this.currentSource = audioEl;
+      this.mediaElementNode = mediaNode;
+      this.analyser = analyser;
+      this.currentUrl = null;
+      this.isPlaying = true;
+      this.isPaused = false;
+      this.notify();
+
+      audioEl.onplaying = () => {
+        this.startAnimation(analyser);
+      };
+
+      const cleanupElement = () => this.cleanupGraph();
+      const finalize = () => this.finalizePlayback(onEnded);
+
+      audioEl.onended = finalize;
+      audioEl.onerror = finalize;
+
+      try {
+        if (audioEl.readyState < 2) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 50));
+        }
+        await audioEl.play();
+      } catch (e) {
+        cleanupElement();
+        finalize();
+      }
+    } catch (e) {
+      this.internalStop();
+      audioArbitrator.releaseControl('tts');
+      throw e;
+    }
+  }
+
   pause(): void {
     if (this.currentSource) {
       try { this.currentSource.pause(); } catch {}

@@ -134,7 +134,25 @@ export const ConversationOverlay: React.FC = () => {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        if (payload.audioBytes && !isShuttingDown.current) {
+        if (isShuttingDown.current) return;
+        if (payload.audioBase64) {
+          ttsPlaybackService.playBase64(payload.audioBase64, () => {
+            setState('listening');
+            if (!isShuttingDown.current) {
+              setTimeout(() => {
+                if (!isShuttingDown.current) {
+                  try {
+                    recorderRef.current?.resumeInput();
+                    recorderRef.current?.startNewRecording();
+                  } catch {}
+                }
+              }, 200);
+            }
+          }).catch((e) => {
+            console.error('[ConversationOverlay] ❌ TTS base64 playback failed:', e);
+            resetToTapToStart('TTS playback failed');
+          });
+        } else if (payload.audioBytes) {
           playAudioImmediately(payload.audioBytes);
         }
       });
