@@ -25,6 +25,8 @@ export class UniversalSTTRecorder {
   private analyser: AnalyserNode | null = null;
   private animationFrame: number | null = null;
   private dataArray: Float32Array | null = null;
+  private freqData: Uint8Array | null = null; // frequency-domain snapshot for spectral measures
+  private spectralFlatness: number = 1; // 1=noise-like, 0=tonal
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
   private bandpassFilter: BiquadFilterNode | null = null; // unused (kept for backward type compat if imported elsewhere)
@@ -50,8 +52,8 @@ export class UniversalSTTRecorder {
   private baselineLastUpdated: number = 0;
   private readonly desktopBaselineTrigger = 0.25; // 25%
   private readonly mobileBaselineTrigger = 0.30; // 30%
-  private readonly desktopAmbientStableMs = 1000; // 1.0s
-  private readonly mobileAmbientStableMs = 1200; // 1.2s
+  private readonly desktopAmbientStableMs = 600; // faster adaptation for desktop
+  private readonly mobileAmbientStableMs = 700; // faster adaptation for mobile
   private readonly desktopBaselineFloor = 0.002;
   private readonly desktopBaselineCeiling = 0.08;
   private readonly mobileBaselineFloor = 0.003;
@@ -256,6 +258,7 @@ export class UniversalSTTRecorder {
 
     // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
+    this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
     
     // Initialize or reuse baseline
     if (this.baselineEnergy > 0) {
@@ -288,6 +291,14 @@ export class UniversalSTTRecorder {
       const tempArray = new Float32Array(this.analyser.fftSize);
       this.analyser.getFloatTimeDomainData(tempArray);
       this.dataArray = tempArray;
+
+      // Frequency-domain snapshot for spectral measures
+      if (this.freqData) {
+        // Ensure buffer type matches expected ArrayBuffer for TS lib types
+        const freqView = new Uint8Array(this.freqData.buffer as ArrayBuffer, this.freqData.byteOffset, this.freqData.byteLength);
+        this.analyser.getByteFrequencyData(freqView);
+        this.spectralFlatness = this.computeSpectralFlatness(freqView);
+      }
       
       // Calculate RMS energy (lightweight)
       let sum = 0;
@@ -361,7 +372,8 @@ export class UniversalSTTRecorder {
         } else {
           // While active, monitor for silence and hangover before finalizing
           const isSpeaking = rms > stopThreshold;
-          if (!isSpeaking) {
+          const noiseLike = this.spectralFlatness >= 0.6; // noise gate veto
+          if (!isSpeaking && noiseLike) {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.finalizeActiveSegment();
@@ -377,7 +389,8 @@ export class UniversalSTTRecorder {
 
         // Baseline adaptation during silence only (freeze while speaking)
         const isSilent = rms <= stopThreshold;
-        if (isSilent) {
+        const noiseLike = this.spectralFlatness >= 0.6; // adapt baseline only when noise-like
+        if (isSilent && noiseLike) {
           // Update ambient EMA
           const ambientAlpha = 0.1; // slow
           this.ambientEma = this.ambientEma === 0 ? rms : (this.ambientEma * (1 - ambientAlpha) + rms * ambientAlpha);
@@ -389,7 +402,7 @@ export class UniversalSTTRecorder {
             if (Date.now() - this.ambientStableSince >= stableMs) {
               // Apply asymmetric EMA to baseline
               const upward = this.ambientEma > this.baselineEnergy;
-              const alpha = upward ? 0.3 : 0.1;
+              const alpha = upward ? 0.38 : 0.14; // more aggressive upward, modest downward
               let newBaseline = this.baselineEnergy * (1 - alpha) + this.ambientEma * alpha;
               // Clamp to platform-specific bounds
               const floor = this.isMobileDevice() ? this.mobileBaselineFloor : this.desktopBaselineFloor;
@@ -415,6 +428,25 @@ export class UniversalSTTRecorder {
     };
 
     updateAnimation(); // Start the energy monitoring loop
+  }
+
+  // Spectral flatness (0=tonal/speech-like, 1=noise-like) using byte frequency data
+  private computeSpectralFlatness(freq: ArrayLike<number>): number {
+    if (!freq || freq.length === 0) return 1;
+    const N = freq.length;
+    let sum = 0;
+    let sumLog = 0;
+    const eps = 1e-3;
+    for (let i = 0; i < N; i++) {
+      const m = Math.max(eps, freq[i]); // keep strictly positive
+      sum += m;
+      sumLog += Math.log(m);
+    }
+    const am = sum / N;
+    const gm = Math.exp(sumLog / N);
+    const flatness = gm / Math.max(eps, am);
+    // Clamp to [0,1]
+    return Math.max(0, Math.min(1, flatness));
   }
 
   private beginActiveSegment(): void {
