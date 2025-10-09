@@ -195,14 +195,6 @@ class TTSPlaybackService {
       audioEl.volume = 1.0;
       (audioEl as any).playsInline = true; // iOS inline
       audioEl.src = audioUrl;
-      // Route output to communications device when supported (e.g., headphones)
-      try {
-        const anyAudioEl = audioEl as any;
-        if (typeof anyAudioEl.setSinkId === 'function') {
-          // Attempt to use 'communications' sink for headsets; browsers may map it automatically
-          await anyAudioEl.setSinkId('communications');
-        }
-      } catch {}
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -279,13 +271,6 @@ class TTSPlaybackService {
       audioEl.volume = 1.0;
       (audioEl as any).playsInline = true;
       audioEl.src = `data:audio/mpeg;base64,${audioBase64}`;
-      // Route output to communications device when supported (e.g., headphones)
-      try {
-        const anyAudioEl = audioEl as any;
-        if (typeof anyAudioEl.setSinkId === 'function') {
-          await anyAudioEl.setSinkId('communications');
-        }
-      } catch {}
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
