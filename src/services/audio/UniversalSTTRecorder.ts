@@ -19,6 +19,7 @@ export interface STTRecorderOptions {
 export class UniversalSTTRecorder {
   // Recording components
   private mediaStream: MediaStream | null = null;
+  private isHeadphonesConnected: boolean = false;
   
   // Energy monitoring components (separate from recording)
   private audioContext: AudioContext | null = null;
@@ -121,16 +122,41 @@ export class UniversalSTTRecorder {
       throw new Error('getUserMedia is not supported in this browser');
     }
 
-    // Request mic access - simple approach
-    const stream = await navigator.mediaDevices.getUserMedia({ 
+    // Best-effort detect headphones/headset to select constraints
+    let isHeadset = false;
+    try {
+      isHeadset = await this.detectHeadphones();
+    } catch {}
+
+    const constraints: MediaStreamConstraints = {
       audio: {
-        noiseSuppression: true,
-        echoCancellation: true,
+        noiseSuppression: !isHeadset,
+        echoCancellation: !isHeadset,
         autoGainControl: false,
       }
-    });
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    // Update persisted detection after permission (labels become available)
+    try {
+      this.isHeadphonesConnected = await this.detectHeadphones();
+    } catch {
+      this.isHeadphonesConnected = isHeadset;
+    }
 
     return stream;
+  }
+
+  // Best-effort detection of headphones/headset from available devices
+  private async detectHeadphones(): Promise<boolean> {
+    if (!navigator.mediaDevices?.enumerateDevices) return false;
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const keywordPattern = /(headphone|headset|airpod|earbud|buds|bluetooth|bt|galaxy buds|pixel buds|wf-|wh-)/i;
+    const anyOutputHeadset = devices.some((d) => d.kind === 'audiooutput' && keywordPattern.test(d.label || ''));
+    if (anyOutputHeadset) return true;
+    const anyInputHeadset = devices.some((d) => d.kind === 'audioinput' && keywordPattern.test(d.label || ''));
+    return anyInputHeadset;
   }
 
   stop(): void {
