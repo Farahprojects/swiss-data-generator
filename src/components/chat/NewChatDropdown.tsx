@@ -202,8 +202,8 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
-                <h2 className="text-2xl font-light text-gray-900">Astro Chat</h2>
-                <p className="text-sm text-gray-500 mt-1">Enter your birth details to start</p>
+                <h2 className="text-2xl font-light text-gray-900">Astro</h2>
+                <p className="text-sm text-gray-500 mt-1">Discover your self or compare energy signal's</p>
               </div>
               <button
                 onClick={() => setShowAstroModal(false)}
