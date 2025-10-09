@@ -447,7 +447,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className={`bg-white shadow-lg overflow-hidden ${
+        className={`bg-white overflow-hidden ${
           isMobile 
             ? 'fixed inset-0 z-50 rounded-none flex flex-col' 
             : 'rounded-2xl'
