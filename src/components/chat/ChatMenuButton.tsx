@@ -1,24 +1,93 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, Share2 } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShareConversationModal } from './ShareConversationModal';
+import { ConversationActionsMenuContent } from './ConversationActionsMenu';
 import { useChatStore } from '@/core/store';
+import { updateConversationTitle } from '@/services/conversations';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatMenuButtonProps {
   className?: string;
+  onEditStart?: () => void;
+  onDeleteStart?: () => void;
 }
 
-export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }) => {
-  const { chat_id } = useChatStore();
-  const [showShareModal, setShowShareModal] = useState(false);
+export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ 
+  className = "",
+  onEditStart,
+  onDeleteStart 
+}) => {
+  const { chat_id, threads, removeThread, clearChat } = useChatStore();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
 
-  const handleShareClick = () => {
-    setShowShareModal(true);
+  // Get current conversation title
+  const currentConversation = threads.find(t => t.id === chat_id);
+  const currentTitle = currentConversation?.title || '';
+
+  const handleEdit = async (conversationId: string, title: string) => {
+    setEditTitle(title);
+    setShowEditDialog(true);
+    if (onEditStart) onEditStart();
+  };
+
+  const handleDelete = async (conversationId: string) => {
+    setShowDeleteDialog(true);
+    if (onDeleteStart) onDeleteStart();
+  };
+
+  const confirmEdit = async () => {
+    if (!chat_id || !editTitle.trim()) return;
+
+    try {
+      await updateConversationTitle(chat_id, editTitle);
+      
+      // Update local state
+      const updatedThreads = threads.map(t => 
+        t.id === chat_id ? { ...t, title: editTitle } : t
+      );
+      useChatStore.setState({ threads: updatedThreads });
+      
+      setShowEditDialog(false);
+    } catch (error) {
+      console.error('[ChatMenuButton] Error updating title:', error);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!chat_id || !user) return;
+
+    try {
+      // Delete messages
+      await supabase
+        .from('messages')
+        .delete()
+        .eq('chat_id', chat_id);
+
+      // Delete conversation
+      await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', chat_id)
+        .eq('user_id', user.id);
+
+      // Update local state
+      removeThread(chat_id);
+      clearChat();
+      
+      setShowDeleteDialog(false);
+      navigate('/therai', { replace: true });
+    } catch (error) {
+      console.error('[ChatMenuButton] Error deleting conversation:', error);
+    }
   };
 
   return (
@@ -30,28 +99,69 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({ className = "" }
           </button>
         </DropdownMenuTrigger>
         
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem className="cursor-pointer" onClick={handleShareClick}>
-            <div className="flex items-center gap-2">
-              <Share2 className="w-4 h-4" />
-              <span>Share Conversation</span>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">
-            Help
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+        <ConversationActionsMenuContent 
+          align="end"
+          currentTitle={currentTitle}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
       </DropdownMenu>
 
-      {/* Share Modal */}
-      {showShareModal && chat_id && (
-        <ShareConversationModal
-          conversationId={chat_id}
-          onClose={() => setShowShareModal(false)}
-        />
+      {/* Edit Title Dialog */}
+      {showEditDialog && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-xl font-light text-gray-900">Edit Title</h3>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900"
+              placeholder="Conversation title"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowEditDialog(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmEdit}
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-xl font-light text-gray-900">Delete Conversation</h3>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

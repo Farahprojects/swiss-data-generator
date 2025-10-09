@@ -33,6 +33,7 @@ import { NewChatDropdown } from '@/components/chat/NewChatDropdown';
 import { AddPersonButton } from '@/components/person/AddPersonButton';
 import { PersonProfilesList } from '@/components/person/PersonProfilesList';
 import { ProfileModal } from '@/components/person/ProfileModal';
+import { ConversationActionsMenuContent } from '@/components/chat/ConversationActionsMenu';
 
 
 interface ChatThreadsSidebarProps {
@@ -592,34 +593,16 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             <MoreHorizontal className="w-4 h-4 text-gray-600" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              // Open astro data form for this specific conversation
-                              openReportModal(conversation.id);
-                            }}
-                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                          >
-                            Astro
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem
-                            onClick={() => handleEditTitle(conversation.id, conversation.title || '')}
-                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setConversationToDelete(conversation.id);
-                              setShowDeleteConfirm(true);
-                            }}
-                            className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
+                        <ConversationActionsMenuContent
+                          conversationId={conversation.id}
+                          currentTitle={conversation.title || ''}
+                          onEdit={handleEditTitle}
+                          onDelete={(conversationId) => {
+                            setConversationToDelete(conversationId);
+                            setShowDeleteConfirm(true);
+                          }}
+                          align="end"
+                        />
                       </DropdownMenu>
                     </div>
                   </div>
