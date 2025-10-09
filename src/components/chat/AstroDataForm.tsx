@@ -453,41 +453,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             : 'rounded-2xl'
         }`}
       >
-      {/* Header (hidden for insights flow; InsightsModal provides header/stepper) */}
-      {isInsights ? null : (
-        <div className={`flex items-center justify-between border-b border-gray-200 ${
-          isMobile ? 'p-4 pt-safe' : 'p-4'
-        }`}>
-          <div className="flex items-center gap-3">
-            {(currentStep === 'details' || currentStep === 'secondPerson') && (
-              <button
-                onClick={() => {
-                  if (currentStep === 'details') goBackToType();
-                  else if (currentStep === 'secondPerson') setCurrentStep('details');
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
-            <h2 className="text-xl font-medium text-gray-900">
-              {currentStep === 'type' 
-                ? 'Choose Discovery Type' 
-                : currentStep === 'details'
-                ? 'Your Details'
-                : 'Second Person Details'}
-            </h2>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Content */}
       <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'}`}>

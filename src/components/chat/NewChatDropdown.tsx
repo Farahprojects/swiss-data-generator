@@ -58,7 +58,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
         id: newChatId,
         user_id: user.id,
         title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-        mode: mode,
+        mode: mode as 'chat' | 'astro' | 'insight',
         meta: {},
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -125,7 +125,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
         id: newChatId,
         user_id: user.id,
         title: 'New Astro Chat',
-        mode: 'astro',
+        mode: 'astro' as const,
         meta: {},
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
