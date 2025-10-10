@@ -269,12 +269,12 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
 
   // Call context-injector to inject report text into messages (fire-and-forget)
   const chatId = reportData.chat_id || reportData.user_id;
-  if (chatId) {
-    console.log(`${logPrefix} Calling context-injector for report injection with chat_id: ${chatId}`);
+  if (chatId && reportData.mode) {
+    console.log(`${logPrefix} Calling context-injector for report injection with chat_id: ${chatId}, mode: ${reportData.mode}`);
     supabase.functions.invoke('context-injector', {
       body: { 
         chat_id: chatId, 
-        mode: reportData.mode || 'chat',
+        mode: reportData.mode,
         report_text: report,
         injection_type: 'report'
       }
@@ -287,6 +287,8 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
     }).catch((err) => {
       console.error(`${logPrefix} Context-injector error:`, err);
     });
+  } else if (chatId && !reportData.mode) {
+    console.error(`${logPrefix} Skipping context-injector: mode is required but not provided`);
   }
 
   // Fire-and-forget insights table update - mark as ready

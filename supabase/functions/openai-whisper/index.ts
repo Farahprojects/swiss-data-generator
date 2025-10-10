@@ -28,12 +28,16 @@ serve(async (req) => {
     const file = form.get('file') as File | null;
     const chat_id = (form.get('chat_id') as string) || undefined;
     const chattype = (form.get('chattype') as string) || undefined;
-    const mode = (form.get('mode') as string) || undefined;
+    const mode = form.get('mode') as string | null;
     const language = (form.get('language') as string) || 'en';
     const voice = (form.get('voice') as string) || undefined;
 
     if (!file) {
       throw new Error('Missing file in form-data');
+    }
+
+    if (!mode) {
+      throw new Error('Missing mode in form-data');
     }
 
     const arrayBuffer = await file.arrayBuffer();

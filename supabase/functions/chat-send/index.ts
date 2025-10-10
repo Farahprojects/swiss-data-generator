@@ -41,12 +41,24 @@ serve(async (req) => {
     const body = await req.json();
     const { chat_id, text, client_msg_id, mode, chattype, role, sessionId, user_id, user_name } = body;
 
-    console.log(`[chat-send] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, role: ${role || 'user'}, mode: ${mode || 'default'}`);
+    console.log(`[chat-send] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, role: ${role || 'user'}, mode: ${mode}`);
     console.log(`[chat-send] 📥 REQUEST BODY DEBUG:`, JSON.stringify({ chat_id, text: text?.substring(0, 50), client_msg_id, mode, role, sessionId }, null, 2));
 
     if (!chat_id || !text) {
       return new Response(JSON.stringify({
         error: "Missing required fields: chat_id, text"
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    if (!mode) {
+      return new Response(JSON.stringify({
+        error: "Missing required field: mode"
       }), {
         status: 400,
         headers: {
@@ -69,7 +81,7 @@ serve(async (req) => {
         text: text,
         client_msg_id: client_msg_id || crypto.randomUUID(),
         status: "complete",
-        mode: mode || 'chat',
+        mode: mode,
         user_id: user_id, // Add user_id for assistant messages too
         user_name: user_name, // Add user_name for assistant messages too
         meta: {}
@@ -113,7 +125,7 @@ serve(async (req) => {
       text: text,
       client_msg_id: client_msg_id || crypto.randomUUID(),
       status: "complete",
-      mode: mode || 'chat',
+      mode: mode,
       user_id: user_id, // Add user_id for user messages
       user_name: user_name, // Add user_name for user messages
       meta: {}

@@ -40,57 +40,64 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
     if (chat_id && user) {
       setIsLoading(true);
       const loadModeFromConversation = async () => {
-        try {
-          // First check if user is a participant in this conversation
-          const { data: participantData, error: checkError } = await supabase
+        // Fetch conversation and check ownership or participation
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('mode, user_id')
+          .eq('id', chat_id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[ModeContext] Error loading conversation:', error);
+          setIsLoading(false);
+          throw new Error(`Failed to load conversation: ${error.message}`);
+        }
+
+        if (!data) {
+          console.error('[ModeContext] Conversation not found');
+          setIsLoading(false);
+          throw new Error('Conversation not found');
+        }
+
+        // Check if user owns this conversation
+        const isOwner = data.user_id === user.id;
+        
+        // If not owner, check if user is a participant
+        if (!isOwner) {
+          const { data: participantData, error: participantError } = await supabase
             .from('conversations_participants')
             .select('conversation_id')
             .eq('conversation_id', chat_id)
             .eq('user_id', user.id)
             .maybeSingle();
           
-          if (checkError) {
-            console.error('[ModeContext] Error checking conversation participation:', checkError);
-            setMode('chat');
+          if (participantError) {
+            console.error('[ModeContext] Error checking participation:', participantError);
             setIsLoading(false);
-            return;
+            throw new Error(`Failed to check conversation participation: ${participantError.message}`);
           }
           
-          // If user is not a participant, default to chat mode
           if (!participantData) {
-            console.log('[ModeContext] User not a participant in this conversation, defaulting to chat mode');
-            setMode('chat');
+            console.error('[ModeContext] User does not own or participate in this conversation');
             setIsLoading(false);
-            return;
+            throw new Error('User does not have access to this conversation');
           }
-          
-          // User is a participant, fetch the conversation mode
-          const { data, error } = await supabase
-            .from('conversations')
-            .select('mode')
-            .eq('id', chat_id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('[ModeContext] Error loading conversation mode:', error);
-            setMode('chat');
-            setIsLoading(false);
-            return;
-          }
-
-          // Use mode from mode column, default to 'chat' if not set
-          const savedMode = data?.mode as ChatMode | null;
-          if (savedMode && (savedMode === 'chat' || savedMode === 'astro' || savedMode === 'insight')) {
-            setMode(savedMode);
-          } else {
-            setMode('chat'); // Default mode for new chats
-          }
-        } catch (error) {
-          console.error('[ModeContext] Error loading mode from conversation:', error);
-          setMode('chat'); // Fallback to default
-        } finally {
-          setIsLoading(false);
         }
+
+        // Use mode from mode column - fail if not set or invalid
+        const savedMode = data.mode as ChatMode | null;
+        if (!savedMode) {
+          setIsLoading(false);
+          throw new Error('Conversation mode is not set');
+        }
+        
+        if (savedMode !== 'chat' && savedMode !== 'astro' && savedMode !== 'insight') {
+          setIsLoading(false);
+          throw new Error(`Invalid conversation mode: ${savedMode}`);
+        }
+        
+        setMode(savedMode);
+        setIsLoading(false);
       };
       
       loadModeFromConversation();
@@ -132,23 +139,20 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
       
       // Save mode to conversations.mode column immediately when selected
       if (chat_id) {
-        try {
-          const { error } = await supabase
-            .from('conversations')
-            .update({ 
-              mode: newMode,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', chat_id);
+        const { error } = await supabase
+          .from('conversations')
+          .update({ 
+            mode: newMode,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', chat_id);
 
-          if (error) {
-            console.error('[ModeContext] Error saving mode to conversation:', error);
-          } else {
-            console.log(`[ModeContext] Saved mode '${newMode}' to conversations.mode column`);
-          }
-        } catch (error) {
+        if (error) {
           console.error('[ModeContext] Error saving mode to conversation:', error);
+          throw new Error(`Failed to save conversation mode: ${error.message}`);
         }
+        
+        console.log(`[ModeContext] Saved mode '${newMode}' to conversations.mode column`);
       }
     }
   };

@@ -42,6 +42,19 @@ serve(async (req) => {
       );
     }
 
+    // Mode validation
+    if (!mode || typeof mode !== 'string') {
+      console.error(`[context-injector][${requestId}] Invalid mode:`, mode);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "mode is required",
+          timestamp: new Date().toISOString()
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`[context-injector][${requestId}] 📋 Processing context injection for chat_id: ${chat_id}, injection_type: ${injection_type || 'swiss_data'}`);
 
     // Initialize Supabase client
@@ -108,7 +121,7 @@ serve(async (req) => {
         text: contextContent,
         status: "complete",
         context_injected: true,
-        mode: mode || 'chat',
+        mode: mode,
         meta: {
           injection_type: contextType,
           has_swiss_data: contextType === 'swiss_data',
