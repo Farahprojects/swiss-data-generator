@@ -139,7 +139,7 @@ serve(async (req) => {
         // Fetch owned conversations (user_id = current user, no participant row needed)
         const { data: ownedConversations, error: ownedError } = await supabaseClient
           .from('conversations')
-          .select('id, title, created_at, updated_at, meta, is_public')
+          .select('id, title, created_at, updated_at, meta, is_public, mode')
           .eq('user_id', user_id)
           .order('updated_at', { ascending: false });
 
@@ -149,7 +149,7 @@ serve(async (req) => {
         const { data: sharedConversations, error: sharedError } = await supabaseClient
           .from('conversations')
           .select(`
-            id, title, created_at, updated_at, meta, is_public,
+            id, title, created_at, updated_at, meta, is_public, mode,
             conversations_participants!inner(role)
           `)
           .eq('conversations_participants.user_id', user_id)
