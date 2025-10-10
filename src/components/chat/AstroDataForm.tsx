@@ -180,7 +180,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       
       if (!currentChatId) {
         // For authenticated users only
-        currentChatId = await addThread(user.id, 'New Chat');
+        currentChatId = await addThread(user.id, 'astro', 'New Astro Chat');
         chatController.initializeConversation(currentChatId);
       }
 

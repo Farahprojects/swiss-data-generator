@@ -14,11 +14,12 @@ export interface Conversation {
 /**
  * Create a new conversation for an authenticated user using edge function
  */
-export const createConversation = async (userId: string, title?: string): Promise<string> => {
+export const createConversation = async (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string): Promise<string> => {
   const { data, error } = await supabase.functions.invoke('conversation-manager?action=create_conversation', {
     body: {
       user_id: userId,
-      title: title || 'New Chat'
+      title: title || 'New Chat',
+      mode: mode
     }
   });
 

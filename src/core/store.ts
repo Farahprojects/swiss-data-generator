@@ -113,11 +113,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
   },
 
-  startNewConversation: async (user_id?: string) => {
+  startNewConversation: async (user_id?: string, mode: 'chat' | 'astro' | 'insight' = 'chat') => {
     if (user_id) {
       // Auth user: create persistent conversation
       const { createConversation } = await import('@/services/conversations');
-      const conversationId = await createConversation(user_id, 'New Chat');
+      const conversationId = await createConversation(user_id, mode, 'New Chat');
       
       set({ 
         chat_id: conversationId,
@@ -249,11 +249,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
   },
 
-  addThread: async (userId: string, title?: string) => {
+  addThread: async (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => {
     set({ isLoadingThreads: true, threadsError: null });
     try {
       const { createConversation } = await import('@/services/conversations');
-      const conversationId = await createConversation(userId, title);
+      const conversationId = await createConversation(userId, mode, title);
       
       // Add new thread to local state immediately for instant UI feedback
       const newThread = {
@@ -465,6 +465,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
               id: insight.id,
               user_id: userId,
               title: `${insight.report_type} - Insight`,
+              mode: 'insight',
               created_at: insight.created_at, // Use insight's created_at for consistency
               updated_at: now, // Set updated_at to now for proper sorting
               meta: {

@@ -59,7 +59,7 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
     }
   };
 
-  const addThread = async (userId: string, title?: string) => {
+  const addThread = async (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => {
     if (!user) throw new Error('User not authenticated');
     
     setLoading(true);
@@ -67,7 +67,7 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
     
     try {
       const { createConversation } = await import('@/services/conversations');
-      const conversationId = await createConversation(userId, title);
+      const conversationId = await createConversation(userId, mode, title);
       
       // Add new thread to local state immediately for instant UI feedback
       const newThread = {

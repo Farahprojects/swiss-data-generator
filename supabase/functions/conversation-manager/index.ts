@@ -20,7 +20,6 @@ serve(async (req) => {
 
     const { method } = req;
     const url = new URL(req.url);
-    const action = url.searchParams.get('action');
 
     if (method !== 'POST') {
       return new Response('Method not allowed', { 
@@ -31,10 +30,19 @@ serve(async (req) => {
 
     const requestBody = await req.json();
     const { user_id, conversation_id, title, mode } = requestBody;
+    const action = url.searchParams.get('action');
 
     // All actions require user_id
     if (!user_id) {
       return new Response('user_id is required', { 
+        status: 400, 
+        headers: corsHeaders 
+      });
+    }
+
+    // Validate mode for create actions
+    if ((action === 'create_conversation' || action === 'get_or_create_conversation') && !mode) {
+      return new Response('mode is required for conversation creation', { 
         status: 400, 
         headers: corsHeaders 
       });
@@ -56,7 +64,7 @@ serve(async (req) => {
             user_id: user_id,
             owner_user_id: user_id,
             title: title || 'New Conversation',
-            mode: mode || 'chat',
+            mode: mode,
             meta: {}
           })
           .select()
@@ -92,7 +100,7 @@ serve(async (req) => {
             .insert({
               user_id,
               title: title || 'New Conversation',
-              mode: mode || 'chat',
+              mode: mode,
               meta: {}
             })
             .select()
