@@ -113,7 +113,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
   },
 
-  startNewConversation: async (user_id?: string, mode: 'chat' | 'astro' | 'insight' = 'chat') => {
+  startNewConversation: async (user_id?: string, mode: 'chat' | 'astro' | 'insight') => {
     if (user_id) {
       // Auth user: create persistent conversation
       const { createConversation } = await import('@/services/conversations');
