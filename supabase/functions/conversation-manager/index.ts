@@ -42,9 +42,26 @@ serve(async (req) => {
 
     // Validate mode for create actions
     if ((action === 'create_conversation' || action === 'get_or_create_conversation') && !mode) {
+      console.error('[conversation-manager] MODE VALIDATION FAILED:', {
+        action,
+        user_id,
+        mode,
+        title,
+        message: 'mode is required but was not provided'
+      });
       return new Response('mode is required for conversation creation', { 
         status: 400, 
         headers: corsHeaders 
+      });
+    }
+    
+    // Log mode validation success
+    if (action === 'create_conversation' || action === 'get_or_create_conversation') {
+      console.log('[conversation-manager] MODE VALIDATED:', {
+        action,
+        user_id,
+        mode,
+        title
       });
     }
 
@@ -54,6 +71,13 @@ serve(async (req) => {
       case 'create_conversation':
         // Create a new conversation for authenticated user
         const newChatId = crypto.randomUUID();
+        
+        console.log('[conversation-manager] CREATING CONVERSATION:', {
+          id: newChatId,
+          user_id,
+          mode,
+          title: title || 'New Conversation'
+        });
         
         // Create conversation (owned, not shared yet)
         // No participant row added - participants are only for shared conversations
@@ -70,7 +94,24 @@ serve(async (req) => {
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('[conversation-manager] CREATE FAILED:', {
+            id: newChatId,
+            user_id,
+            mode,
+            error: createError,
+            error_message: createError.message,
+            error_details: createError.details,
+            error_hint: createError.hint
+          });
+          throw createError;
+        }
+
+        console.log('[conversation-manager] CREATE SUCCESS:', {
+          id: newConversation.id,
+          mode: newConversation.mode,
+          title: newConversation.title
+        });
 
         result = newConversation;
         break;
@@ -95,6 +136,12 @@ serve(async (req) => {
           result = existingConv;
         } else {
           // Create new conversation
+          console.log('[conversation-manager] GET_OR_CREATE - Creating new:', {
+            user_id,
+            mode,
+            title: title || 'New Conversation'
+          });
+          
           const { data: newConv, error: createNewError } = await supabaseClient
             .from('conversations')
             .insert({
@@ -106,7 +153,22 @@ serve(async (req) => {
             .select()
             .single();
 
-          if (createNewError) throw createNewError;
+          if (createNewError) {
+            console.error('[conversation-manager] GET_OR_CREATE FAILED:', {
+              user_id,
+              mode,
+              error: createNewError,
+              error_message: createNewError.message,
+              error_details: createNewError.details
+            });
+            throw createNewError;
+          }
+          
+          console.log('[conversation-manager] GET_OR_CREATE SUCCESS:', {
+            id: newConv.id,
+            mode: newConv.mode
+          });
+          
           result = newConv;
         }
         break;
@@ -364,7 +426,14 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in conversation-manager:', error);
+    console.error('[conversation-manager] UNHANDLED ERROR:', {
+      action: requestBody?.action,
+      user_id: requestBody?.user_id,
+      mode: requestBody?.mode,
+      error: error,
+      error_message: error.message,
+      error_stack: error.stack
+    });
     return new Response(JSON.stringify({ 
       error: error.message || 'Internal server error' 
     }), {
