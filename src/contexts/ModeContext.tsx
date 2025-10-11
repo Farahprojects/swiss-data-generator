@@ -40,21 +40,25 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
       setIsLoading(true);
       
       // Simple load: mode is already set on creation, just read it
-      supabase
-        .from('conversations')
-        .select('mode')
-        .eq('id', chat_id)
-        .maybeSingle()
-        .then(({ data }) => {
+      const loadMode = async () => {
+        try {
+          const { data } = await supabase
+            .from('conversations')
+            .select('mode')
+            .eq('id', chat_id)
+            .maybeSingle();
+          
           // Default to 'chat' if missing (defensive, shouldn't happen)
           setMode((data?.mode as ChatMode) || 'chat');
-          setIsLoading(false);
-        })
-        .catch(() => {
+        } catch {
           // On any error, just default to chat mode
           setMode('chat');
+        } finally {
           setIsLoading(false);
-        });
+        }
+      };
+      
+      loadMode();
     } else {
       setIsLoading(false);
     }

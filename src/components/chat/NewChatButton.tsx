@@ -35,7 +35,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
       
       // Create conversation through conversation-manager edge function
       const { addThread } = useChatStore.getState();
-      const newChatId = await addThread(user.id, mode, title);
+      const newChatId = await addThread(user.id, title);
       
       // Set chat_id and fetch messages
       const { setChatId } = useMessageStore.getState();

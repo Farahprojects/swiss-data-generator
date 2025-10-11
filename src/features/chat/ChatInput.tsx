@@ -78,7 +78,7 @@ export const ChatInput = () => {
       if (isAuthenticated && !chat_id && user) {
         try {
           console.log('[ChatInput] Creating new conversation for authenticated user');
-          const newChatId = await addThread(user.id, 'chat', 'New Chat');
+          const newChatId = await addThread(user.id, 'New Chat');
           
           // Initialize the conversation in chatController (store will handle state)
           await chatController.initializeConversation(newChatId);
