@@ -54,12 +54,15 @@ interface ChatState {
 
   // Thread actions
   loadThreads: (userId?: string) => Promise<void>;
-  addThread: (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => Promise<string>;
+  addThread: (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string, reportData?: {
+    reportType?: string;
+    report_data?: any;
+    email?: string;
+    name?: string;
+  }) => Promise<string>;
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
   clearThreadsError: () => void;
-  addPendingInsightThread: (reportId: string, reportType: string) => void;
-  completePendingInsightThread: (reportId: string) => Promise<void>;
   reconcileInsightThreads: (userId: string) => Promise<void>;
   
   // Real-time sync methods
@@ -252,11 +255,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
   },
 
-  addThread: async (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => {
+  addThread: async (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string, reportData?: {
+    reportType?: string;
+    report_data?: any;
+    email?: string;
+    name?: string;
+  }) => {
     set({ isLoadingThreads: true, threadsError: null });
     try {
       const { createConversation } = await import('@/services/conversations');
-      const conversationId = await createConversation(userId, mode, title);
+      const conversationId = await createConversation(userId, mode, title, reportData);
       
       // Add new thread to local state immediately for instant UI feedback
       const newThread = {
@@ -266,7 +274,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         mode: mode, // Include mode in local state
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        meta: null
+        meta: reportData?.reportType ? { reportType: reportData.reportType } : null
       };
       
       set(state => ({
@@ -325,91 +333,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
 
   clearThreadsError: () => set({ threadsError: null }),
-
-  // Pending insight thread methods
-  addPendingInsightThread: (reportId: string, reportType: string) => {
-    // Add to pending map
-    set(state => {
-      const newPendingMap = new Map(state.pendingInsightThreads);
-      newPendingMap.set(reportId, { reportType, timestamp: Date.now() });
-      return { pendingInsightThreads: newPendingMap };
-    });
-
-    // Add optimistic UI thread with pending state
-    const pendingThread: Conversation = {
-      id: reportId,
-      user_id: '', // Will be set when conversation is created
-      title: `${reportType} - Insight (generating...)`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      meta: { type: 'pending_insight', reportType, isPending: true }
-    };
-
-    set(state => ({
-      threads: [pendingThread, ...state.threads]
-    }));
-  },
-
-  completePendingInsightThread: async (reportId: string) => {
-    const { pendingInsightThreads } = get();
-    const pendingData = pendingInsightThreads.get(reportId);
-    
-    if (!pendingData) {
-      console.warn('[Store] No pending thread found for report_id:', reportId);
-      return;
-    }
-
-    try {
-      // Get user from auth
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Create the actual conversation in DB
-      const { error } = await supabase
-        .from('conversations')
-        .insert({
-          id: reportId,
-          user_id: user.id,
-          title: `${pendingData.reportType} - Insight`,
-          meta: {
-            type: 'insight_chat',
-            insight_report_id: reportId,
-            parent_report_type: pendingData.reportType
-          }
-        });
-
-      if (error) {
-        console.error('[Store] Failed to create insight conversation:', error);
-        return;
-      }
-
-      // Update the thread in local state (remove pending flag)
-      set(state => ({
-        threads: state.threads.map(thread => 
-          thread.id === reportId 
-            ? {
-                ...thread,
-                user_id: user.id,
-                title: `${pendingData.reportType} - Insight`,
-                meta: {
-                  type: 'insight_chat',
-                  insight_report_id: reportId,
-                  parent_report_type: pendingData.reportType
-                }
-              }
-            : thread
-        )
-      }));
-
-      // Remove from pending map
-      const newPendingMap = new Map(pendingInsightThreads);
-      newPendingMap.delete(reportId);
-      set({ pendingInsightThreads: newPendingMap });
-
-    } catch (error) {
-      console.error('[Store] Error completing pending insight thread:', error);
-    }
-  },
 
   reconcileInsightThreads: async (userId: string) => {
     if (!userId) return;

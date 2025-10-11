@@ -139,34 +139,35 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       let currentChatId = chat_id;
       
       if (!currentChatId) {
-        // For authenticated users only - use current mode from context
+        // Build report data for conversation creation
+        const reportPayload = buildAuthReportPayload(data, '');
+        
+        // For authenticated users - create conversation with report data
         const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
-        currentChatId = await addThread(user.id, mode, title);
+        currentChatId = await addThread(user.id, mode, title, {
+          reportType: reportType,
+          report_data: reportPayload.report_data,
+          email: user?.email || '',
+          name: data.name
+        });
         chatController.initializeConversation(currentChatId);
-      }
+        
+        // Conversation-manager will handle calling initiate-auth-report if reportType exists
+        console.log('[AstroDataForm] Conversation created with report data:', currentChatId);
+      } else {
+        // If chat_id already exists, call initiate-auth-report directly
+        const payload = buildAuthReportPayload(data, currentChatId);
+        
+        const { error } = await supabase.functions.invoke('initiate-auth-report', {
+          body: payload
+        });
 
-      // Add pending insight thread to UI if this is an insight report
-      if (mode === 'insight' && reportType) {
-        const { addPendingInsightThread } = useChatStore.getState();
-        addPendingInsightThread(currentChatId, reportType);
-      }
-
-      // Note: Report completion listening is handled globally in ChatThreadsSidebar
-      // No need to subscribe here - it will automatically detect when reports are ready
-      
-      // Build payload for initiate-auth-report
-      const payload = buildAuthReportPayload(data, currentChatId);
-      
-      // Invoke initiate-auth-report edge function
-      const { data: result, error } = await supabase.functions.invoke('initiate-auth-report', {
-        body: payload
-      });
-
-      if (error) {
-        console.error('[AstroDataForm] Initiate-auth-report error:', error);
-        toast.error('Failed to process astro data. Please try again.');
-        setIsProcessing(false);
-        return;
+        if (error) {
+          console.error('[AstroDataForm] Initiate-auth-report error:', error);
+          toast.error('Failed to process astro data. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
       }
       
       // Call onSubmit for profile flow and insights variant

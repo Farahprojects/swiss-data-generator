@@ -201,10 +201,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           // Check if the insight is marked as ready
           if (insight.is_ready === true) {
             console.log('[ChatThreadsSidebar] Report completed:', insight.id);
-            
-            // Complete the pending insight thread (creates conversation in DB)
-            const { completePendingInsightThread } = useChatStore.getState();
-            await completePendingInsightThread(insight.id);
+            // Note: Conversation already created by addThread in AstroDataForm
+            // Just remove from pending map
+            const { pendingInsightThreads } = useChatStore.getState();
+            const newPendingMap = new Map(pendingInsightThreads);
+            newPendingMap.delete(insight.id);
+            useChatStore.setState({ pendingInsightThreads: newPendingMap });
           }
         }
       )

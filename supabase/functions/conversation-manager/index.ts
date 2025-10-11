@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     requestBody = await req.json(); // Assign inside try
-    const { user_id, conversation_id, title, mode } = requestBody;
+    const { user_id, conversation_id, title, mode, reportType, report_data, email, name } = requestBody;
     const action = url.searchParams.get('action');
 
     // All actions require user_id
@@ -114,6 +114,41 @@ serve(async (req) => {
           mode: newConversation.mode,
           title: newConversation.title
         });
+
+        // If reportType exists, trigger report generation
+        if (reportType && report_data) {
+          console.log('[conversation-manager] Triggering report generation for:', {
+            chat_id: newChatId,
+            reportType,
+            mode
+          });
+
+          // Get auth token from request for forwarding
+          const authHeader = req.headers.get('Authorization');
+          
+          // Call initiate-auth-report to process the astro data
+          const reportPayload = {
+            chat_id: newChatId,
+            report_data: report_data,
+            email: email || '',
+            name: name || '',
+            mode: mode
+          };
+
+          // Fire-and-forget - don't wait for report processing
+          fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/initiate-auth-report`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader || ''
+            },
+            body: JSON.stringify(reportPayload)
+          }).catch(error => {
+            console.error('[conversation-manager] Failed to trigger report:', error);
+          });
+
+          console.log('[conversation-manager] Report generation triggered (fire-and-forget)');
+        }
 
         result = newConversation;
         break;
