@@ -54,7 +54,7 @@ interface ChatState {
 
   // Thread actions
   loadThreads: (userId?: string) => Promise<void>;
-  addThread: (userId: string, title?: string) => Promise<string>;
+  addThread: (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => Promise<string>;
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
   clearThreadsError: () => void;

@@ -6,7 +6,7 @@ import { useAuth } from './AuthContext';
 export type ChatMode = 'chat' | 'astro' | 'insight';
 
 interface ModeContextType {
-  mode: ChatMode;
+  mode: ChatMode | null;
   setMode: (mode: ChatMode) => void;
   isModeLocked: boolean;
   isLoading: boolean;
@@ -27,7 +27,7 @@ interface ModeProviderProps {
 }
 
 export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
-  const [mode, setMode] = useState<ChatMode>('chat');
+  const [mode, setMode] = useState<ChatMode | null>(null);
   const [isModeLocked, setIsModeLocked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -48,11 +48,11 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
             .eq('id', chat_id)
             .maybeSingle();
           
-          // Default to 'chat' if missing (defensive, shouldn't happen)
-          setMode((data?.mode as ChatMode) || 'chat');
+          // Mode must exist on conversation - no defaults
+          setMode((data?.mode as ChatMode) || null);
         } catch {
-          // On any error, just default to chat mode
-          setMode('chat');
+          // On any error, set to null (no mode selected)
+          setMode(null);
         } finally {
           setIsLoading(false);
         }
@@ -67,7 +67,7 @@ export const ModeProvider: React.FC<ModeProviderProps> = ({ children }) => {
   // Reset mode when user is not authenticated
   useEffect(() => {
     if (!user) {
-      setMode('chat');
+      setMode(null);
       setIsModeLocked(false);
       setIsLoading(false);
     }

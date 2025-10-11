@@ -175,6 +175,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     setIsProcessing(true);
     
     try {
+      // Ensure we have a mode selected
+      if (!mode) {
+        toast.error('Please select a mode from the dropdown menu before submitting.');
+        setIsProcessing(false);
+        return;
+      }
+      
       // Ensure we have a chat_id
       let currentChatId = chat_id;
       
@@ -292,7 +299,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       report_data: reportData,
       email: user?.email || '',
       name: data.name,
-      mode: mode, // Add mode to payload
+      mode: mode || 'chat', // Fallback to 'chat' for payload only (should never be null here due to validation)
     };
   };
 
