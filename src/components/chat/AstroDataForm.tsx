@@ -188,20 +188,14 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         return;
       }
       
-      // Determine chat_id based on mode and context
+      // Ensure we have a chat_id
       let currentChatId = chat_id;
       
       if (!currentChatId) {
-        // For insights: reportId IS the chat_id (don't create separate conversation)
-        if (mode === 'insight' && reportId) {
-          currentChatId = reportId;
-          chatController.initializeConversation(currentChatId);
-        } else {
-          // For chat/astro: create new conversation
-          const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
-          currentChatId = await addThread(user.id, mode, title);
-          chatController.initializeConversation(currentChatId);
-        }
+        // For authenticated users only - use current mode from context
+        const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
+        currentChatId = await addThread(user.id, mode, title);
+        chatController.initializeConversation(currentChatId);
       }
 
       // Add pending insight thread to UI if this is an insight report
