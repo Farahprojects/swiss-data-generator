@@ -117,6 +117,7 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
               reportType={selectedReportType}
               isProfileFlow={false}
               variant="insights"
+              mode="insight"
             />
           ) : (
             <>

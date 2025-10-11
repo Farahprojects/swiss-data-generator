@@ -198,6 +198,7 @@ const Profile: React.FC = () => {
                   reportType="essence_personal"
                   contextId={user?.id}
                   isProfileFlow={true}
+                  mode="astro"
                 />
               </CardContent>
             </Card>

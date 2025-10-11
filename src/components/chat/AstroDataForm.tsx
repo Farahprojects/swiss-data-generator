@@ -34,6 +34,8 @@ interface AstroDataFormProps {
   isProfileFlow?: boolean;
   // UI variant: when 'insights', suppress internal header/type step
   variant?: 'standalone' | 'insights';
+  // Explicit mode when opened from specific contexts (overrides ModeContext)
+  mode?: 'chat' | 'astro' | 'insight';
 }
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
@@ -44,6 +46,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   contextId,
   isProfileFlow = false,
   variant = 'standalone',
+  mode: explicitMode,
 }) => {
   const isInsights = variant === 'insights';
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
@@ -67,7 +70,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Conversation management for authenticated users
   const { addThread } = useChatStore();
   const chat_id = useChatStore((state) => state.chat_id);
-  const { mode } = useMode();
+  const { mode: contextMode } = useMode();
+  
+  // Use explicit mode prop if provided, otherwise fall back to ModeContext
+  const mode = explicitMode || contextMode;
   
   // Universal ID logic: use provided contextId or fall back to chat store
   const finalContextId = contextId || chat_id;
@@ -182,14 +188,20 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         return;
       }
       
-      // Ensure we have a chat_id
+      // Determine chat_id based on mode and context
       let currentChatId = chat_id;
       
       if (!currentChatId) {
-        // For authenticated users only - use current mode from context
-        const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
-        currentChatId = await addThread(user.id, mode, title);
-        chatController.initializeConversation(currentChatId);
+        // For insights: reportId IS the chat_id (don't create separate conversation)
+        if (mode === 'insight' && reportId) {
+          currentChatId = reportId;
+          chatController.initializeConversation(currentChatId);
+        } else {
+          // For chat/astro: create new conversation
+          const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
+          currentChatId = await addThread(user.id, mode, title);
+          chatController.initializeConversation(currentChatId);
+        }
       }
 
       // Add pending insight thread to UI if this is an insight report

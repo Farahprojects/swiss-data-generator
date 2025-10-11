@@ -193,6 +193,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
                 onSubmit={handleAstroFormSubmit}
                 variant="standalone"
                 isProfileFlow={false}
+                mode="astro"
               />
             </div>
           </div>

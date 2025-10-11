@@ -59,7 +59,27 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[create-insight-id] Created insight with ID: ${data.id}`)
+    const insightId = data.id
+    console.log(`[create-insight-id] Created insight with ID: ${insightId}`)
+
+    // Create conversation with the SAME ID so reportId === conversationId
+    const { error: conversationError } = await supabase
+      .from('conversations')
+      .insert({
+        id: insightId,
+        user_id,
+        title: 'New Insight Report',
+        mode: 'insight',
+        meta: { report_type }
+      })
+
+    if (conversationError) {
+      console.error('[create-insight-id] Failed to create conversation:', conversationError)
+      // Don't fail the request - insight was created successfully
+      // The conversation can be created later if needed
+    } else {
+      console.log(`[create-insight-id] Created conversation with same ID: ${insightId}`)
+    }
 
     return new Response(
       JSON.stringify({ 
