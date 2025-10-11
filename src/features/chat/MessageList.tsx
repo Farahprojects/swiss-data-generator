@@ -7,11 +7,8 @@ import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
 // TypewriterText removed - keeping source field logic for future use
-import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
-import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useMode } from '@/contexts/ModeContext';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering
 const renderMessages = (messages: Message[], currentUserId?: string) => {
@@ -89,7 +86,6 @@ const renderMessages = (messages: Message[], currentUserId?: string) => {
 
 export const MessageList = () => {
   const chat_id = useChatStore((state) => state.chat_id);
-  const { mode, isLoading: modeLoading } = useMode();
   
   // Use unified message store
   const { 
@@ -110,19 +106,7 @@ export const MessageList = () => {
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
-  const [astroChoiceMade, setAstroChoiceMade] = useState(false);
-  
-  // Reset astro choice when switching to a new conversation
-  useEffect(() => {
-    setAstroChoiceMade(false);
-  }, [chat_id]);
   const navigate = useNavigate();
-  
-  const handleAddAstroData = () => {
-    setAstroChoiceMade(true);
-    // TODO: Open astro data form or redirect to report generation
-    console.log('User chose to add astro data');
-  };
   
   // Set chat ID when it changes
   // Removed redundant setChatId call - chat switching already handles this
@@ -144,12 +128,8 @@ export const MessageList = () => {
     const userMessages = messages.filter(m => m.role === 'user');
     if (userMessages.length > 0) {
       setHasUserSentMessage(true);
-      // Auto-assume "without" if user starts typing
-      if (!astroChoiceMade) {
-        setAstroChoiceMade(true);
-      }
     }
-  }, [messages, astroChoiceMade]);
+  }, [messages]);
 
   // Auto-scroll when content grows
   React.useEffect(() => {
@@ -200,23 +180,9 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!modeLoading && mode === 'astro' && !astroChoiceMade ? (
-                  <div className="w-full max-w-2xl lg:max-w-4xl">
-                    <AstroDataForm
-                      onClose={() => {
-                        setAstroChoiceMade(true);
-                      }}
-                      onSubmit={(data) => {
-                        console.log('Astro data submitted:', data);
-                        handleAddAstroData();
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm">Ready to chat! Type your message below.</p>
-                  </div>
-                )}
+                <div className="text-center text-gray-500">
+                  <p className="text-sm">Ready to chat! Type your message below.</p>
+                </div>
               </div>
             </div>
           ) : (
