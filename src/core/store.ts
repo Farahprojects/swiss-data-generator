@@ -263,6 +263,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         id: conversationId,
         user_id: userId,
         title: title || 'New Chat',
+        mode: mode, // Include mode in local state
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         meta: null

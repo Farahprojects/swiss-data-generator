@@ -26,7 +26,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showAstroModal, setShowAstroModal] = useState(false);
 
-  // Shared handleNewChat function
+  // Shared handleNewChat function - all creation goes through conversation-manager
   const handleNewChat = async (mode: 'chat' | 'astro' | 'insight' = 'chat') => {
     if (!user) {
       console.error('[NewChatDropdown] Cannot create new chat: user not authenticated');
@@ -34,44 +34,17 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
     }
 
     try {
-      // Create new conversation with mode in mode column
-      const { data: conversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-          mode: mode,
-          meta: {}
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('[NewChatDropdown] Failed to create conversation:', error);
-        return;
-      }
-
-      const newChatId = conversation.id;
+      const title = mode === 'insight' ? 'New Insight Chat' : 'New Chat';
       
-      // Add to local threads state directly (no DB call needed)
-      const newThread = {
-        id: newChatId,
-        user_id: user.id,
-        title: mode === 'insight' ? 'New Insight Chat' : 'New Chat',
-        mode: mode as 'chat' | 'astro' | 'insight',
-        meta: {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      // Create conversation through conversation-manager edge function
+      const { addThread } = useChatStore.getState();
+      const newChatId = await addThread(user.id, mode, title);
       
-      const currentState = useChatStore.getState();
-      useChatStore.setState({ threads: [newThread, ...currentState.threads] });
-      
-      // DIRECT FLOW: Immediately set chat_id and fetch messages
+      // Set chat_id and fetch messages
       const { setChatId } = useMessageStore.getState();
       setChatId(newChatId);
       
-      // Also update the main chat store
+      // Update the main chat store
       const { startConversation } = useChatStore.getState();
       startConversation(newChatId);
       
