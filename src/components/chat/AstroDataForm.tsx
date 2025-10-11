@@ -144,16 +144,21 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         
         // For authenticated users - create conversation with report data
         const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
-        currentChatId = await addThread(user.id, mode, title, {
+        const conversationResult = await addThread(user.id, mode, title, {
           reportType: reportType,
           report_data: reportPayload.report_data,
           email: user?.email || '',
           name: data.name
         });
+        
+        // conversation-manager returns the ID and tells us if report is generating
+        currentChatId = conversationResult;
         chatController.initializeConversation(currentChatId);
         
-        // Conversation-manager will handle calling initiate-auth-report if reportType exists
-        console.log('[AstroDataForm] Conversation created with report data:', currentChatId);
+        console.log('[AstroDataForm] Conversation created, mode-based routing handled by backend:', {
+          chat_id: currentChatId,
+          mode
+        });
       } else {
         // If chat_id already exists, call initiate-auth-report directly
         const payload = buildAuthReportPayload(data, currentChatId);

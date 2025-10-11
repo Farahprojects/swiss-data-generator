@@ -115,12 +115,15 @@ serve(async (req) => {
           title: newConversation.title
         });
 
-        // If reportType exists, trigger report generation
-        if (reportType && report_data) {
-          console.log('[conversation-manager] Triggering report generation for:', {
+        // Route by mode - mode determines behavior
+        let isGeneratingReport = false;
+
+        if (mode === 'insight' || (mode === 'astro' && report_data)) {
+          // Insight mode always generates report, astro mode only if report_data exists
+          console.log('[conversation-manager] MODE-BASED ROUTING: Report generation triggered', {
             chat_id: newChatId,
-            reportType,
-            mode
+            mode,
+            reportType: reportType || 'N/A'
           });
 
           // Get auth token from request for forwarding
@@ -147,10 +150,21 @@ serve(async (req) => {
             console.error('[conversation-manager] Failed to trigger report:', error);
           });
 
-          console.log('[conversation-manager] Report generation triggered (fire-and-forget)');
+          isGeneratingReport = true;
+          console.log('[conversation-manager] Report generation initiated (async)');
+        } else {
+          console.log('[conversation-manager] MODE-BASED ROUTING: No report generation', {
+            mode,
+            reason: 'mode is chat or no report_data provided'
+          });
         }
 
-        result = newConversation;
+        // Return conversation with metadata about report generation
+        result = {
+          ...newConversation,
+          is_generating_report: isGeneratingReport,
+          reportType: reportType || null
+        };
         break;
 
       case 'get_or_create_conversation':
