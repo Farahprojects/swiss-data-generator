@@ -55,8 +55,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [selectedAstroType, setSelectedAstroType] = useState<string>(preselectedType || '');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [reportId, setReportId] = useState<string | null>(null);
-  const [isCreatingReportId, setIsCreatingReportId] = useState(false);
   const isMobile = useIsMobile();
   
   // Auth detection - use route-based logic
@@ -103,52 +101,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const { register, handleSubmit, setValue, setError, watch, formState: { errors } } = form;
   const formValues = watch();
 
-  // Create insight report ID when we have reportType and user
-  useEffect(() => {
-    if (reportType && user?.id && currentStep === 'details' && !reportId && !isCreatingReportId) {
-      createInsightReportId(user.id, reportType);
-    }
-  }, [reportType, user?.id, currentStep, reportId, isCreatingReportId]);
-
   const handleAstroTypeSelect = (type: string) => {
     setSelectedAstroType(type);
     setValue('request', type);
     setValue('reportType', null);
     setCurrentStep('details');
-  };
-
-  // Function to create insight report ID
-  const createInsightReportId = async (userId: string, reportType: string) => {
-    if (reportId) return reportId; // Already have a report ID
-    
-    setIsCreatingReportId(true);
-    try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-insight-id`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          report_type: reportType
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create report ID');
-      }
-
-      const data = await response.json();
-      setReportId(data.report_id);
-      return data.report_id;
-    } catch (error) {
-      console.error('[AstroDataForm] Error creating report ID:', error);
-      toast.error('Failed to initialize report. Please try again.');
-      return null;
-    } finally {
-      setIsCreatingReportId(false);
-    }
   };
 
   const handlePlaceSelect = (place: PlaceData) => {
@@ -167,16 +124,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Handle form submission for authenticated users
   const handleAuthenticatedSubmit = async (data: ReportFormData) => {
     if (!user) return;
-    
-    // If we have a reportType but no reportId yet, wait for it to be created
-    if (reportType && !reportId) {
-      // Wait a bit for the report ID to be created
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      if (!reportId) {
-        toast.error('Report initialization is taking longer than expected. Please try again.');
-        return;
-      }
-    }
     
     setIsProcessing(true);
     
@@ -199,9 +146,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
 
       // Add pending insight thread to UI if this is an insight report
-      if (reportId && reportType) {
+      if (mode === 'insight' && reportType) {
         const { addPendingInsightThread } = useChatStore.getState();
-        addPendingInsightThread(reportId, reportType);
+        addPendingInsightThread(currentChatId, reportType);
       }
 
       // Note: Report completion listening is handled globally in ChatThreadsSidebar
@@ -300,8 +247,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
 
     return {
-      chat_id: reportId || contextId, // Use report_id for insights, contextId for chat/profile flows
-      report_id: reportId, // Pass report_id for insights reports
+      chat_id: contextId, // Use the conversation ID
       report_data: reportData,
       email: user?.email || '',
       name: data.name,

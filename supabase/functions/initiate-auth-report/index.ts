@@ -9,7 +9,6 @@ const corsHeaders = {
 
 interface AuthReportRequest {
   chat_id: string;
-  report_id?: string; // Optional report_id for insights reports
   report_data: {
     request: string;
     reportType: string;
@@ -46,9 +45,9 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, report_id, report_data, email, name, mode } = await req.json() as AuthReportRequest;
+    const { chat_id, report_data, email, name, mode } = await req.json() as AuthReportRequest;
     
-    console.log(`🔄 [initiate-auth-report] Processing request for chat_id: ${chat_id}, report_id: ${report_id}`);
+    console.log(`🔄 [initiate-auth-report] Processing request for chat_id: ${chat_id}, mode: ${mode}`);
 
     if (!chat_id || !report_data) {
       return new Response(JSON.stringify({ error: "chat_id and report_data are required" }), {
@@ -93,11 +92,11 @@ serve(async (req) => {
     let isUserProfile = false;
     let isInsightsReport = false;
     
-    // Check if this is an insights report with a report_id
-    if (report_id) {
-      console.log(`🔄 [initiate-auth-report] Using report_id for insights report: ${report_id}`);
+    // Check if this is an insights report by mode
+    if (mode === 'insight') {
+      console.log(`🔄 [initiate-auth-report] Insights report flow for chat_id: ${chat_id}`);
       isInsightsReport = true;
-      actualChatId = report_id; // Use report_id as context_id for insights
+      actualChatId = chat_id; // Use chat_id for insights
     }
     // Check if the chat_id is actually a user_id (from profile page)
     else if (chat_id === user.id) {
@@ -126,7 +125,7 @@ serve(async (req) => {
     // Step 3: Build translator-edge payload
     const translatorPayload = {
       ...report_data,
-      chat_id: actualChatId, // Always pass chat_id (conversation id, user id for profile, or report_id for insights)
+      chat_id: actualChatId, // Always pass chat_id (conversation id, user id for profile, or conversation id for insights)
       request_id: crypto.randomUUID().slice(0, 8),
       email: email,
       name: name,
