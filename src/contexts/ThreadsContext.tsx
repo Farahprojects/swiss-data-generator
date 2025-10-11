@@ -7,7 +7,7 @@ interface ThreadsContextType {
   loading: boolean;
   error: string | null;
   loadThreads: () => Promise<void>;
-  addThread: (userId: string, title?: string) => Promise<string>;
+  addThread: (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => Promise<string>;
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
   clearThreadsError: () => void;
@@ -59,7 +59,7 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
     }
   };
 
-  const addThread = async (userId: string, title?: string) => {
+  const addThread = async (userId: string, mode: 'chat' | 'astro' | 'insight', title?: string) => {
     if (!user) throw new Error('User not authenticated');
     
     setLoading(true);
@@ -67,13 +67,14 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
     
     try {
       const { createConversation } = await import('@/services/conversations');
-      const conversationId = await createConversation(userId, 'chat', title);
+      const conversationId = await createConversation(userId, mode, title);
       
       // Add new thread to local state immediately for instant UI feedback
       const newThread = {
         id: conversationId,
         user_id: userId,
         title: title || 'New Chat',
+        mode: mode, // Include mode in local state
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         meta: null

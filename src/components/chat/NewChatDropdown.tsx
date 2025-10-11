@@ -38,7 +38,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
       
       // Create conversation through conversation-manager edge function
       const { addThread } = useChatStore.getState();
-      const newChatId = await addThread(user.id, title);
+      const newChatId = await addThread(user.id, mode, title);
       
       // Set chat_id and fetch messages
       const { setChatId } = useMessageStore.getState();

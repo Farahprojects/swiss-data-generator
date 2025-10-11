@@ -181,7 +181,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       if (!currentChatId) {
         // For authenticated users only - use current mode from context
         const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
-        currentChatId = await addThread(user.id, title);
+        currentChatId = await addThread(user.id, mode, title);
         chatController.initializeConversation(currentChatId);
       }
 

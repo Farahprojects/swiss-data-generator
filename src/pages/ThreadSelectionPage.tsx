@@ -20,7 +20,7 @@ const ThreadSelectionPage: React.FC = () => {
     
     setIsCreating(true);
     try {
-      const threadId = await addThread(user.id, 'New Chat');
+      const threadId = await addThread(user.id, 'chat', 'New Chat');
       navigate(`/c/${threadId}`);
     } catch (error) {
       console.error('Failed to create new thread:', error);

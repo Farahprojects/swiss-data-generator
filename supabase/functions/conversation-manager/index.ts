@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  let requestBody; // Declare outside try block for error handler access
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -28,7 +30,7 @@ serve(async (req) => {
       });
     }
 
-    const requestBody = await req.json();
+    requestBody = await req.json(); // Assign inside try
     const { user_id, conversation_id, title, mode } = requestBody;
     const action = url.searchParams.get('action');
 
