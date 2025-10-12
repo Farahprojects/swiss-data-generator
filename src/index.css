@@ -13,7 +13,7 @@
 /* Mobile safe area padding for phone navigation buttons */
 @supports (padding: max(0px)) {
   .pb-safe {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom), var(--vv-bottom, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
 
@@ -216,19 +216,6 @@ textarea {
   font-size: 16px;                       /* Min font‑size to avoid zoom */
 }
 
-/* Scroll lock helper applied via JS while drawer is open */
-.drawer-scroll-lock {
-  position: fixed !important;
-  inset: 0 !important;
-  overflow: hidden !important;
-}
-
-/* Ensure React root also freezes */
-.drawer-scroll-lock #root {
-  height: 100% !important;
-  overflow: hidden !important;
-}
-
 /* -------------------------------------------------------------------------- */
 /*  GOOGLE MAPS AUTOCOMPLETE PATCHES (mobile)                                 */
 /* -------------------------------------------------------------------------- */
@@ -279,123 +266,9 @@ gmp-place-autocomplete::part(result-item) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  MOBILE FORM PROTECTOR                                                    */
-/* -------------------------------------------------------------------------- */
-.mobile-form-protector {
-  /* Prevent pull-to-refresh and zoom interference */
-  -webkit-tap-highlight-color: transparent;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  
-  /* Ensure proper stacking */
-  position: relative;
-  isolation: isolate;
-  z-index: 1000;
-}
-
-/* Fixed footer at bottom of viewport, resists keyboard push */
-.mobile-form-protector .mobile-footer-fixed {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 50 !important;
-  background: white !important;
-  border-top: 1px solid #f3f4f6 !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-}
-
-/* Remove extra padding since footer is not fixed */
-.mobile-form-protector .flex-1 {
-  padding-bottom: 0 !important;
-}
-
-/* Ensure promo code error messages are visible */
-.mobile-form-protector .CollapsibleContent {
-  overflow: visible !important;
-}
-
-.mobile-form-protector .CollapsibleContent .space-y-3 {
-  overflow: visible !important;
-}
-
-/* Elegant promo code error styling */
-.promo-error-message {
-  animation: fadeInUp 0.3s ease-out;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Smooth error state transitions */
-.promo-input-error {
-  transition: all 0.2s ease-in-out;
-}
-
-.promo-input-error:focus {
-  border-color: rgb(248 113 113) !important;
-  ring-color: rgb(248 113 113) !important;
-}
-
-/* -------------------------------------------------------------------------- */
-/*  MOBILE SHEET (PORTAL)                                                     */
-/* -------------------------------------------------------------------------- */
-.sheet__scroll {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--kb, 0px) + var(--footer-h, 80px));
-}
-
-.sheet__backdrop {
-  pointer-events: auto;
-  touch-action: none; /* prevent pull-to-refresh on Android */
-}
-
-/* Ensure focused fields clear the footer */
-.sheet__scroll input,
-.sheet__scroll textarea,
-.sheet__scroll [contenteditable] {
-  scroll-margin-bottom: calc(var(--footer-h, 80px) + 24px);
-}
-
-@supports not (height: 100dvh) {
-  .sheet__container { height: 100vh; }
-}
-/* -------------------------------------------------------------------------- */
-/*  END SHEET                                                                 */
-/* -------------------------------------------------------------------------- */
-
-/* -------------------------------------------------------------------------- */
 /*  END                                                                      */
 /* -------------------------------------------------------------------------- */
-
-/* Global fixed footer rule for portal sheet */
-/* .mobile-footer-fixed disabled to allow chat bar to move with keyboard */
-/*
-.mobile-footer-fixed {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2147483647;
-  contain: paint;
-  backface-visibility: hidden;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  touch-action: manipulation;
-}
-*/
 
 /* Sheet root/backdrop per guidance */
 .sheet-root { position: fixed; inset: 0; display: flex; flex-direction: column; min-height: 100dvh; min-height: 100svh; }
 .sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.5); overscroll-behavior: contain; touch-action: none; }
-
-/* Scroll area padding and input margins already added as .sheet__scroll rules */

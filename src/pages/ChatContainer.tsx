@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useSafeBottomPadding } from '@/hooks/useSafeBottomPadding';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { useChatInitialization } from '@/hooks/useChatInitialization';
@@ -20,8 +19,6 @@ const ChatContainerContent: React.FC = () => {
 
   // Single responsibility: Initialize chat when threadId changes
   useChatInitialization();
-  // Keyboard handling now uses CSS 100dvh approach
-  // useSafeBottomPadding();
   
   // Check for pending join token and open auth modal
   useEffect(() => {
