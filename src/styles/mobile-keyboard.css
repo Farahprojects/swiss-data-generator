@@ -7,21 +7,17 @@
   }
 }
 
-/* Professional keyboard handling - Fixed positioning (WhatsApp/Telegram approach) */
+/* Natural mobile keyboard handling - let browser handle it */
 @media screen and (max-width: 639px) {
   .mobile-input-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
     z-index: 40;
     background: white;
-    will-change: transform; /* Performance optimization for smooth movement */
   }
   
-  /* Add padding to message area so content doesn't hide under fixed input */
+  /* No padding needed - input is in natural flow */
   .mobile-messages-area {
-    padding-bottom: 80px; /* Height of input area */
+    padding-bottom: 0;
   }
 }
 

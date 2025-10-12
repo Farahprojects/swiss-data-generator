@@ -4,7 +4,6 @@ import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatController } from './ChatController';
 import { supabase } from '@/integrations/supabase/client';
-import { useKeyboardAwareInput } from '@/hooks/useKeyboardAwareInput';
 
 import { Menu, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,9 +41,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
-  
-  // Professional keyboard handling for mobile
-  const keyboardAwareRef = useKeyboardAwareInput();
   
   
   // Get chat_id from store for payment flow
@@ -124,7 +120,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           duration: 0.6
         }}
       >
-        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0 mobile-chat-container" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any }}>
+        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0 mobile-chat-container" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any, minHeight: '100vh' }}>
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50 h-full">
             <div className="p-4 flex flex-col h-full">
@@ -186,9 +182,8 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
               </Suspense>
             </div>
 
-            {/* Footer Area - Fixed positioning with keyboard awareness */}
+            {/* Footer Area - Natural flow for keyboard handling */}
             <div 
-              ref={keyboardAwareRef}
               className="mobile-input-area mobile-input-container"
             >
               {error && (
