@@ -26,6 +26,14 @@ export const ChatInput = () => {
   const [text, setText] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const { mode } = useMode();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Manual scroll handler for testing if interactive-widget=overlays-content is blocking
+  const handleFocus = () => {
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300); // Delay to allow keyboard to appear
+  };
   
   // Get chat locked state
   
@@ -205,8 +213,10 @@ export const ChatInput = () => {
             </div>
           ) : (
             <TextareaAutosize
+              ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onFocus={handleFocus}
               placeholder={isAssistantGenerating ? "Setting up your space..." : "Share your thoughts..."}
               disabled={isAssistantGenerating}
               className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto ${
