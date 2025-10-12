@@ -35,9 +35,7 @@ const ChatContainerContent: React.FC = () => {
   return (
     <div className="flex flex-col h-screen" style={{ overscrollBehavior: 'contain' as any }}>
       <ReportModalProvider>
-        <MobileViewportLock active={false}>
-          <ChatBox />
-        </MobileViewportLock>
+        <ChatBox />
       </ReportModalProvider>
       
       {/* Auth modal for pending joins */}
