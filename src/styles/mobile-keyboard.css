@@ -10,21 +10,16 @@
 /* Handle iOS Safari viewport changes */
 @supports (-webkit-touch-callout: none) {
   .mobile-input-container {
-    /* Use transform instead of position fixed to avoid keyboard issues */
-    position: relative;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
+    /* Non-sticky positioning - allows natural movement above keyboard */
+    position: static;
   }
 }
 
 /* Android Chrome handling */
 @media screen and (max-width: 768px) {
   .mobile-input-container {
-    /* Ensure chat input stays visible above keyboard */
-    position: relative;
-    bottom: 0;
+    /* Non-sticky positioning - allows natural movement above keyboard */
+    position: static;
   }
   
   /* Add padding to prevent keyboard overlap */
