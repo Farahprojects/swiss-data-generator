@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, Suspense, lazy, useState } from 'react';
+import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatController } from './ChatController';
@@ -35,6 +36,7 @@ interface ChatBoxProps {
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
+  const { error } = useChatStore();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
@@ -178,6 +180,20 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
               <Suspense fallback={<MessageListSkeleton />}>
                 <MessageList />
               </Suspense>
+            </div>
+
+            {/* Footer Area - Natural flow for keyboard handling */}
+            <div 
+              className="mobile-input-area mobile-input-container"
+            >
+              {error && (
+                <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
+                  {error}
+                </div>
+              )}
+              <div className="border-t border-gray-100">
+                <ChatInput />
+              </div>
             </div>
 
             {/* Conversation Overlay */}
