@@ -6,19 +6,15 @@ interface ConversationUIState {
   closeConversation: () => void;
 }
 
-export const useConversationUIStore = create<ConversationUIState>((set, get) => ({
+export const useConversationUIStore = create<ConversationUIState>((set) => ({
   isConversationOpen: false,
   openConversation: () => {
     set({ isConversationOpen: true });
-    // Add no-anim class to disable animations
-    document.documentElement.classList.add('no-anim');
     // Lock scroll
     document.body.style.overflow = 'hidden';
   },
   closeConversation: () => {
     set({ isConversationOpen: false });
-    // Remove no-anim class to re-enable animations
-    document.documentElement.classList.remove('no-anim');
     // Unlock scroll
     document.body.style.overflow = '';
   },
