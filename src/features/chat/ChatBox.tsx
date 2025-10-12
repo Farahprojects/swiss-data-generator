@@ -198,7 +198,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
             {/* Conversation Overlay */}
             <Suspense fallback={null}>
-              <ConversationOverlay />
+              {/* <ConversationOverlay /> */}
             </Suspense>
           </div>
         </div>
