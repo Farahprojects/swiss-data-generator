@@ -7,24 +7,21 @@
   }
 }
 
-/* Handle iOS Safari viewport changes */
-@supports (-webkit-touch-callout: none) {
-  .mobile-input-container {
-    /* Non-sticky positioning - allows natural movement above keyboard */
-    position: static;
-  }
-}
-
-/* Android Chrome handling */
+/* Professional keyboard handling - Fixed positioning (WhatsApp/Telegram approach) */
 @media screen and (max-width: 768px) {
   .mobile-input-container {
-    /* Non-sticky positioning - allows natural movement above keyboard */
-    position: static;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: white;
+    will-change: transform; /* Performance optimization for smooth movement */
   }
   
-  /* Add padding to prevent keyboard overlap */
-  .mobile-keyboard-padding {
-    padding-bottom: env(keyboard-inset-height, 0px);
+  /* Add padding to message area so content doesn't hide under fixed input */
+  .mobile-messages-area {
+    padding-bottom: 80px; /* Height of input area */
   }
 }
 

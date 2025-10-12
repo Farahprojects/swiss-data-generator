@@ -4,6 +4,7 @@ import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatController } from './ChatController';
 import { supabase } from '@/integrations/supabase/client';
+import { useKeyboardAwareInput } from '@/hooks/useKeyboardAwareInput';
 
 import { Menu, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
+  
+  // Professional keyboard handling for mobile
+  const keyboardAwareRef = useKeyboardAwareInput();
   
   
   // Get chat_id from store for payment flow
@@ -182,8 +186,11 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
               </Suspense>
             </div>
 
-            {/* Footer Area (in-flow on mobile to follow keyboard) */}
-            <div className="pb-safe mobile-input-area mobile-input-container" style={{ transform: 'none' as any }}>
+            {/* Footer Area - Fixed positioning with keyboard awareness */}
+            <div 
+              ref={keyboardAwareRef}
+              className="pb-safe mobile-input-area mobile-input-container"
+            >
               {error && (
                 <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
                   {error}
