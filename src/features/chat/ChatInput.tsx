@@ -204,7 +204,7 @@ export const ChatInput = () => {
   };
 
   return (
-    <div className="bg-white/20 backdrop-blur-lg border-t border-gray-100 p-2 relative mobile-input-container">
+    <div className="bg-white/20 backdrop-blur-lg border-t border-gray-100 p-2 relative mobile-input-container" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (
