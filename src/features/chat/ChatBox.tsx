@@ -155,17 +155,10 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                 </SheetContent>
               </Sheet>
               
-              <div className="flex items-center gap-2">
-                {/* Sexy New Chat Button */}
-                <Suspense fallback={<div className="h-8 w-20 bg-gray-200 rounded-lg animate-pulse" />}>
-                  <NewChatButton />
-                </Suspense>
-                
-                {/* 3 Dots Menu */}
-                <Suspense fallback={<div className="h-8 w-8 bg-gray-200 rounded-lg animate-pulse" />}>
-                  <ChatMenuButton />
-                </Suspense>
-              </div>
+              {/* 3 Dots Menu */}
+              <Suspense fallback={<div className="h-8 w-8 bg-gray-200 rounded-lg animate-pulse" />}>
+                <ChatMenuButton />
+              </Suspense>
             </div>
 
             {/* Chat Header - Desktop only */}
