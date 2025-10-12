@@ -31,7 +31,7 @@
 /* Visual viewport API support for modern browsers */
 @supports (height: 100svh) {
   .mobile-chat-container {
-    height: 100svh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
@@ -44,25 +44,6 @@
   
   .mobile-input-area {
     flex-shrink: 0;
-  }
-}
-
-/* Mobile-specific: disable flex container for natural scrolling */
-@media screen and (max-width: 768px) {
-  .mobile-chat-container {
-    display: block !important; /* Override flex layout on mobile */
-    height: auto !important;
-    min-height: 100vh;
-  }
-  
-  .mobile-messages-area {
-    overflow-y: visible; /* Natural scrolling */
-    height: auto;
-  }
-  
-  .mobile-input-area {
-    position: static; /* Natural document flow */
-    width: 100%;
   }
 }
 
