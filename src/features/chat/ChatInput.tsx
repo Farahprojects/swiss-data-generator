@@ -28,11 +28,12 @@ export const ChatInput = () => {
   const { mode } = useMode();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Manual scroll handler for testing if interactive-widget=overlays-content is blocking
+  // Scroll input into view when keyboard appears
   const handleFocus = () => {
+    // Small delay to let keyboard animation start
     setTimeout(() => {
-      textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 300); // Delay to allow keyboard to appear
+      textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
   
   // Get chat locked state
@@ -204,7 +205,7 @@ export const ChatInput = () => {
   };
 
   return (
-    <div className="bg-white/20 backdrop-blur-lg border-t border-gray-100 p-2 relative mobile-input-container" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+    <div className="bg-white backdrop-blur-lg border-t border-gray-100 p-2 relative mobile-input-container" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0.5rem)' }}>
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (

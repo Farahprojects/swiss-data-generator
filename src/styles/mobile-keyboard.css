@@ -7,20 +7,20 @@
   }
 }
 
-/* Mobile keyboard handling - natural flow with dvh viewport */
+/* Mobile keyboard handling - fixed positioning (industry standard) */
 @media screen and (max-width: 639px) {
   .mobile-input-container {
-    position: relative;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 40;
     background: white;
-    /* Stick to bottom of container */
-    margin-top: auto;
   }
   
-  /* Minimal padding for messages */
+  /* Add padding so messages don't hide under fixed input */
   .mobile-messages-area {
-    padding-bottom: 8px;
-    /* Allow scrolling */
+    padding-bottom: 90px; /* Height of input + some breathing room */
     overflow-y: auto;
     overflow-x: hidden;
   }
