@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useSafeBottomPadding } from '@/hooks/useSafeBottomPadding';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
-import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { useChatInitialization } from '@/hooks/useChatInitialization';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +21,7 @@ const ChatContainerContent: React.FC = () => {
   // Single responsibility: Initialize chat when threadId changes
   useChatInitialization();
   // Ensure bottom padding accounts for dynamic mobile UI (must run as a hook)
-  // useSafeBottomPadding();
+  useSafeBottomPadding();
   
   // Check for pending join token and open auth modal
   useEffect(() => {

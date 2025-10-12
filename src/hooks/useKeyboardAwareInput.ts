@@ -11,7 +11,10 @@ export const useKeyboardAwareInput = () => {
 
   useEffect(() => {
     // Only run on mobile devices - use consistent mobile detection
-    if (typeof window === 'undefined' || !isMobile) return;
+    if (typeof window === 'undefined' || !isMobile) {
+      console.log('[useKeyboardAwareInput] Skipping - not mobile or no window');
+      return;
+    }
     
     const container = inputContainerRef.current;
     if (!container) {
@@ -60,6 +63,7 @@ export const useKeyboardAwareInput = () => {
 
     // Cleanup
     return () => {
+      console.log('[useKeyboardAwareInput] Cleanup');
       observer.disconnect();
       if (rafId !== null) {
         cancelAnimationFrame(rafId);

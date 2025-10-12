@@ -7,17 +7,20 @@
   }
 }
 
-/* Natural mobile keyboard handling - let browser handle it */
+/* Fixed positioning for mobile keyboard handling - input floats above keyboard */
 @media screen and (max-width: 639px) {
   .mobile-input-container {
-    position: relative;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 40;
     background: white;
   }
   
-  /* No padding needed - input is in natural flow */
+  /* Add padding so messages don't hide under fixed input */
   .mobile-messages-area {
-    padding-bottom: 0;
+    padding-bottom: 80px;
   }
 }
 
