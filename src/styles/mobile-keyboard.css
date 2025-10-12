@@ -7,20 +7,22 @@
   }
 }
 
-/* Fixed positioning for mobile keyboard handling - input floats above keyboard */
+/* Mobile keyboard handling - natural flow with dvh viewport */
 @media screen and (max-width: 639px) {
   .mobile-input-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
     z-index: 40;
     background: white;
+    /* Stick to bottom of container */
+    margin-top: auto;
   }
   
-  /* Add padding so messages don't hide under fixed input */
+  /* Minimal padding for messages */
   .mobile-messages-area {
-    padding-bottom: 80px;
+    padding-bottom: 8px;
+    /* Allow scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
 

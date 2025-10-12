@@ -15,7 +15,6 @@ import { useMessageStore } from '@/stores/messageStore';
 import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
-import { useKeyboardAwareInput } from '@/hooks/useKeyboardAwareInput';
 // Using unified message store for all message management
 
 // Stop icon component
@@ -27,9 +26,6 @@ export const ChatInput = () => {
   const [text, setText] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const { mode } = useMode();
-  
-  // Mobile keyboard handling - moves input above keyboard
-  const inputContainerRef = useKeyboardAwareInput();
   
   // Get chat locked state
   
@@ -200,7 +196,7 @@ export const ChatInput = () => {
   };
 
   return (
-    <div ref={inputContainerRef} className="bg-white/20 backdrop-blur-lg border-t border-gray-100 p-2 relative mobile-input-container">
+    <div className="bg-white/20 backdrop-blur-lg border-t border-gray-100 p-2 relative mobile-input-container">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (
