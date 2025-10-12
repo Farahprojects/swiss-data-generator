@@ -22,7 +22,7 @@ const ChatContainerContent: React.FC = () => {
   // Single responsibility: Initialize chat when threadId changes
   useChatInitialization();
   // Ensure bottom padding accounts for dynamic mobile UI (must run as a hook)
-  useSafeBottomPadding();
+  // useSafeBottomPadding();
   
   // Check for pending join token and open auth modal
   useEffect(() => {
@@ -33,7 +33,7 @@ const ChatContainerContent: React.FC = () => {
   }, [user]);
 
   return (
-    <div className="flex h-screen pb-safe" style={{ overscrollBehavior: 'contain' as any }}>
+    <div className="flex flex-col h-screen" style={{ overscrollBehavior: 'contain' as any }}>
       <ReportModalProvider>
         <MobileViewportLock active={false}>
           <ChatBox />
