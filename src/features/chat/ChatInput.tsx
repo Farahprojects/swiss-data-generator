@@ -209,7 +209,7 @@ export const ChatInput = () => {
               onChange={(e) => setText(e.target.value)}
               placeholder={isAssistantGenerating ? "Setting up your space..." : "Share your thoughts..."}
               disabled={isAssistantGenerating}
-              className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto mobile-input-focus ${
+              className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto ${
                 isAssistantGenerating 
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
                   : 'border-gray-300'

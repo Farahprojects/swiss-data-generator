@@ -6,7 +6,6 @@
 /* -------------------------------------------------------------------------- */
 
 @import './styles/mobile-keyboard.css';
-@import './styles/mobile-keyboard.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -214,13 +213,6 @@ textarea {
 .drawer-scroll-lock #root {
   height: 100% !important;
   overflow: hidden !important;
-}
-
-/* -------------------------------- KEYBOARD FIX --------------------------- */
-@supports (height: env(keyboard-inset-height)) {
-  .keyboard-visible {
-    padding-bottom: env(keyboard-inset-height);
-  }
 }
 
 /* -------------------------------------------------------------------------- */

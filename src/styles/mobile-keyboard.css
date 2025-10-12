@@ -44,12 +44,6 @@
   }
 }
 
-/* Ensure text input is visible when keyboard appears */
-.mobile-input-focus {
-  transform: translateY(0);
-  transition: transform 0.2s ease-in-out;
-}
-
 /* Prevent zoom on input focus (iOS) */
 input[type="text"],
 input[type="email"],
