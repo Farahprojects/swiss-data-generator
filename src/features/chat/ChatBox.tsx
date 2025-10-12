@@ -120,7 +120,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           duration: 0.6
         }}
       >
-        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0 mobile-chat-container" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any, minHeight: '100vh' }}>
+        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0 mobile-chat-container" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any }}>
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50 h-full">
             <div className="p-4 flex flex-col h-full">
@@ -131,7 +131,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           </div>
 
           {/* Main Chat Area */}
-          <div className="flex flex-col flex-1 w-full min-w-0 h-full mobile-chat-container">
+          <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
 
             {/* Mobile Header */}
             <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
