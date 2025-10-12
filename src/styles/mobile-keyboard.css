@@ -47,6 +47,25 @@
   }
 }
 
+/* Mobile-specific: disable flex container for natural scrolling */
+@media screen and (max-width: 768px) {
+  .mobile-chat-container {
+    display: block !important; /* Override flex layout on mobile */
+    height: auto !important;
+    min-height: 100vh;
+  }
+  
+  .mobile-messages-area {
+    overflow-y: visible; /* Natural scrolling */
+    height: auto;
+  }
+  
+  .mobile-input-area {
+    position: static; /* Natural document flow */
+    width: 100%;
+  }
+}
+
 /* Ensure text input is visible when keyboard appears */
 .mobile-input-focus {
   transform: translateY(0);
