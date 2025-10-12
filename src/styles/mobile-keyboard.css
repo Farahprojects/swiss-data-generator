@@ -47,22 +47,22 @@
   }
 }
 
-/* Mobile-specific: natural document flow with input at bottom */
+/* Mobile-specific: disable flex container for natural scrolling */
 @media screen and (max-width: 768px) {
   .mobile-chat-container {
     display: block !important; /* Override flex layout on mobile */
-    min-height: 100vh; /* Fill viewport */
-    height: auto !important; /* Grow with content */
+    height: auto !important;
+    min-height: 100vh;
   }
   
   .mobile-messages-area {
-    overflow-y: visible !important; /* No internal scroll */
-    padding-bottom: 1rem; /* Space before input */
+    overflow-y: visible; /* Natural scrolling */
+    height: auto;
   }
   
   .mobile-input-area {
-    position: static; /* Follow document flow */
-    margin-top: auto; /* Push to bottom if container is tall */
+    position: static; /* Natural document flow */
+    width: 100%;
   }
 }
 
