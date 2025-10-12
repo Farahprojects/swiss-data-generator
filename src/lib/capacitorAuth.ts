@@ -1,15 +1,21 @@
-import { Browser } from '@capacitor/browser';
-import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-
-// Custom URL scheme for OAuth callback
-const OAUTH_CALLBACK_URL = 'therai://auth/callback';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { SignInWithApple, SignInWithAppleOptions, SignInWithAppleResponse } from '@capacitor-community/apple-sign-in';
 
 export class CapacitorAuth {
   private static instance: CapacitorAuth;
-  private isListening = false;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize Google Auth on app start
+    if (Capacitor.getPlatform() !== 'web') {
+      GoogleAuth.initialize({
+        clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // TODO: Replace with your Web Client ID
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      });
+    }
+  }
 
   static getInstance(): CapacitorAuth {
     if (!CapacitorAuth.instance) {
@@ -20,81 +26,115 @@ export class CapacitorAuth {
 
   async signInWithOAuth(provider: 'google' | 'apple', onSuccess?: () => void) {
     try {
-      // Set up URL listener if not already listening
-      if (!this.isListening) {
-        this.setupUrlListener(onSuccess);
+      if (provider === 'google') {
+        return await this.signInWithGoogleNative(onSuccess);
+      } else if (provider === 'apple') {
+        return await this.signInWithAppleNative(onSuccess);
       }
-
-      // Open OAuth provider in browser
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: OAUTH_CALLBACK_URL,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-
-      if (error) {
-        console.error('OAuth error:', error);
-        throw error;
-      }
-
-      if (data.url) {
-        // Open the OAuth URL in the system browser
-        await Browser.open({ url: data.url });
-      }
-
-      return { data, error: null };
+      throw new Error('Unsupported provider');
     } catch (error) {
       console.error('OAuth sign-in error:', error);
       return { data: null, error };
     }
   }
 
-  private setupUrlListener(onSuccess?: () => void) {
-    if (this.isListening) return;
-
-    App.addListener('appUrlOpen', async (event) => {
-      console.log('App opened with URL:', event.url);
+  private async signInWithGoogleNative(onSuccess?: () => void) {
+    try {
+      console.log('[CapacitorAuth] Starting Google native sign-in');
       
-      // Check if this is our OAuth callback
-      if (event.url.startsWith(OAUTH_CALLBACK_URL)) {
-        // Close the browser
-        await Browser.close();
-        
-        // Extract the URL fragments
-        const url = new URL(event.url);
-        const accessToken = url.searchParams.get('access_token');
-        const refreshToken = url.searchParams.get('refresh_token');
-        
-        if (accessToken && refreshToken) {
-          // Set the session
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          
-          if (error) {
-            console.error('Error setting session:', error);
-          } else {
-            console.log('Successfully authenticated via OAuth');
-            // Call the success callback to clear loading state
-            onSuccess?.();
-          }
-        }
-      }
-    });
+      // Sign in with Google native SDK
+      const googleUser = await GoogleAuth.signIn();
+      console.log('[CapacitorAuth] Google sign-in successful:', googleUser.email);
 
-    this.isListening = true;
+      // Get the ID token to authenticate with Supabase
+      const idToken = googleUser.authentication.idToken;
+
+      if (!idToken) {
+        throw new Error('No ID token returned from Google');
+      }
+
+      // Sign in to Supabase with the Google ID token
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) {
+        console.error('[CapacitorAuth] Supabase sign-in error:', error);
+        throw error;
+      }
+
+      console.log('[CapacitorAuth] Successfully authenticated with Supabase');
+      onSuccess?.();
+      
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('[CapacitorAuth] Google sign-in error:', error);
+      return { data: null, error };
+    }
+  }
+
+  private async signInWithAppleNative(onSuccess?: () => void) {
+    try {
+      console.log('[CapacitorAuth] Starting Apple native sign-in');
+
+      const options: SignInWithAppleOptions = {
+        clientId: 'com.therai.app', // Your app bundle ID
+        redirectURI: 'https://api.therai.co/auth/v1/callback', // Your Supabase callback URL
+        scopes: 'email name',
+        state: Math.random().toString(36).substring(2, 15),
+        nonce: Math.random().toString(36).substring(2, 15),
+      };
+
+      const result: SignInWithAppleResponse = await SignInWithApple.authorize(options);
+      console.log('[CapacitorAuth] Apple sign-in successful');
+
+      if (!result.response.identityToken) {
+        throw new Error('No identity token returned from Apple');
+      }
+
+      // Sign in to Supabase with the Apple identity token
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: result.response.identityToken,
+        nonce: options.nonce,
+      });
+
+      if (error) {
+        console.error('[CapacitorAuth] Supabase sign-in error:', error);
+        throw error;
+      }
+
+      console.log('[CapacitorAuth] Successfully authenticated with Supabase');
+      onSuccess?.();
+
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('[CapacitorAuth] Apple sign-in error:', error);
+      return { data: null, error };
+    }
   }
 
   async signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Sign out error:', error);
+    try {
+      // Sign out from Google if signed in
+      if (Capacitor.getPlatform() !== 'web') {
+        try {
+          await GoogleAuth.signOut();
+        } catch (err) {
+          // Ignore if not signed in with Google
+          console.log('[CapacitorAuth] Google sign out skipped');
+        }
+      }
+
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('[CapacitorAuth] Sign out error:', error);
       throw error;
     }
   }
