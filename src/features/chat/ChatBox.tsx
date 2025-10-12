@@ -135,7 +135,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           </div>
 
           {/* Main Chat Area */}
-          <div className="flex flex-col flex-1 w-full min-w-0 min-h-screen md:h-full mobile-chat-container">
+          <div className="flex flex-col flex-1 w-full min-w-0 h-full mobile-chat-container">
 
             {/* Mobile Header */}
             <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-white border-b border-gray-100 pt-safe">

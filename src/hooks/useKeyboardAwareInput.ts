@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Professional keyboard handling using Visual Viewport API
- * Used by WhatsApp, Telegram, Slack - the bulletproof approach
+ * Professional keyboard handling - reads --kb CSS var set by useSafeBottomPadding
+ * Applies transform to move input above keyboard
  */
 export const useKeyboardAwareInput = () => {
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -11,40 +11,49 @@ export const useKeyboardAwareInput = () => {
     // Only run on mobile devices
     if (typeof window === 'undefined' || window.innerWidth > 768) return;
     
-    // Check if Visual Viewport API is supported
-    if (!window.visualViewport) {
-      console.warn('[useKeyboardAwareInput] Visual Viewport API not supported');
-      return;
-    }
-
-    const viewport = window.visualViewport;
     const container = inputContainerRef.current;
     if (!container) return;
 
-    const handleViewportChange = () => {
-      // Calculate how much the viewport has shrunk (keyboard height)
-      const keyboardHeight = window.innerHeight - viewport.height;
+    let rafId: number | null = null;
+
+    const updatePosition = () => {
+      if (rafId !== null) return;
       
-      // Adjust input position to stay above keyboard
-      if (keyboardHeight > 0) {
-        // Keyboard is open - move input up
-        container.style.transform = `translateY(-${keyboardHeight}px)`;
-        container.style.transition = 'transform 0.2s ease-out';
-      } else {
-        // Keyboard is closed - reset position
-        container.style.transform = 'translateY(0)';
-        container.style.transition = 'transform 0.2s ease-out';
-      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        
+        // Read keyboard height from CSS var (set by useSafeBottomPadding)
+        const kbHeight = parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue('--kb') || '0'
+        );
+        
+        // Apply transform to move input above keyboard
+        if (kbHeight > 0) {
+          container.style.transform = `translateY(-${kbHeight}px)`;
+          container.style.transition = 'transform 0.2s ease-out';
+        } else {
+          container.style.transform = 'translateY(0)';
+          container.style.transition = 'transform 0.2s ease-out';
+        }
+      });
     };
 
-    // Listen to viewport changes (keyboard open/close)
-    viewport.addEventListener('resize', handleViewportChange);
-    viewport.addEventListener('scroll', handleViewportChange);
+    // Listen to CSS var changes (when useSafeBottomPadding updates --kb)
+    const observer = new MutationObserver(updatePosition);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style']
+    });
+
+    // Initial update
+    updatePosition();
 
     // Cleanup
     return () => {
-      viewport.removeEventListener('resize', handleViewportChange);
-      viewport.removeEventListener('scroll', handleViewportChange);
+      observer.disconnect();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []);
 

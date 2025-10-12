@@ -26,22 +26,20 @@
 }
 
 /* Visual viewport API support for modern browsers */
-@supports (height: 100svh) {
-  .mobile-chat-container {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .mobile-messages-area {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-  }
-  
-  .mobile-input-area {
-    flex-shrink: 0;
-  }
+.mobile-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.mobile-messages-area {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.mobile-input-area {
+  flex-shrink: 0;
 }
 
 /* Prevent zoom on input focus (iOS) */
