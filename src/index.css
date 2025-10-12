@@ -17,8 +17,8 @@
   }
 }
 
-/* Global safe-area baseline for iOS home indicator */
-body { padding-bottom: env(safe-area-inset-bottom); }
+/* Global safe-area baseline for iOS home indicator - removed to allow natural keyboard flow */
+/* body { padding-bottom: env(safe-area-inset-bottom); } */
 
 /* -------------------------------------------------------------------------- */
 /*  CSS CUSTOM PROPERTIES                                                     */
@@ -165,7 +165,21 @@ html, body {
   touch-action: manipulation;            /* Remove double‑tap zoom delay */
   overscroll-behavior: contain;          /* Disable pull‑to‑refresh */
   -webkit-overflow-scrolling: touch;     /* Momentum scroll iOS */
-  height: 100%;
+}
+
+/* Desktop only - fixed height */
+@media screen and (min-width: 640px) {
+  html, body {
+    height: 100%;
+  }
+}
+
+/* Mobile - allow natural height adjustment for keyboard */
+@media screen and (max-width: 639px) {
+  html, body {
+    min-height: 100vh;
+    height: auto;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
