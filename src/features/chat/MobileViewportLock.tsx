@@ -18,9 +18,10 @@ export const MobileViewportLock: React.FC<Props> = ({ active = true, children })
     const viewportMeta = document.querySelector('meta[name="viewport"]');
     if (viewportMeta) {
       originalViewport.current = viewportMeta.getAttribute('content') || '';
+      // Preserve interactive-widget=overlays-content for keyboard handling
       viewportMeta.setAttribute(
         'content',
-        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content'
       );
     }
 

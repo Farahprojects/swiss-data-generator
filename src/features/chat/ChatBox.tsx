@@ -189,7 +189,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
             {/* Footer Area - Fixed positioning with keyboard awareness */}
             <div 
               ref={keyboardAwareRef}
-              className="pb-safe mobile-input-area mobile-input-container"
+              className="mobile-input-area mobile-input-container"
             >
               {error && (
                 <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">

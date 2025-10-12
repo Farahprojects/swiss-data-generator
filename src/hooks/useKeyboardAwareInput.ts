@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useIsMobile } from './use-mobile';
 
 /**
  * Professional keyboard handling - reads --kb CSS var set by useSafeBottomPadding
@@ -6,13 +7,19 @@ import { useEffect, useRef } from 'react';
  */
 export const useKeyboardAwareInput = () => {
   const inputContainerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Only run on mobile devices
-    if (typeof window === 'undefined' || window.innerWidth > 768) return;
+    // Only run on mobile devices - use consistent mobile detection
+    if (typeof window === 'undefined' || !isMobile) return;
     
     const container = inputContainerRef.current;
-    if (!container) return;
+    if (!container) {
+      console.warn('[useKeyboardAwareInput] Container ref not attached');
+      return;
+    }
+
+    console.log('[useKeyboardAwareInput] Initialized for mobile keyboard handling');
 
     let rafId: number | null = null;
 
@@ -27,10 +34,13 @@ export const useKeyboardAwareInput = () => {
           getComputedStyle(document.documentElement).getPropertyValue('--kb') || '0'
         );
         
+        console.log('[useKeyboardAwareInput] Keyboard height from --kb:', kbHeight);
+        
         // Apply transform to move input above keyboard
         if (kbHeight > 0) {
           container.style.transform = `translateY(-${kbHeight}px)`;
           container.style.transition = 'transform 0.2s ease-out';
+          console.log('[useKeyboardAwareInput] Applied transform:', `translateY(-${kbHeight}px)`);
         } else {
           container.style.transform = 'translateY(0)';
           container.style.transition = 'transform 0.2s ease-out';
@@ -55,7 +65,7 @@ export const useKeyboardAwareInput = () => {
         cancelAnimationFrame(rafId);
       }
     };
-  }, []);
+  }, [isMobile]);
 
   return inputContainerRef;
 };

@@ -8,7 +8,7 @@
 }
 
 /* Professional keyboard handling - Fixed positioning (WhatsApp/Telegram approach) */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 639px) {
   .mobile-input-container {
     position: fixed;
     bottom: 0;
