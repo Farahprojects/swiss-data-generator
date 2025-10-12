@@ -10,7 +10,7 @@ export class CapacitorAuth {
     // Initialize Google Auth on app start
     if (Capacitor.getPlatform() !== 'web') {
       GoogleAuth.initialize({
-        clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // TODO: Replace with your Web Client ID
+        clientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
         scopes: ['profile', 'email'],
         grantOfflineAccess: true,
       });
