@@ -1,17 +1,12 @@
-import * as React from 'react';
 import { Capacitor } from '@capacitor/core';
 
-export function useIsNativeApp() {
-  const [isNative, setIsNative] = React.useState<boolean>(false);
-
-  React.useEffect(() => {
-    // Detect if running in a native Capacitor app (iOS or Android)
-    const platform = Capacitor.getPlatform();
-    const isNativeApp = platform === 'ios' || platform === 'android';
-    setIsNative(isNativeApp);
-  }, []);
-
-  return isNative;
+/**
+ * Detects if running in a native Capacitor app (iOS or Android)
+ * Returns immediately - no state, no async, no race conditions
+ */
+export function useIsNativeApp(): boolean {
+  const platform = Capacitor.getPlatform();
+  return platform === 'ios' || platform === 'android';
 }
 
 
