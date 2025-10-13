@@ -420,6 +420,26 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         }`}
       >
 
+      {/* Mobile close button */}
+      {isMobile && (
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <h2 className="text-lg font-light text-gray-900">
+            {currentStep === 'type' ? 'Choose Your Path' : 
+             currentStep === 'details' ? 'Your Details' : 
+             'Partner Details'}
+          </h2>
+          <Button
+            type="button"
+            onClick={handleClose}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-gray-100"
+          >
+            <X className="h-5 w-5 text-gray-600" />
+          </Button>
+        </div>
+      )}
+
       {/* Content */}
       <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'}`}>
         <AnimatePresence mode="wait">
