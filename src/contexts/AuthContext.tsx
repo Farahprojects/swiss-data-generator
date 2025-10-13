@@ -4,6 +4,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
+import { authManager } from '@/services/authManager';
 
 import { authService } from '@/services/authService';
 /**
@@ -371,62 +372,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
-    try {
-      // This method handles ONLY web OAuth (system browser)
-      // Capacitor apps use CapacitorSocialLogin component instead
-      console.log('[AuthContext] Web OAuth - signInWithGoogle');
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${baseUrl}/therai`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Google OAuth error:', error);
-        return { error: new Error(error.message || 'Google sign-in failed') };
-      }
-
-      return { error: null };
-    } catch (err: unknown) {
-      console.error('Google sign-in exception:', err);
-      return { error: err instanceof Error ? err : new Error('Unexpected Google sign-in error') };
-    }
+    // Unified auth manager handles platform routing automatically
+    return await authManager.signInWithOAuth('google');
   };
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
-    try {
-      // This method handles ONLY web OAuth (system browser)
-      // Capacitor apps use CapacitorSocialLogin component instead
-      console.log('[AuthContext] Web OAuth - signInWithApple');
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${baseUrl}/therai`,
-          queryParams: {
-            response_mode: 'form_post',
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Apple OAuth error:', error);
-        return { error: new Error(error.message || 'Apple sign-in failed') };
-      }
-
-      return { error: null };
-    } catch (err: unknown) {
-      console.error('Apple sign-in exception:', err);
-      return { error: err instanceof Error ? err : new Error('Unexpected Apple sign-in error') };
-    }
+    // Unified auth manager handles platform routing automatically
+    return await authManager.signInWithOAuth('apple');
   };
 
   const signOut = async () => {

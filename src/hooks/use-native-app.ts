@@ -1,12 +1,9 @@
-import { Capacitor } from '@capacitor/core';
+import { authManager } from '@/services/authManager';
 
 /**
- * Detects if running in a native Capacitor app (iOS or Android)
- * Returns immediately - no state, no async, no race conditions
+ * Returns true if running in native Capacitor app
+ * Uses centralized authManager - single source of truth
  */
 export function useIsNativeApp(): boolean {
-  const platform = Capacitor.getPlatform();
-  return platform === 'ios' || platform === 'android';
+  return authManager.isNativeApp();
 }
-
-

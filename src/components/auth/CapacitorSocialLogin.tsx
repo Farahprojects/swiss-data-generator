@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
-import { capacitorAuth } from '@/lib/capacitorAuth';
+import { authManager } from '@/services/authManager';
 import { toast } from 'sonner';
 
 interface CapacitorSocialLoginProps {
@@ -17,7 +17,7 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
     try {
       setIsLoading(provider);
       
-      const { error } = await capacitorAuth.signInWithOAuth(provider, wrappedOnSuccess);
+      const { error } = await authManager.signInWithOAuth(provider);
       
       if (error) {
         console.error(`${provider} OAuth error:`, error);
@@ -25,9 +25,10 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
         onError?.(error as Error);
         setIsLoading(null);
       } else {
-        // Don't clear loading state here - keep it until OAuth completes
-        // The loading state will be cleared when onSuccess is called
-        console.log(`${provider} OAuth initiated, waiting for completion...`);
+        // Success - auth state will update via Supabase listener
+        console.log(`${provider} OAuth initiated successfully`);
+        setIsLoading(null);
+        onSuccess?.();
       }
     } catch (error) {
       console.error(`${provider} sign-in error:`, error);
@@ -35,12 +36,6 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
       onError?.(error as Error);
       setIsLoading(null);
     }
-  };
-
-  // Create a wrapper for onSuccess that clears loading state
-  const wrappedOnSuccess = () => {
-    setIsLoading(null);
-    onSuccess?.();
   };
 
   return (
