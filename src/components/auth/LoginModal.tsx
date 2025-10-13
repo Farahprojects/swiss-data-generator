@@ -9,7 +9,7 @@ import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsNativeApp } from '@/hooks/use-native-app';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,7 +20,7 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }) => {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const isNativeApp = useIsNativeApp();
 
   // ————————————————————————————————————————————————
   // Auth context
@@ -245,8 +245,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }
           Forgot your password?
         </button>
 
-        {/* Social Login - Use Capacitor auth on mobile, regular auth on desktop */}
-        {isMobile ? (
+        {/* Social Login - Use Capacitor auth on native apps, web OAuth on browsers */}
+        {isNativeApp ? (
           <CapacitorSocialLogin onSuccess={onSuccess} />
         ) : (
           <div className="space-y-3">

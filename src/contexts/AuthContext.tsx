@@ -4,8 +4,6 @@ import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
-import { Capacitor } from '@capacitor/core';
-import { capacitorAuth } from '@/lib/capacitorAuth';
 
 import { authService } from '@/services/authService';
 /**
@@ -374,14 +372,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      // If running in Capacitor app, use in-app browser
-      if (Capacitor.getPlatform() !== 'web') {
-        console.log('[AuthContext] Capacitor detected, using in-app browser');
-        return await capacitorAuth.signInWithOAuth('google');
-      }
-
-      // Web browser: Use Supabase's standard OAuth redirect
-      console.log('[AuthContext] Web platform, using standard OAuth');
+      // This method handles ONLY web OAuth (system browser)
+      // Capacitor apps use CapacitorSocialLogin component instead
+      console.log('[AuthContext] Web OAuth - signInWithGoogle');
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -409,14 +402,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     try {
-      // If running in Capacitor app, use in-app browser
-      if (Capacitor.getPlatform() !== 'web') {
-        console.log('[AuthContext] Capacitor detected, using in-app browser');
-        return await capacitorAuth.signInWithOAuth('apple');
-      }
-
-      // Web browser: Use Supabase's standard OAuth redirect
-      console.log('[AuthContext] Web platform, using standard OAuth');
+      // This method handles ONLY web OAuth (system browser)
+      // Capacitor apps use CapacitorSocialLogin component instead
+      console.log('[AuthContext] Web OAuth - signInWithApple');
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       
       const { data, error } = await supabase.auth.signInWithOAuth({

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { CapacitorSocialLogin } from '@/components/auth/CapacitorSocialLogin';
+import { useIsNativeApp } from '@/hooks/use-native-app';
 
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,8 +19,9 @@ type Props = {
 
 const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithApple } = useAuth();
   const { isAuthModalOpen, openAuthModal, closeAuthModal, authModalMode } = useAuthModal();
+  const isNativeApp = useIsNativeApp();
 
   // Rotating words for the "Your..." animation - same as desktop
   const rotatingWords = ['Self', 'Mind', 'Bae', 'Soul', 'Will'];
@@ -115,7 +117,35 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
       {/* Auth (black) */}
       <section className="mt-auto bg-black text-white px-5 pt-8 pb-10 rounded-t-3xl">
         <div className="space-y-3">
-          <CapacitorSocialLogin onSuccess={handleSocialLoginSuccess} />
+          {isNativeApp ? (
+            <CapacitorSocialLogin onSuccess={handleSocialLoginSuccess} />
+          ) : (
+            <>
+              <Button
+                type="button"
+                className="w-full h-12 rounded-full bg-white text-black hover:bg-white/90"
+                onClick={async () => {
+                  await signInWithGoogle();
+                  handleSocialLoginSuccess();
+                }}
+              >
+                <FcGoogle className="mr-2 h-5 w-5" />
+                Continue with Google
+              </Button>
+              
+              <Button
+                type="button"
+                className="w-full h-12 rounded-full bg-white text-black hover:bg-white/90"
+                onClick={async () => {
+                  await signInWithApple();
+                  handleSocialLoginSuccess();
+                }}
+              >
+                <FaApple className="mr-2 h-5 w-5" />
+                Continue with Apple
+              </Button>
+            </>
+          )}
 
           <Button
             type="button"

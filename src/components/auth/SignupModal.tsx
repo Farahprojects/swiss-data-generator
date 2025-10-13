@@ -9,7 +9,7 @@ import { validateEmail } from '@/utils/authValidation';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
 import { Mail } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsNativeApp } from '@/hooks/use-native-app';
 import { useNavigate } from 'react-router-dom';
 
 interface SignupModalProps {
@@ -20,7 +20,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
   const { toast } = useToast();
   const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  const isNativeApp = useIsNativeApp();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -248,8 +248,8 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
         </Button>
       </form>
 
-      {/* Social Login - Use Capacitor auth on mobile, regular auth on desktop */}
-      {isMobile ? (
+      {/* Social Login - Use Capacitor auth on native apps, web OAuth on browsers */}
+      {isNativeApp ? (
         <CapacitorSocialLogin onSuccess={onSuccess} />
       ) : (
         <div className="space-y-3">
