@@ -4,5 +4,4 @@
     <string name="title_activity_main">Therai</string>
     <string name="package_name">com.therai.app</string>
     <string name="custom_url_scheme">com.therai.app</string>
-    <string name="server_client_id">706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com</string>
 </resources>
