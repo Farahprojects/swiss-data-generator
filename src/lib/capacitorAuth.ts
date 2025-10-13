@@ -10,14 +10,9 @@ export class CapacitorAuth {
     // Initialize Google Auth on app start
     if (Capacitor.getPlatform() !== 'web') {
       GoogleAuth.initialize({
-        // For iOS Google Sign-In, clientId should be your iOS reversed client ID if available.
-        // For Android, GoogleAuth uses serverClientId (the Web Client ID) to mint an ID token.
         clientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
-        // Ensure Android receives an ID token
-        serverClientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
         scopes: ['profile', 'email'],
-        // We only need an ID token for Supabase signInWithIdToken
-        grantOfflineAccess: false,
+        grantOfflineAccess: true,
       });
     }
   }
@@ -51,9 +46,8 @@ export class CapacitorAuth {
       const googleUser = await GoogleAuth.signIn();
       console.log('[CapacitorAuth] Google sign-in successful:', googleUser.email);
 
-      // Get the ID token to authenticate with Supabase (plugin return shape can vary)
-      const anyUser: any = googleUser as any;
-      const idToken = anyUser?.authentication?.idToken || anyUser?.idToken;
+      // Get the ID token to authenticate with Supabase
+      const idToken = googleUser.authentication.idToken;
 
       if (!idToken) {
         throw new Error('No ID token returned from Google');
