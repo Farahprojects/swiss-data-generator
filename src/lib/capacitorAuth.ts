@@ -7,25 +7,18 @@ export class CapacitorAuth {
   private static instance: CapacitorAuth;
 
   private constructor() {
-    const platform = Capacitor.getPlatform();
-    console.log('[CapacitorAuth] Initializing on platform:', platform);
-    
-    // Only initialize native SDKs on native platforms
-    if (platform === 'ios' || platform === 'android') {
-      try {
-        GoogleAuth.initialize({
-          // Web Client ID - used for both iOS and Android
-          clientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
-          scopes: ['profile', 'email'],
-          // We only need an ID token for Supabase signInWithIdToken
-          grantOfflineAccess: false,
-        } as any); // Use 'as any' to bypass TypeScript issue with serverClientId
-        console.log('[CapacitorAuth] GoogleAuth initialized successfully');
-      } catch (error) {
-        console.error('[CapacitorAuth] Failed to initialize GoogleAuth:', error);
-      }
-    } else {
-      console.log('[CapacitorAuth] Skipping native SDK initialization on web platform');
+    // Initialize Google Auth on app start
+    if (Capacitor.getPlatform() !== 'web') {
+      GoogleAuth.initialize({
+        // For iOS Google Sign-In, clientId should be your iOS reversed client ID if available.
+        // For Android, GoogleAuth uses serverClientId (the Web Client ID) to mint an ID token.
+        clientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
+        // Ensure Android receives an ID token
+        serverClientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
+        scopes: ['profile', 'email'],
+        // We only need an ID token for Supabase signInWithIdToken
+        grantOfflineAccess: false,
+      });
     }
   }
 
@@ -51,14 +44,8 @@ export class CapacitorAuth {
   }
 
   private async signInWithGoogleNative(onSuccess?: () => void) {
-    const platform = Capacitor.getPlatform();
-    
-    if (platform === 'web') {
-      throw new Error('Native Google Sign-In is not available on web. Use Supabase OAuth instead.');
-    }
-    
     try {
-      console.log('[CapacitorAuth] Starting Google native sign-in on', platform);
+      console.log('[CapacitorAuth] Starting Google native sign-in');
       
       // Sign in with Google native SDK
       const googleUser = await GoogleAuth.signIn();
@@ -68,26 +55,19 @@ export class CapacitorAuth {
       const anyUser: any = googleUser as any;
       const idToken = anyUser?.authentication?.idToken || anyUser?.idToken;
 
-      console.log('[CapacitorAuth] Google user object:', JSON.stringify(googleUser, null, 2));
-      console.log('[CapacitorAuth] ID token present:', !!idToken);
-      console.log('[CapacitorAuth] ID token length:', idToken?.length || 0);
-
       if (!idToken) {
-        console.error('[CapacitorAuth] Full response:', googleUser);
-        throw new Error('No ID token returned from Google. Check serverClientId configuration.');
+        throw new Error('No ID token returned from Google');
       }
 
       // Sign in to Supabase with the Google ID token
-      console.log('[CapacitorAuth] Calling Supabase signInWithIdToken...');
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
 
       if (error) {
-        console.error('[CapacitorAuth] Supabase sign-in error:', error.message);
-        console.error('[CapacitorAuth] Error details:', JSON.stringify(error, null, 2));
-        throw new Error(`Supabase auth failed: ${error.message}`);
+        console.error('[CapacitorAuth] Supabase sign-in error:', error);
+        throw error;
       }
 
       console.log('[CapacitorAuth] Successfully authenticated with Supabase');
@@ -101,14 +81,8 @@ export class CapacitorAuth {
   }
 
   private async signInWithAppleNative(onSuccess?: () => void) {
-    const platform = Capacitor.getPlatform();
-    
-    if (platform === 'web') {
-      throw new Error('Native Apple Sign-In is not available on web. Use Supabase OAuth instead.');
-    }
-    
     try {
-      console.log('[CapacitorAuth] Starting Apple native sign-in on', platform);
+      console.log('[CapacitorAuth] Starting Apple native sign-in');
 
       const options: SignInWithAppleOptions = {
         clientId: 'com.therai.app', // Your app bundle ID
