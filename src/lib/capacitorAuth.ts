@@ -55,19 +55,26 @@ export class CapacitorAuth {
       const anyUser: any = googleUser as any;
       const idToken = anyUser?.authentication?.idToken || anyUser?.idToken;
 
+      console.log('[CapacitorAuth] Google user object:', JSON.stringify(googleUser, null, 2));
+      console.log('[CapacitorAuth] ID token present:', !!idToken);
+      console.log('[CapacitorAuth] ID token length:', idToken?.length || 0);
+
       if (!idToken) {
-        throw new Error('No ID token returned from Google');
+        console.error('[CapacitorAuth] Full response:', googleUser);
+        throw new Error('No ID token returned from Google. Check serverClientId configuration.');
       }
 
       // Sign in to Supabase with the Google ID token
+      console.log('[CapacitorAuth] Calling Supabase signInWithIdToken...');
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
 
       if (error) {
-        console.error('[CapacitorAuth] Supabase sign-in error:', error);
-        throw error;
+        console.error('[CapacitorAuth] Supabase sign-in error:', error.message);
+        console.error('[CapacitorAuth] Error details:', JSON.stringify(error, null, 2));
+        throw new Error(`Supabase auth failed: ${error.message}`);
       }
 
       console.log('[CapacitorAuth] Successfully authenticated with Supabase');
