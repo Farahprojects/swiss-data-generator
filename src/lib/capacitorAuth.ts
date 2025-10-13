@@ -7,18 +7,25 @@ export class CapacitorAuth {
   private static instance: CapacitorAuth;
 
   private constructor() {
-    // Initialize Google Auth on app start
-    if (Capacitor.getPlatform() !== 'web') {
-      GoogleAuth.initialize({
-        // For iOS Google Sign-In, clientId should be your iOS reversed client ID if available.
-        // For Android, GoogleAuth uses serverClientId (the Web Client ID) to mint an ID token.
-        clientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
-        // Ensure Android receives an ID token
-        serverClientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
-        scopes: ['profile', 'email'],
-        // We only need an ID token for Supabase signInWithIdToken
-        grantOfflineAccess: false,
-      });
+    const platform = Capacitor.getPlatform();
+    console.log('[CapacitorAuth] Initializing on platform:', platform);
+    
+    // Only initialize native SDKs on native platforms
+    if (platform === 'ios' || platform === 'android') {
+      try {
+        GoogleAuth.initialize({
+          // Web Client ID - used for both iOS and Android
+          clientId: '706959873059-ilu0j4usjtfuehp4h3l06snknbcnd2f4.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+          // We only need an ID token for Supabase signInWithIdToken
+          grantOfflineAccess: false,
+        } as any); // Use 'as any' to bypass TypeScript issue with serverClientId
+        console.log('[CapacitorAuth] GoogleAuth initialized successfully');
+      } catch (error) {
+        console.error('[CapacitorAuth] Failed to initialize GoogleAuth:', error);
+      }
+    } else {
+      console.log('[CapacitorAuth] Skipping native SDK initialization on web platform');
     }
   }
 
@@ -44,8 +51,14 @@ export class CapacitorAuth {
   }
 
   private async signInWithGoogleNative(onSuccess?: () => void) {
+    const platform = Capacitor.getPlatform();
+    
+    if (platform === 'web') {
+      throw new Error('Native Google Sign-In is not available on web. Use Supabase OAuth instead.');
+    }
+    
     try {
-      console.log('[CapacitorAuth] Starting Google native sign-in');
+      console.log('[CapacitorAuth] Starting Google native sign-in on', platform);
       
       // Sign in with Google native SDK
       const googleUser = await GoogleAuth.signIn();
@@ -88,8 +101,14 @@ export class CapacitorAuth {
   }
 
   private async signInWithAppleNative(onSuccess?: () => void) {
+    const platform = Capacitor.getPlatform();
+    
+    if (platform === 'web') {
+      throw new Error('Native Apple Sign-In is not available on web. Use Supabase OAuth instead.');
+    }
+    
     try {
-      console.log('[CapacitorAuth] Starting Apple native sign-in');
+      console.log('[CapacitorAuth] Starting Apple native sign-in on', platform);
 
       const options: SignInWithAppleOptions = {
         clientId: 'com.therai.app', // Your app bundle ID
