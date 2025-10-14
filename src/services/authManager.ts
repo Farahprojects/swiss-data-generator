@@ -186,11 +186,22 @@ class AuthManager {
   }
 }
 
-// Export singleton instance
-export const authManager = AuthManager.getInstance();
+// Lazy/safe singleton accessors (no eager initialization at import time)
+let _authManager: AuthManager | null = null;
+export function getAuthManager(): AuthManager {
+  if (!_authManager) {
+    _authManager = AuthManager.getInstance();
+  }
+  return _authManager;
+}
 
-// Export helper for components
+// Explicit initializer to be called at app bootstrap (main.tsx)
+export function initAuthManager(): void {
+  getAuthManager();
+}
+
+// Export helper for components (centralized platform check)
 export function useIsNativeApp(): boolean {
-  return authManager.isNativeApp();
+  return getAuthManager().isNativeApp();
 }
 

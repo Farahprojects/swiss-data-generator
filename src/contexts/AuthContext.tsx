@@ -4,7 +4,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
-import { authManager } from '@/services/authManager';
+import { getAuthManager } from '@/services/authManager';
 
 import { authService } from '@/services/authService';
 /**
@@ -373,12 +373,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     // Unified auth manager handles platform routing automatically
-    return await authManager.signInWithOAuth('google');
+    return await getAuthManager().signInWithOAuth('google');
   };
 
   const signInWithApple = async (): Promise<{ error: Error | null }> => {
     // Unified auth manager handles platform routing automatically
-    return await authManager.signInWithOAuth('apple');
+    return await getAuthManager().signInWithOAuth('apple');
   };
 
   const signOut = async () => {

@@ -2,6 +2,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { initAuthManager } from './services/authManager';
 import './index.css';
 
 // Dev-only: suppress noisy Lovable editor console errors (CORS/504 polling)
@@ -19,6 +20,9 @@ if (typeof window !== 'undefined') {
   if (process.env.NODE_ENV !== 'production') {
     initDevConsoleFilter();
   }
+  // Initialize unified auth manager AFTER window is available
+  // Ensures Capacitor bridge is ready before platform detection
+  try { initAuthManager(); } catch {}
   createRoot(document.getElementById("root")!).render(
     <App />
   );

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
 import { FaApple } from 'react-icons/fa';
-import { authManager } from '@/services/authManager';
+import { getAuthManager } from '@/services/authManager';
 import { toast } from 'sonner';
 
 interface CapacitorSocialLoginProps {
@@ -17,7 +17,7 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
     try {
       setIsLoading(provider);
       
-      const { error } = await authManager.signInWithOAuth(provider);
+      const { error } = await getAuthManager().signInWithOAuth(provider);
       
       if (error) {
         console.error(`${provider} OAuth error:`, error);
