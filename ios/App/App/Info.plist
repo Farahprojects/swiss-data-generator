@@ -60,5 +60,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access is required for Conversation Mode.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition is used to transcribe your voice in Conversation Mode.</string>
 </dict>
 </plist>
