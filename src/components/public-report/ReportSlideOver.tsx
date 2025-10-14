@@ -131,7 +131,14 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   if (reportId === 'new') {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+        <SheetContent 
+          side="right" 
+          className="w-full sm:max-w-2xl p-0"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}
+        >
           <div className="flex flex-col h-full">
             <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
               <SheetTitle className="text-lg font-medium text-gray-900">Add Astro Data</SheetTitle>
