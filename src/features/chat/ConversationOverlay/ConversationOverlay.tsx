@@ -247,7 +247,12 @@ export const ConversationOverlay: React.FC = () => {
   // Start conversation - ROBUST SEQUENCE with validation
   const handleStart = useCallback(async () => {
     // 1. IDEMPOTENT GUARD - Prevent multiple simultaneous starts
-    if (isStartingRef.current || isActiveRef.current || !chat_id) return;
+    if (isStartingRef.current || isActiveRef.current || !chat_id || !mode) {
+      if (!mode) {
+        console.error('[ConversationOverlay] Cannot start: mode is not set');
+      }
+      return;
+    }
     
     isStartingRef.current = true;
     setState('establishing');
@@ -330,7 +335,7 @@ export const ConversationOverlay: React.FC = () => {
     } finally {
       isStartingRef.current = false;
     }
-  }, [chat_id, establishConnection, initializeAudioContext, resumeAudioContext]);
+  }, [chat_id, mode, user, displayName, establishConnection, initializeAudioContext, resumeAudioContext]);
 
   // Cleanup on modal close - graceful release with fire-and-forget
   const handleModalClose = useCallback(async () => {
