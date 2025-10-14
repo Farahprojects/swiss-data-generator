@@ -35,8 +35,6 @@ const ChatContainerContent: React.FC = () => {
         height: '100dvh', 
         minHeight: '100vh', 
         overscrollBehavior: 'contain' as any,
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       <ReportModalProvider>

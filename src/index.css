@@ -10,6 +10,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS Safe Area - Apply globally to entire app */
+html, body, #root {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 /* Mobile safe area padding for phone navigation buttons */
 @supports (padding: max(0px)) {
   .pb-safe {
