@@ -38,6 +38,7 @@ interface ChatBoxProps {
 export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const { error } = useChatStore();
   const { user } = useAuth();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
@@ -135,7 +136,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
             {/* Mobile Header */}
             <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
-              <Sheet>
+              <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
                 <SheetTrigger asChild>
                   <button
                     aria-label="Open menu"
@@ -155,7 +156,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                   <div className="h-full flex flex-col bg-gray-50/50">
                     <div className="p-4 flex flex-col h-full bg-white">
                       <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                        <ChatSidebarControls onDelete={onDelete} />
+                        <ChatSidebarControls onDelete={onDelete} onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)} />
                       </Suspense>
                     </div>
                   </div>

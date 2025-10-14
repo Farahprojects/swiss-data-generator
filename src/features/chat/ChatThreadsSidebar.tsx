@@ -39,9 +39,10 @@ import { ConversationActionsMenuContent } from '@/components/chat/ConversationAc
 interface ChatThreadsSidebarProps {
   className?: string;
   onDelete?: () => void;
+  onCloseMobileSidebar?: () => void;
 }
 
-export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, onDelete }) => {
+export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, onDelete, onCloseMobileSidebar }) => {
   // Use single source of truth for auth state
   const { isAuthenticated } = useAuth();
   const userPermissions = useUserPermissions();
@@ -235,6 +236,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     
     // Navigate to auth route
     navigate(`/c/${conversationId}`, { replace: true });
+    
+    // Close mobile sidebar if callback provided
+    onCloseMobileSidebar?.();
   };
 
   // Handle clicking on insight report - create or navigate to dedicated chat thread
