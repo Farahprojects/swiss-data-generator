@@ -12,6 +12,7 @@ const https = require('https');
 const sharp = require('sharp');
 
 const REMOTE_SVG_URL = process.env.SVG_URL || 'https://api.therai.co/storage/v1/object/public/therai-assets/theraiicon.svg';
+const FALLBACK_PATH = path.resolve(__dirname, '..', 'public', 'therai-icon.svg');
 
 async function ensureDir(dir) {
   await fs.promises.mkdir(dir, { recursive: true });
@@ -33,18 +34,19 @@ function fetchRemote(url) {
 }
 
 async function generate() {
-  const fallbackPath = path.resolve(__dirname, '..', 'public', 'app-icon.svg');
   const assetsDir = path.resolve(__dirname, '..', 'assets');
   await ensureDir(assetsDir);
 
   let svgBuffer;
   try {
     svgBuffer = await fetchRemote(REMOTE_SVG_URL);
+    console.log('Using remote SVG from Supabase bucket');
   } catch (e) {
-    if (!fs.existsSync(fallbackPath)) {
-      throw new Error(`Failed to fetch remote SVG and no fallback found at ${fallbackPath}`);
+    if (!fs.existsSync(FALLBACK_PATH)) {
+      throw new Error(`Failed to fetch remote SVG and no fallback found at ${FALLBACK_PATH}`);
     }
-    svgBuffer = await fs.promises.readFile(fallbackPath);
+    console.log('Using local fallback SVG');
+    svgBuffer = await fs.promises.readFile(FALLBACK_PATH);
   }
 
   // ICON 1024x1024, white background, centered logo
