@@ -60,7 +60,10 @@ const baseSchema = z.object({
 export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; birth_time?: string; location?: string }): string {
   if (parts.local) {
     const d = new Date(parts.local);
-    if (isNaN(d.getTime())) throw new Error("Invalid 'local' timestamp");
+    if (isNaN(d.getTime())) {
+      console.error('[translator-edge] Invalid local timestamp:', parts.local);
+      throw new Error(`Invalid 'local' timestamp: ${parts.local}. Expected ISO format (YYYY-MM-DD)`);
+    }
     return d.toISOString();
   }
   
@@ -70,7 +73,10 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
   if (actualDate) {
     if (actualTime) {
       const birthDate = new Date(actualDate);
-      if (isNaN(birthDate.getTime())) throw new Error("Invalid date");
+      if (isNaN(birthDate.getTime())) {
+        console.error('[translator-edge] Invalid birth_date:', actualDate);
+        throw new Error(`Invalid birth_date: ${actualDate}. Expected ISO format (YYYY-MM-DD), got: ${actualDate}`);
+      }
       const year = birthDate.getUTCFullYear();
       const month = birthDate.getUTCMonth();
       const day = birthDate.getUTCDate();
@@ -101,7 +107,10 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
       }
     }
     const d = new Date(actualDate);
-    if (isNaN(d.getTime())) throw new Error("Invalid date");
+    if (isNaN(d.getTime())) {
+      console.error('[translator-edge] Invalid date (no time):', actualDate);
+      throw new Error(`Invalid date: ${actualDate}. Expected ISO format (YYYY-MM-DD)`);
+    }
     return d.toISOString();
   }
 
@@ -180,6 +189,8 @@ serve(async (req)=>{
   const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
   let requestType="unknown", googleGeo=false, chatId:string|undefined;
+  let body: any;
+  let mode: string | undefined;
   
   try{
     // Extract chat_id before validation for proper error logging
@@ -194,6 +205,7 @@ serve(async (req)=>{
       }
       
       chatId = rawBody.chat_id;
+      mode = rawBody.mode;
     } catch (parseErr) {
       console.error(`[translator-edge-${reqId}] JSON parse failed:`, parseErr);
       throw new Error("Invalid JSON in request body");
@@ -343,7 +355,7 @@ serve(async (req)=>{
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, chat_id:chatId, mode:body?.mode });
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, chat_id:chatId, mode:mode });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });

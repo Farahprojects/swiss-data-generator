@@ -237,7 +237,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     // Add person_b for compatibility requests
     if (selectedAstroType === 'sync' && data.secondPersonName) {
       const personB: any = {
-        birth_date: data.secondPersonBirthDate,
+        birth_date: convertDateFormat(data.secondPersonBirthDate),
         birth_time: data.secondPersonBirthTime,
         location: data.secondPersonBirthLocation,
         latitude: data.secondPersonLatitude,
