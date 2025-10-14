@@ -22,7 +22,13 @@ if (typeof window !== 'undefined') {
   }
   // Initialize unified auth manager AFTER window is available
   // Ensures Capacitor bridge is ready before platform detection
-  try { initAuthManager(); } catch {}
+  try { 
+    console.log('[main.tsx] Initializing authManager...');
+    initAuthManager(); 
+    console.log('[main.tsx] authManager initialized successfully');
+  } catch (error) {
+    console.error('[main.tsx] CRITICAL: authManager initialization failed:', error);
+  }
   createRoot(document.getElementById("root")!).render(
     <App />
   );
