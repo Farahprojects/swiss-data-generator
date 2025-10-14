@@ -137,19 +137,28 @@ class AuthManager {
 
       if (event.url.startsWith(this.OAUTH_CALLBACK_URL)) {
         try {
-          // Close the in-app browser
+          // CRITICAL: Close in-app browser FIRST
+          console.log('[AuthManager] Closing in-app browser...');
           await Browser.close();
 
-          // Extract tokens from URL
+          // Parse the callback URL
           const url = new URL(event.url);
           const hash = url.hash.substring(1);
-          const params = new URLSearchParams(hash || url.search);
+          const searchParams = new URLSearchParams(url.search);
+          const hashParams = new URLSearchParams(hash);
 
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
+          console.log('[AuthManager] URL search params:', Object.fromEntries(searchParams));
+          console.log('[AuthManager] URL hash params:', Object.fromEntries(hashParams));
+
+          // Try to get tokens from either hash or search params
+          const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+          
+          // Or handle OAuth code flow
+          const code = searchParams.get('code');
 
           if (accessToken && refreshToken) {
-            console.log('[AuthManager] Tokens received, setting session');
+            console.log('[AuthManager] Direct tokens received, setting session');
 
             const { error } = await supabase.auth.setSession({
               access_token: accessToken,
@@ -159,10 +168,21 @@ class AuthManager {
             if (error) {
               console.error('[AuthManager] Session error:', error);
             } else {
-              console.log('[AuthManager] Authentication successful!');
+              console.log('[AuthManager] ✅ Authentication successful!');
+            }
+          } else if (code) {
+            console.log('[AuthManager] OAuth code received, exchanging for session');
+            
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            
+            if (error) {
+              console.error('[AuthManager] Code exchange error:', error);
+            } else {
+              console.log('[AuthManager] ✅ Authentication successful!');
             }
           } else {
-            console.error('[AuthManager] No tokens in callback URL');
+            console.error('[AuthManager] ❌ No tokens or code in callback URL');
+            console.error('[AuthManager] Full URL:', event.url);
           }
         } catch (error) {
           console.error('[AuthManager] Callback handling error:', error);
