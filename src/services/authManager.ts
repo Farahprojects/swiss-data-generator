@@ -83,6 +83,7 @@ class AuthManager {
         url: oauthUrl,
         windowName: '_self',
         toolbarColor: '#ffffff',
+        presentationStyle: 'fullscreen', // iOS: Hide URL bar for cleaner UI
       });
 
       return { error: null };
