@@ -1,7 +1,6 @@
 {
   "images": {
     "icon": "assets/icon.png",
-    "splash": "assets/splash.png",
-    "icon-foreground": "assets/icon-foreground.png"
+    "splash": "assets/splash.png"
   }
 }
