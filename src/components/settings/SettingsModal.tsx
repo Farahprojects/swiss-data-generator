@@ -83,12 +83,16 @@ export const SettingsModal = () => {
   const tabs = [
     { id: "general", label: "General", icon: SettingsIcon },
     ...(user ? [
-      { id: "account", label: "Account", icon: User },
+      { id: "account", label: "Account Settings", icon: User },
       { id: "billing", label: "Billing", icon: CreditCard },
       { id: "notifications", label: "Notifications", icon: Bell },
     ] : []),
-    { id: "support", label: "Support", icon: LifeBuoy },
+    { id: "support", label: "Contact Support", icon: LifeBuoy },
   ];
+
+  const handleLegalTerms = () => {
+    window.open('/legal', '_blank');
+  };
 
   const renderSettingsContent = () => (
     <Tabs value={activePanel} className="space-y-4">
@@ -208,6 +212,36 @@ export const SettingsModal = () => {
                     </Button>
                   ))}
                 </div>
+
+                {/* Help submenu items */}
+                <div className="mt-6 border-t pt-4">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start p-4 h-auto hover:bg-gray-100 hover:text-gray-900 text-left"
+                    onClick={handleLegalTerms}
+                  >
+                    <div className="flex items-center gap-3">
+                      <LifeBuoy className="h-5 w-5" />
+                      <div>
+                        <div className="font-medium">Legal & Terms</div>
+                      </div>
+                    </div>
+                  </Button>
+                </div>
+
+                {user && (
+                  <div className="border-t pt-4">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                    >
+                      <LogOut className="h-5 w-5 mr-3" />
+                      {loggingOut ? 'Logging out...' : 'Logout'}
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               /* Mobile Settings Panel */
