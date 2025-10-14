@@ -23,6 +23,12 @@ const MobileLanding: React.FC<Props> = ({ onGoogle, onApple }) => {
   const { isAuthModalOpen, openAuthModal, closeAuthModal, authModalMode } = useAuthModal();
   const isNativeApp = useIsNativeApp();
 
+  // Debug: Log which auth buttons we're showing
+  useEffect(() => {
+    console.log('[MobileLanding] isNativeApp:', isNativeApp);
+    console.log('[MobileLanding] Will show:', isNativeApp ? 'Capacitor buttons' : 'Web buttons');
+  }, [isNativeApp]);
+
   // Rotating words for the "Your..." animation - same as desktop
   const rotatingWords = ['Self', 'Mind', 'Bae', 'Soul', 'Will'];
   const [currentWordIndex, setCurrentWordIndex] = useState(0);

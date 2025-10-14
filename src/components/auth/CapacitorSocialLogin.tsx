@@ -15,9 +15,13 @@ export function CapacitorSocialLogin({ onSuccess, onError }: CapacitorSocialLogi
 
   const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
     try {
+      console.log('[CapacitorSocialLogin] Button clicked:', provider);
       setIsLoading(provider);
       
-      const { error } = await getAuthManager().signInWithOAuth(provider);
+      const authManager = getAuthManager();
+      console.log('[CapacitorSocialLogin] AuthManager retrieved:', authManager);
+      
+      const { error } = await authManager.signInWithOAuth(provider);
       
       if (error) {
         console.error(`${provider} OAuth error:`, error);
