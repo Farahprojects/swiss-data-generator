@@ -62,29 +62,25 @@ class AuthManager {
     try {
       console.log(`[AuthManager] Native OAuth: ${provider}`);
 
-      // Get OAuth URL from Supabase
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: this.OAUTH_CALLBACK_URL,
-          queryParams: provider === 'google' 
-            ? { access_type: 'offline', prompt: 'consent' }
-            : { response_mode: 'form_post' },
-        },
-      });
-
-      if (error) {
-        console.error('[AuthManager] OAuth URL generation error:', error);
-        return { error: new Error(error.message || 'OAuth failed') };
+      // IMPORTANT: We DON'T call supabase.auth.signInWithOAuth() here
+      // because it automatically opens a browser (triggers system browser)
+      // Instead, manually construct the OAuth URL
+      
+      const supabaseUrl = 'https://api.therai.co';
+      const redirectUri = encodeURIComponent(this.OAUTH_CALLBACK_URL);
+      
+      let oauthUrl: string;
+      if (provider === 'google') {
+        oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}&access_type=offline&prompt=consent`;
+      } else {
+        oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=apple&redirect_to=${redirectUri}&response_mode=form_post`;
       }
 
-      if (!data?.url) {
-        return { error: new Error('No OAuth URL returned') };
-      }
+      console.log('[AuthManager] Opening in-app browser:', oauthUrl);
 
-      // Open in in-app browser
+      // Open ONLY in-app browser (no automatic system browser)
       await Browser.open({
-        url: data.url,
+        url: oauthUrl,
         windowName: '_self',
         toolbarColor: '#ffffff',
       });
