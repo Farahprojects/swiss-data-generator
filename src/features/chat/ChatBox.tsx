@@ -144,7 +144,14 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
                     <Menu className="w-5 h-5" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[85%] sm:max-w-xs p-0">
+                <SheetContent 
+                  side="left" 
+                  className="w-[85%] sm:max-w-xs p-0"
+                  style={{
+                    paddingTop: 'env(safe-area-inset-top)',
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                  }}
+                >
                   <div className="h-full flex flex-col bg-gray-50/50">
                     <div className="p-4 flex flex-col h-full bg-white">
                       <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>

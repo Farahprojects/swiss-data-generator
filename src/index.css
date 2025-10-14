@@ -10,12 +10,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS Safe Area - Apply globally to entire app */
-html, body, #root {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+/* iOS Safe Area - Fixed/Absolute positioned elements (Radix UI modals, sheets) */
+/* These are rendered via portals outside #root, so need explicit safe area */
+[data-radix-popper-content-wrapper],
+[data-radix-dialog-overlay],
+[data-radix-dialog-content],
+.radix-sheet-overlay,
+.radix-sheet-content {
+  padding-top: env(safe-area-inset-top) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+  padding-left: env(safe-area-inset-left) !important;
+  padding-right: env(safe-area-inset-right) !important;
 }
 
 /* Mobile safe area padding for phone navigation buttons */
