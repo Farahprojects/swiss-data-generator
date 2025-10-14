@@ -153,7 +153,14 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   if (!reportData) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl">
+        <SheetContent 
+          side="right" 
+          className="w-full sm:max-w-2xl"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}
+        >
           <SheetHeader className="px-6 py-4 border-b bg-white">
             <SheetTitle className="text-lg font-medium text-gray-900">Report</SheetTitle>
             <SheetDescription className="text-sm text-gray-600">Report information</SheetDescription>
@@ -170,7 +177,14 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+      <SheetContent 
+        side="right" 
+        className="w-full sm:max-w-2xl p-0"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
         <div className="flex flex-col h-full">
           <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
             <SheetTitle className="text-lg font-medium text-gray-900">Astrological Report</SheetTitle>
