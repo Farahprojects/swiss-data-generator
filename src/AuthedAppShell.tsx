@@ -35,7 +35,7 @@ const AuthedAppShell: React.FC = () => {
     <Routes>
       {/* Main public route - show MobileLanding on mobile, Index on desktop */}
       <Route path="/" element={
-        isMobile && !isNativeApp ? <MobileLanding /> : <Index />
+        isMobile ? <MobileLanding /> : <Index />
       } />
       
       {/* Public routes */}
@@ -48,10 +48,10 @@ const AuthedAppShell: React.FC = () => {
       
       {/* Auth routes - redirect mobile users to landing page */}
       <Route path="/login" element={
-        isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Login />
+        isMobile ? <Navigate to="/" replace /> : <Login />
       } />
       <Route path="/signup" element={
-        isMobile && !isNativeApp ? <Navigate to="/" replace /> : <Signup />
+        isMobile ? <Navigate to="/" replace /> : <Signup />
       } />
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/password" element={<Auth />} />
