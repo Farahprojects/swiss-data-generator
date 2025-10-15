@@ -24,6 +24,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showPulseModal, setShowPulseModal] = useState(false);
   const [showAstroModal, setShowAstroModal] = useState(false);
 
   // Shared handleNewChat function - all creation goes through conversation-manager
@@ -62,6 +63,11 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   // Shared handleOpenInsights function
   const handleOpenInsights = () => {
     setShowInsightsModal(true);
+  };
+
+  // Shared handleOpenPulse function
+  const handleOpenPulse = () => {
+    setShowPulseModal(true);
   };
 
   // Handle Astro modal open
@@ -159,6 +165,15 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
               <span>Generate Insight</span>
             </div>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleOpenPulse}
+            className="cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span>Generate Pulse</span>
+            </div>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -166,6 +181,13 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
       <InsightsModal
         isOpen={showInsightsModal}
         onClose={() => setShowInsightsModal(false)}
+      />
+
+      {/* Pulse Modal */}
+      <InsightsModal
+        isOpen={showPulseModal}
+        onClose={() => setShowPulseModal(false)}
+        mode="pulse"
       />
 
       {/* Astro Modal */}

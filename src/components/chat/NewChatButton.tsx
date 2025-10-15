@@ -22,6 +22,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showPulseModal, setShowPulseModal] = useState(false);
 
   // Shared handleNewChat function - all creation goes through conversation-manager
   const handleNewChat = async (mode: 'chat' | 'astro' | 'insight' = 'chat') => {
@@ -61,6 +62,11 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
     setShowInsightsModal(true);
   };
 
+  // Shared handleOpenPulse function
+  const handleOpenPulse = () => {
+    setShowPulseModal(true);
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -93,6 +99,15 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
               <span>Generate Insight</span>
             </div>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleOpenPulse}
+            className="cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span>Generate Pulse</span>
+            </div>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -100,6 +115,13 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
       <InsightsModal
         isOpen={showInsightsModal}
         onClose={() => setShowInsightsModal(false)}
+      />
+
+      {/* Pulse Modal */}
+      <InsightsModal
+        isOpen={showPulseModal}
+        onClose={() => setShowPulseModal(false)}
+        mode="pulse"
       />
     </>
   );

@@ -268,8 +268,30 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
   });
 
   // Call context-injector to inject report text into messages (fire-and-forget)
+  // For schema reports, we ONLY inject the report content (not astro data)
+  const reportType = reportData.reportType || reportData.report_type;
   const chatId = reportData.chat_id || reportData.user_id;
-  if (chatId && reportData.mode) {
+  
+  if (chatId && reportData.mode && reportType === 'schema') {
+    console.log(`${logPrefix} [SCHEMA] Calling context-injector for report-only injection with chat_id: ${chatId}, mode: ${reportData.mode}`);
+    supabase.functions.invoke('context-injector', {
+      body: { 
+        chat_id: chatId, 
+        mode: reportData.mode,
+        report_text: report,
+        injection_type: 'report'
+      }
+    }).then(({ error }) => {
+      if (error) {
+        console.error(`${logPrefix} [SCHEMA] Context-injector failed:`, error);
+      } else {
+        console.log(`${logPrefix} [SCHEMA] Context-injector completed successfully - report injected`);
+      }
+    }).catch((err) => {
+      console.error(`${logPrefix} [SCHEMA] Context-injector error:`, err);
+    });
+  } else if (chatId && reportData.mode && reportType !== 'schema') {
+    // For non-schema reports, also inject report content
     console.log(`${logPrefix} Calling context-injector for report injection with chat_id: ${chatId}, mode: ${reportData.mode}`);
     supabase.functions.invoke('context-injector', {
       body: { 

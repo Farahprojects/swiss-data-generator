@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface InsightsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  mode?: 'insight' | 'pulse';
 }
 
 interface ReportCardProps {
@@ -38,13 +39,32 @@ const ReportCard: React.FC<ReportCardProps> = ({ title, description, icon, isDua
   );
 };
 
-export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose }) => {
+export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose, mode = 'insight' }) => {
   const [showAstroForm, setShowAstroForm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState<string>('');
   const [selectedRequest, setSelectedRequest] = useState<string>('');
   const { user } = useAuth();
   const channelRef = useRef<any>(null);
+
+  // For pulse mode, auto-select schema report type
+  useEffect(() => {
+    if (isOpen && mode === 'pulse') {
+      setSelectedReportType('schema');
+      setSelectedRequest('essence');
+      setShowAstroForm(true);
+    }
+  }, [isOpen, mode]);
+
+  // Reset form state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowAstroForm(false);
+      setShowSuccess(false);
+      setSelectedReportType('');
+      setSelectedRequest('');
+    }
+  }, [isOpen]);
 
   // Cleanup WebSocket on unmount or close
   useEffect(() => {
@@ -121,8 +141,14 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
               </button>
             )}
             <div>
-              <h2 className="text-2xl font-light text-gray-900">Insights</h2>
-              <p className="text-sm text-gray-500 mt-1">Generate personalized astrological reports</p>
+              <h2 className="text-2xl font-light text-gray-900">
+                {mode === 'pulse' ? 'Pulse' : 'Insights'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {mode === 'pulse' 
+                  ? 'Generate your schema pulse report' 
+                  : 'Generate personalized astrological reports'}
+              </p>
             </div>
           </div>
           <button
