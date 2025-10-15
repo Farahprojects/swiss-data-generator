@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, ChevronDown, Sparkles, X } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, Activity, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
@@ -25,6 +25,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showAstroModal, setShowAstroModal] = useState(false);
+  const [showPulseModal, setShowPulseModal] = useState(false);
 
   // Shared handleNewChat function - all creation goes through conversation-manager
   const handleNewChat = async (mode: 'chat' | 'astro' | 'insight' = 'chat') => {
@@ -62,6 +63,10 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   // Shared handleOpenInsights function
   const handleOpenInsights = () => {
     setShowInsightsModal(true);
+  };
+
+  const handleOpenPulse = () => {
+    setShowPulseModal(true);
   };
 
   // Handle Astro modal open
@@ -159,6 +164,15 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
               <span>Generate Insight</span>
             </div>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleOpenPulse}
+            className="cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              <span>Generate Pulse</span>
+            </div>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -167,6 +181,33 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
         isOpen={showInsightsModal}
         onClose={() => setShowInsightsModal(false)}
       />
+
+      {/* Pulse Modal - directly opens astro form with schma reportType */}
+      {showPulseModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="text-2xl font-light text-gray-900">Generate Pulse Report</h2>
+              <button onClick={() => setShowPulseModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <AstroDataForm
+                onClose={() => setShowPulseModal(false)}
+                onSubmit={() => {
+                  setShowPulseModal(false);
+                }}
+                preselectedType="schma"
+                reportType="schma"
+                isProfileFlow={false}
+                variant="insights"
+                mode="insight"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Astro Modal */}
       {showAstroModal && (
