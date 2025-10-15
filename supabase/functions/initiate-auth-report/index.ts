@@ -89,7 +89,6 @@ serve(async (req) => {
 
     // Step 2: Determine context ID and flow type
     let actualChatId = chat_id;
-    let isUserProfile = false;
     let isInsightsReport = false;
     
     // Check if this is an insights report by mode
@@ -114,12 +113,6 @@ serve(async (req) => {
             console.log(`✅ [initiate-auth-report] Insight record created: ${chat_id}`);
           }
         });
-    }
-    // Check if the chat_id is actually a user_id (from profile page)
-    else if (chat_id === user.id) {
-      console.log(`🔄 [initiate-auth-report] chat_id matches user_id - profile page flow`);
-      isUserProfile = true;
-      actualChatId = user.id; // Use user_id directly for profile reports
     } else {
       // Verify the conversation belongs to this user (chat flow)
       const { data: conversation, error: convError } = await supabase
@@ -160,22 +153,8 @@ serve(async (req) => {
       })
     );
 
-    // Step 5: If profile flow or insights report, mark profile setup as completed
-    if (isUserProfile || isInsightsReport) {
-      const { error: profileErr } = await supabase
-        .from('profiles')
-        .update({ has_profile_setup: true, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-
-      if (profileErr) {
-        console.error('❌ [initiate-auth-report] Failed to mark profile setup complete:', profileErr);
-      } else {
-        console.log('✅ [initiate-auth-report] Marked has_profile_setup=true for user:', user.id);
-      }
-    }
-
-    // Step 6: Save form details to conversations.meta (only for chat flows)
-    if (!isUserProfile) {
+    // Step 5: Save form details to conversations.meta (only for chat flows, skip for insights)
+    if (!isInsightsReport) {
       const { error: metaError } = await supabase
         .from("conversations")
         .update({
@@ -201,7 +180,7 @@ serve(async (req) => {
         console.log(`✅ [initiate-auth-report] Form meta saved for: ${chat_id}`);
       }
     } else {
-      console.log(`✅ [initiate-auth-report] Skipping conversation meta save for profile flow`);
+      console.log(`✅ [initiate-auth-report] Skipping conversation meta save for insights flow`);
     }
 
     console.log(`✅ [initiate-auth-report] Successfully processed: ${chat_id}`);
@@ -211,8 +190,8 @@ serve(async (req) => {
       chat_id,
       message: "Astro data submitted successfully",
       user_id: user.id,
-      flow_type: isUserProfile ? 'profile' : (isInsightsReport ? 'insight' : 'chat'),
-      is_generating_report: isInsightsReport || isUserProfile,
+      flow_type: isInsightsReport ? 'insight' : 'chat',
+      is_generating_report: isInsightsReport,
       report_id: isInsightsReport ? chat_id : null
     }), {
       status: 200,

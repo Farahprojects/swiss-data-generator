@@ -21,7 +21,6 @@ import Index from './pages/Index';
 import MobileLanding from './pages/MobileLanding';
 import NotFound from './pages/NotFound';
 const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
-import Profile from './pages/Profile';
 import Beats from './pages/Beats';
 import PersonProfile from './pages/PersonProfile';
 
@@ -77,7 +76,6 @@ const AuthedAppShell: React.FC = () => {
       
       {/* Protected routes */}
       <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
-      <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
       <Route path="/beats" element={<Beats />} />
       
       {/* 404 */}

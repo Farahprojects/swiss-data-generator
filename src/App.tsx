@@ -12,7 +12,6 @@ import { SettingsModalProvider } from '@/contexts/SettingsModalContext'
 import { AuthModalProvider } from '@/contexts/AuthModalContext'
 import { PricingProvider } from '@/contexts/PricingContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
-import { ProfileProvider } from '@/contexts/ProfileContext'
 
 const queryClient = new QueryClient()
 
@@ -23,17 +22,15 @@ function AppProviders({ children }: { children: React.ReactNode }) {
         <ThreadsProvider>
           <SubscriptionProvider>
             <ModalStateProvider>
-              <ProfileProvider>
-                <SettingsModalProvider>
-                  <AuthModalProvider>
-                    <PricingProvider>
-                      <ModeProvider>
-                        {children}
-                      </ModeProvider>
-                    </PricingProvider>
-                  </AuthModalProvider>
-                </SettingsModalProvider>
-              </ProfileProvider>
+              <SettingsModalProvider>
+                <AuthModalProvider>
+                  <PricingProvider>
+                    <ModeProvider>
+                      {children}
+                    </ModeProvider>
+                  </PricingProvider>
+                </AuthModalProvider>
+              </SettingsModalProvider>
             </ModalStateProvider>
           </SubscriptionProvider>
         </ThreadsProvider>
