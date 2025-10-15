@@ -69,6 +69,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
     report_type: payload.report_type,
     chartData: payload.chartData,
     is_guest: payload.is_guest,
+    mode: payload.mode,  // Required for context-injector
     // Add any other fields that are explicitly needed by the engines
     system_prompt_type: payload.system_prompt_type,
     selectedEngine: engine,

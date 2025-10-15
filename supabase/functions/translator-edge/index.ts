@@ -334,7 +334,8 @@ serve(async (req)=>{
           report_type: parsed.reportType,
           chat_id: body.chat_id,  // Use chat_id instead of user_id
           chartData: swissData,
-          is_guest: false
+          is_guest: false,
+          mode: body.mode  // Pass mode for context-injector
         };
         
         const { error: orchestratorError } = await sb.functions.invoke('report-orchestrator', {
