@@ -159,11 +159,20 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           chat_id: currentChatId,
           mode
         });
+
+        // If insight mode, add to pending map
+        if (mode === 'insight') {
+          const { pendingInsightThreads } = useChatStore.getState();
+          const newPendingMap = new Map(pendingInsightThreads);
+          newPendingMap.set(currentChatId, { reportType: reportType || '', timestamp: Date.now() });
+          useChatStore.setState({ pendingInsightThreads: newPendingMap });
+          console.log('[AstroDataForm] Added new insight to pending map:', currentChatId);
+        }
       } else {
         // If chat_id already exists, call initiate-auth-report directly
         const payload = buildAuthReportPayload(data, currentChatId);
         
-        const { error } = await supabase.functions.invoke('initiate-auth-report', {
+        const { data: responseData, error } = await supabase.functions.invoke('initiate-auth-report', {
           body: payload
         });
 
@@ -172,6 +181,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           toast.error('Failed to process astro data. Please try again.');
           setIsProcessing(false);
           return;
+        }
+
+        // If report is generating, add to pending map
+        if (responseData?.is_generating_report && responseData?.report_id) {
+          const { pendingInsightThreads } = useChatStore.getState();
+          const newPendingMap = new Map(pendingInsightThreads);
+          newPendingMap.set(responseData.report_id, { reportType: reportType || '', timestamp: Date.now() });
+          useChatStore.setState({ pendingInsightThreads: newPendingMap });
+          console.log('[AstroDataForm] Added to pending insights:', responseData.report_id);
         }
       }
       

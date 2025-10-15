@@ -97,6 +97,23 @@ serve(async (req) => {
       console.log(`🔄 [initiate-auth-report] Insights report flow for chat_id: ${chat_id}`);
       isInsightsReport = true;
       actualChatId = chat_id; // Use chat_id for insights
+      
+      // INSERT into insights table (fire-and-forget)
+      supabase.from('insights')
+        .insert({
+          id: chat_id, // Use chat_id as insight_id (same as conversation)
+          user_id: user.id,
+          report_type: report_data.reportType,
+          status: 'pending',
+          is_ready: false
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error(`❌ [initiate-auth-report] Failed to insert insight:`, error);
+          } else {
+            console.log(`✅ [initiate-auth-report] Insight record created: ${chat_id}`);
+          }
+        });
     }
     // Check if the chat_id is actually a user_id (from profile page)
     else if (chat_id === user.id) {
@@ -194,7 +211,9 @@ serve(async (req) => {
       chat_id,
       message: "Astro data submitted successfully",
       user_id: user.id,
-      flow_type: isUserProfile ? 'profile' : 'chat'
+      flow_type: isUserProfile ? 'profile' : (isInsightsReport ? 'insight' : 'chat'),
+      is_generating_report: isInsightsReport || isUserProfile,
+      report_id: isInsightsReport ? chat_id : null
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

@@ -67,7 +67,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     isLoadingThreads,
     threadsError,
     addThread,
-    removeThread
+    removeThread,
+    pendingInsightThreads
   } = useChatStore();
   
   // Get messages from message store
@@ -553,7 +554,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <div className="space-y-0.5">
                 {visibleThreadsList.map((conversation) => {
                   const isActive = conversation.id === chat_id;
-                  const isPending = (conversation.meta as any)?.isPending === true;
+                  const isPendingInsight = pendingInsightThreads.has(conversation.id);
+                  const isPending = (conversation.meta as any)?.isPending === true || isPendingInsight;
                   
                   return (
                     <div

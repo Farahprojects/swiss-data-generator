@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, User, Users, Briefcase, Heart, UserCheck, Users2, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { ReportFormData } from '@/types/public-report';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InsightsModalProps {
   isOpen: boolean;
@@ -43,6 +44,17 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
   const [selectedReportType, setSelectedReportType] = useState<string>('');
   const [selectedRequest, setSelectedRequest] = useState<string>('');
   const { user } = useAuth();
+  const channelRef = useRef<any>(null);
+
+  // Cleanup WebSocket on unmount or close
+  useEffect(() => {
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -57,11 +69,37 @@ export const InsightsModal: React.FC<InsightsModalProps> = ({ isOpen, onClose })
     setShowAstroForm(false);
     setShowSuccess(true);
     
-    // Auto-close after 3 seconds
-    setTimeout(() => {
-      setShowSuccess(false);
-      onClose();
-    }, 3000);
+    // Mount WebSocket listener for report completion
+    if (user?.id) {
+      const channel = supabase
+        .channel('insight-completion')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'insights',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            const insight = payload.new;
+            if (insight.is_ready === true) {
+              console.log('[InsightsModal] Report ready:', insight.id);
+              // Close success screen and modal
+              setShowSuccess(false);
+              onClose();
+              // Cleanup
+              if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+              }
+            }
+          }
+        )
+        .subscribe();
+      
+      channelRef.current = channel;
+    }
   };
 
   const handleFormClose = () => {
