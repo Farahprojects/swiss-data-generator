@@ -63,7 +63,6 @@ interface ChatState {
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
   clearThreadsError: () => void;
-  reconcileInsightThreads: (userId: string) => Promise<void>;
   
   // Real-time sync methods
   addConversation: (conversation: Conversation) => void;
@@ -333,115 +332,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
 
   clearThreadsError: () => set({ threadsError: null }),
-
-  reconcileInsightThreads: async (userId: string) => {
-    if (!userId) return;
-
-    try {
-      // Always load threads first
-      await get().loadThreads(userId);
-
-      // Get all ready insights for this user (sort by created_at for consistency)
-      const { data: insights, error: insightsError } = await supabase
-        .from('insights')
-        .select('id, report_type, created_at')
-        .eq('user_id', userId)
-        .eq('is_ready', true)
-        .order('created_at', { ascending: false });
-
-      if (insightsError) {
-        console.error('[Store] Failed to fetch insights for reconciliation:', insightsError);
-        return;
-      }
-
-      if (!insights || insights.length === 0) {
-        return; // Already loaded threads above, so we can return early
-      }
-
-      // Get all existing conversations for the user (id + meta to identify insight chats)
-      const { data: conversations, error: convError } = await supabase
-        .from('conversations')
-        .select('id, meta')
-        .eq('user_id', userId);
-
-      if (convError) {
-        console.error('[Store] Failed to fetch conversations:', convError);
-        return;
-      }
-
-      const existingConvIds = new Set(conversations?.map(c => c.id) || []);
-      const readyInsightIds = new Set(insights.map(i => i.id));
-
-      // Find insights that don't have conversations
-      const missingConversations = insights.filter(insight => !existingConvIds.has(insight.id));
-
-      // Identify orphan conversations (insight chat whose id no longer exists in insights)
-      const insightConversations = (conversations || []).filter(c => (c as any).meta?.type === 'insight_chat');
-      const orphanConversations = insightConversations.filter(c => !readyInsightIds.has(c.id));
-
-      const createdCount = missingConversations.length;
-      const deletedCount = orphanConversations.length;
-
-      if (createdCount > 0) {
-        console.log(`[Store] Found ${createdCount} insights without conversations, creating them...`);
-        const now = new Date().toISOString();
-        
-        for (const insight of missingConversations) {
-          try {
-            const { error: insertError } = await supabase.from('conversations').insert({
-              id: insight.id,
-              user_id: userId,
-              title: `${insight.report_type} - Insight`,
-              mode: 'insight',
-              created_at: insight.created_at, // Use insight's created_at for consistency
-              updated_at: now, // Set updated_at to now for proper sorting
-              meta: {
-                type: 'insight_chat',
-                insight_report_id: insight.id,
-                parent_report_type: insight.report_type
-              }
-            });
-            
-            if (insertError) {
-              console.error(`[Store] Failed to create conversation for insight ${insight.id}:`, insertError);
-            } else {
-              console.log(`[Store] ✅ Created conversation for insight: ${insight.id}`);
-            }
-          } catch (error) {
-            console.error(`[Store] Error creating conversation for insight ${insight.id}:`, error);
-          }
-        }
-      }
-
-      if (deletedCount > 0) {
-        console.log(`[Store] Found ${deletedCount} orphan insight conversations, deleting them...`);
-        for (const conv of orphanConversations) {
-          try {
-            const { error: deleteError } = await supabase.from('conversations').delete().eq('id', conv.id).eq('user_id', userId);
-            
-            if (deleteError) {
-              console.error(`[Store] Failed to delete orphan conversation ${conv.id}:`, deleteError);
-            } else {
-              console.log(`[Store] ✅ Deleted orphan conversation: ${conv.id}`);
-              // Also remove locally to keep UI in sync immediately
-              get().removeConversation(conv.id);
-            }
-          } catch (error) {
-            console.error(`[Store] Error deleting orphan conversation ${conv.id}:`, error);
-          }
-        }
-      }
-
-      // Only reload if we actually made changes
-      if (createdCount > 0 || deletedCount > 0) {
-        console.log(`[Store] Reloading threads after reconciliation (created: ${createdCount}, deleted: ${deletedCount})`);
-        await get().loadThreads(userId);
-      }
-
-    } catch (error) {
-      console.error('[Store] Error during insight reconciliation:', error);
-    }
-  },
 
   // Real-time sync methods
   addConversation: (conversation: Conversation) => {

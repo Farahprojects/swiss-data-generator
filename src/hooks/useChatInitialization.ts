@@ -25,11 +25,10 @@ export const useChatInitialization = () => {
   useEffect(() => {
     // Load threads when user signs in (useChatStore needs this for ChatThreadsSidebar)
     if (user) {
-      const { reconcileInsightThreads } = useChatStore.getState();
+      const { loadThreads } = useChatStore.getState();
       
-      // Reconcile insights - creates missing chat threads AND loads all threads
-      // No need to call loadThreads separately since reconcile does it at the end
-      reconcileInsightThreads(user.id);
+      // Load all threads from DB (conversations table)
+      loadThreads(user.id);
       
       // No persistence - always start fresh from URL
     }
