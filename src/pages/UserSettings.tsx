@@ -10,7 +10,7 @@ const UserSettings = () => {
   useEffect(() => {
     // Extract panel from URL if present
     const urlParams = new URLSearchParams(window.location.search);
-    const panel = urlParams.get('panel') as "general" | "account" | "notifications" | "delete" | "support" || "general";
+    const panel = urlParams.get('panel') as "general" | "account" | "profiles" | "notifications" | "delete" | "support" | "billing" || "general";
     
     // Open the settings modal with the panel from URL or default to general
     openSettings(panel);

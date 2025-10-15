@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard, ArrowLeft } from "lucide-react";
+import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard, ArrowLeft, Users } from "lucide-react";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
+import { ProfilesPanel } from "./panels/ProfilesPanel";
 import { VoiceSelectionPanel } from "./VoiceSelectionPanel";
 import DisplayNamePanel from "./panels/DisplayNamePanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
@@ -84,6 +85,7 @@ export const SettingsModal = () => {
     { id: "general", label: "General", icon: SettingsIcon },
     ...(user ? [
       { id: "account", label: "Account Settings", icon: User },
+      { id: "profiles", label: "Profiles", icon: Users },
       { id: "billing", label: "Billing", icon: CreditCard },
       { id: "notifications", label: "Notifications", icon: Bell },
     ] : []),
@@ -154,6 +156,7 @@ export const SettingsModal = () => {
         </div>
       </TabsContent>
       <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
+      <TabsContent value="profiles"><ProfilesPanel /></TabsContent>
       <TabsContent value="billing">
         <div className="p-4 text-center text-gray-500">
           <p>Billing features have been removed</p>
