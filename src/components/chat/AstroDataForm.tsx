@@ -529,12 +529,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                    Full Name *
+                    Name *
                   </Label>
                   <Input
                     id="name"
                     {...register('name', { required: 'Name is required' })}
-                    placeholder="Enter your full name"
+                    placeholder="Enter your name"
                     className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
                   />
                   {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
@@ -643,12 +643,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
-                    Second Person's Full Name *
+                    Second Person's Name *
                   </Label>
                   <Input
                     id="secondPersonName"
                     {...register('secondPersonName', { required: 'Second person name is required' })}
-                    placeholder="Enter second person's full name"
+                    placeholder="Enter second person's name"
                     className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
                   />
                   {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}

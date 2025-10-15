@@ -258,7 +258,7 @@ const Contact = () => {
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="name" className="text-sm font-light text-gray-700">
-                          Full Name <span className="text-red-400 ml-1">*</span>
+                          Name <span className="text-red-400 ml-1">*</span>
                         </Label>
                         <Input 
                           id="name" 
@@ -266,7 +266,7 @@ const Contact = () => {
                           value={formData.name} 
                           onChange={handleChange} 
                           required 
-                          placeholder="Enter your full name"
+                          placeholder="Enter your name"
                           className={`h-12 rounded-xl border-gray-200 bg-gray-50/50 font-light placeholder:text-gray-400 focus:border-primary focus:bg-white transition-all duration-300 ${formErrors.name ? "border-red-300 bg-red-50/30" : ""}`}
                         />
                         {formErrors.name && (
