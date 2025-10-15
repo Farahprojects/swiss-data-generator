@@ -5,6 +5,7 @@ import { UniversalSTTRecorder } from '@/services/audio/UniversalSTTRecorder';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
+import { useMode } from '@/contexts/ModeContext';
 
 interface UseUniversalMicOptions {
   onTranscriptReady?: (transcript: string) => void;
@@ -17,6 +18,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
   const { displayName } = useUserData();
+  const { mode } = useMode();
   const [audioLevel, setAudioLevel] = useState(0);
   const recorderRef = useRef<UniversalSTTRecorder | null>(null);
   const levelRef = useRef(0);
@@ -103,6 +105,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         silenceHangover: 600, // 600ms silence detection (slight hang)
         user_id: user?.id, // Add user_id for message attribution
         user_name: displayName || 'User', // Add user_name for message attribution
+        mode: mode, // Add mode for message context
       });
 
       await recorderRef.current.start();
