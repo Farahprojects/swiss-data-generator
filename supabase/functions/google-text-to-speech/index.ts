@@ -89,8 +89,7 @@ p.catch((e: unknown) => console.error("[google-tts] async error:", e));
 }
 }
 
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-serve(async (req) => {
+Deno.serve(async (req) => {
 const startTime = Date.now();
 
 console.log('[google-tts] 🚀 FIRST: Function started - processing TTS request');
