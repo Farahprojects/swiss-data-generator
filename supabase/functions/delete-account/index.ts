@@ -27,7 +27,7 @@ const logToAdmin = async (supabase: any, userId: string, eventType: string, mess
   }
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log('🚀 Delete account function invoked')
   
   if (req.method === 'OPTIONS') {

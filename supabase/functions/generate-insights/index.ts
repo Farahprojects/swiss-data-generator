@@ -1,5 +1,5 @@
 
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -282,7 +282,7 @@ async function saveInsightEntry(
   return data.id;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
   const startTime = Date.now();
 

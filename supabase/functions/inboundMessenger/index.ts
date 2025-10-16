@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Supabase Setup ──
@@ -84,7 +84,7 @@ const logMessage = (message: string, data: any = {}) => {
 };
 
 // ── Main ──
-serve(async (req) => {
+Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   logMessage("🚀 INBOUND MESSENGER REQUEST STARTED", { 
     requestId, 

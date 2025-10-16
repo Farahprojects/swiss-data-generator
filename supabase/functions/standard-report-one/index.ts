@@ -8,7 +8,7 @@
   Uses system prompts from the reports_prompts table
   Enhanced for production readiness with retries, timeouts, and structured logging.
 ────────────────────────────────────────────────────────────────────────────────*/
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /*───────────────────────────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
 // Logging is now handled by the orchestrator
 
 // Main handler function
-serve(async (req) => {
+Deno.serve(async (req) => {
   let reportData: any; // Define here to be accessible in catch block
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
   const logPrefix = `[standard-report-one][${requestId}]`;

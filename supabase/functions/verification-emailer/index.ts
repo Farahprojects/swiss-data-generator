@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +14,7 @@ interface EmailPayload {
   from?: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log('[verification-emailer] Function invoked:', { method: req.method, url: req.url });
   
   if (req.method === "OPTIONS") {

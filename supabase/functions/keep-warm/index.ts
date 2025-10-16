@@ -1,5 +1,5 @@
 //
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 
 // Keep warm function - pings edge functions to prevent cold starts
 const corsHeaders = {
@@ -106,7 +106,7 @@ async function pingAllFunctions(): Promise<{
 }
 
 // Main handler
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });

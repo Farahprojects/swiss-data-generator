@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -21,7 +21,7 @@ interface DiagnosticResponse {
   case_number?: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log(`[error-handler-diagnostic] Received ${req.method} request`);
 
   if (req.method === 'OPTIONS') {

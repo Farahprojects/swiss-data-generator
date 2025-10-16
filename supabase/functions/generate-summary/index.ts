@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -24,7 +24,7 @@ const SYSTEM_PROMPT = `You are an expert psychological behavioral analyst. Analy
 
 Provide a concise psychological behavioral summary focusing on observable patterns rather than diagnoses. Keep it professional and objective.`;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log(`[generate-summary] Function started, method: ${req.method}`);
   
   if (req.method === "OPTIONS") {

@@ -15,7 +15,7 @@ function transformGoogleResponse(googleData: any) {
   }));
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log('🌍 Google Places Autocomplete function called');
   console.log('📋 Request URL:', req.url);
   console.log('📋 Request method:', req.method);
