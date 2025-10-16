@@ -1,108 +1,60 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// Production-ready, simplified llm-handler-gemini
+// - Uses Deno.serve (no std/http)
+// - Validates inputs, consistent CORS + JSON responses
+// - Minimal logs, clear flow, graceful fallbacks
+// - Fire-and-forget for TTS and chat-send
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Create Supabase client once at module scope for better performance
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  { auth: { persistSession: false } }
-);
-
-// Optimized O(n) sanitizer - single pass with minimal regex
-function sanitizePlainText(text: string): string {
-  if (!text || typeof text !== 'string') return '';
-  return text
-    .replace(/^#{1,6}\s+|[*_]{1,2}([^*_\n]+)[*_]{1,2}|\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|`+([^`\n]*)`+|~~([^~\n]+)~~|[#*_\[\](){}]/g, '$1$2$3')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+"Access-Control-Allow-Origin": "*",
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
+"Access-Control-Allow-Methods": "POST, OPTIONS",
+"Vary": "Origin"
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+const json = (status, data) =>
+new Response(JSON.stringify(data), {
+status,
+headers: { ...corsHeaders, "Content-Type": "application/json" }
+});
 
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
-  }
+// Env
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_1");
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
+const GEMINI_TIMEOUT_MS = 30000;
 
-  try {
-    const body = await req.json();
-    const { chat_id, text, mode, chattype, voice, user_id, user_name } = body;
+if (!SUPABASE_URL) throw new Error("Missing env: SUPABASE_URL");
+if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing env: SUPABASE_SERVICE_ROLE_KEY");
+if (!GOOGLE_API_KEY) throw new Error("Missing env: GOOGLE_LLM_1");
 
-    console.log(`[llm-handler-gemini] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, mode: ${mode || 'default'}, text: ${typeof text === 'string' ? text.substring(0, 50) : ''}...`);
+// Supabase client (module scope)
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-    if (!chat_id || !text) {
-      throw new Error("Missing 'chat_id' or 'text' in request body.");
-    }
+// Simple sanitizer: strips common markdown and extra whitespace
+function sanitizePlainText(input) {
+const s = typeof input === "string" ? input : "";
+return s
+.replace(/[\s\S]*?/g, "") // code blocks
+.replace(/([^]+)`/g, "$1") // inline code
+.replace(/![[^]]]([^)])/g, "") // images
+.replace(/[([^]]+)]([^)])/g, "$1") // links
+.replace(/[>_~#]+/g, "") // md symbols
+.replace(/-{3,}/g, " ")
+.replace(/\s+/g, " ")
+.trim();
+}
 
-    
-
-    // Get Google API key
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_1");
-    if (!GOOGLE_API_KEY) {
-      console.error("[llm-handler-gemini] Missing GOOGLE_LLM_1");
-      throw new Error("Google API key not configured");
-    }
-    
-
-    // OPTIMIZED: Single query to fetch both history and system message
-    // Fetch recent messages (includes both history and system in one round trip)
-    const HISTORY_LIMIT = 6;
-    const { data: allMessages, error: messagesError } = await supabase
-      .from("messages")
-      .select("role, text, created_at")
-      .eq("chat_id", chat_id)
-      .eq("status", "complete")
-      .not("text", "is", null)
-      .neq("text", "")
-      .order("created_at", { ascending: false })
-      .limit(20); // Fetch enough to get history + system message
-
-    if (messagesError) {
-      console.error(`[llm-handler-gemini] ❌ Messages fetch error:`, messagesError);
-      throw new Error("Failed to fetch conversation messages");
-    }
-
-    // Split results: history (last 6 non-system) and earliest system message
-    const history = (allMessages || [])
-      .filter(m => m.role !== 'system')
-      .slice(0, HISTORY_LIMIT);
-    
-    const systemMessages = (allMessages || [])
-      .filter(m => m.role === 'system')
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    
-    const systemText = systemMessages.length > 0 ? String(systemMessages[0].text) : null;
-
-    // Log what we fetched for verification
-    console.log(
-      `[llm-handler-gemini] 📥 History fetched (excluding system): count=${history?.length ?? 0}, roles(newest→oldest)=${(history || [])
-        .map(m => m.role)
-        .join(', ')}`
-    );
-    console.log(
-      `[llm-handler-gemini] 📥 System message present=${Boolean(systemText)}, chars=${systemText ? systemText.length : 0}, preview="${systemText ? systemText.substring(0, 140) : ''}"`
-    );
-    
-
-    const requestStartTime = Date.now();
-
-    // System prompt
-    const systemPrompt = `You are an AI guide for self-awareness.
+const systemPrompt = `You are an AI guide for self-awareness.
 Tone:
-– Direct, a bit playful. Contractions welcome, dated slang not. 
-- Lead with Human-centric translation and behavioral resonance, not planets or metaphors
-- Astro jargon not, just the translation in emotional/ meaning 
+– Direct, a bit playful. Contractions welcome, dated slang not.
 
+Lead with Human-centric translation and behavioral resonance, not planets or metaphors
+Astro jargon not, just the translation in emotional/ meaning
 Response Logic:
-Acknowledge: One-word encourager. 
+Acknowledge: One-word encourager.
 
 Answer the user’s latest message first and fully.
 Pull in recent convo context only when it preserves flow or adds nuance.
@@ -111,201 +63,166 @@ Use astrodata only if it adds real emotional or situational insight—otherwise 
 Show one-line "why" tying emotional/psychological pattern back to a core need or fear
 
 Response output:
-No labels , human led conversation 
-
+No labels , human led conversation
 
 Check-in: Close with a simple, open question.`;
 
-    // Build Gemini contents array from history
-    const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+Deno.serve(async (req) => {
+if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
-    if (history && history.length > 0) {
-      for (let i = history.length - 1; i >= 0; i--) {
-        const m = history[i];
-        const role = m.role === 'assistant' ? 'model' : 'user';
-        if (typeof m.text === 'string' && m.text.trim().length > 0) {
-          contents.push({ role, parts: [{ text: m.text }] });
-        }
-      }
-    }
+const startedAt = Date.now();
 
-    // Add current user message
-    contents.push({ role: 'user', parts: [{ text: String(text) }] });
+let body;
+try {
+body = await req.json();
+} catch {
+return json(400, { error: "Invalid JSON body" });
+}
 
-    // Log what will be sent in contents
-    console.log(
-      `[llm-handler-gemini] 📤 Contents prepared: count=${contents.length}, roles(oldest→newest)=${contents.map(c => c.role).join(', ')}`
-    );
+const { chat_id, text, mode, chattype, voice, user_id, user_name } = body || {};
 
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+if (!chat_id || typeof chat_id !== "string") return json(400, { error: "Missing or invalid field: chat_id" });
+if (!text || typeof text !== "string") return json(400, { error: "Missing or invalid field: text" });
 
-    // Call Google Generative Language API (Gemini)
-    
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+// Fetch recent messages (history + optional system)
+const HISTORY_LIMIT = 6;
+let allMessages = [];
+try {
+const { data, error } = await supabase
+.from("messages")
+.select("role, text, created_at")
+.eq("chat_id", chat_id)
+.eq("status", "complete")
+.not("text", "is", null)
+.neq("text", "")
+.order("created_at", { ascending: false })
+.limit(20);
 
-    const combinedSystemInstruction = systemText
-      ? `${systemPrompt}\n\n[System Data]\n${systemText}`
-      : systemPrompt;
+if (error) {
+  console.warn("[llm] messages fetch warning:", error.message);
+} else {
+  allMessages = data || [];
+}
+} catch (e) {
+console.warn("[llm] messages fetch exception:", e?.message || String(e));
+}
 
-    const requestBody = {
-      system_instruction: { role: 'system', parts: [{ text: combinedSystemInstruction }] },
-      contents,
-      generationConfig: {
-        temperature: 0.7,
-      },
-    };
+const history = allMessages.filter((m) => m.role !== "system").slice(0, HISTORY_LIMIT);
+const systemMessages = allMessages
+.filter((m) => m.role === "system")
+.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+const systemText = systemMessages.length ? String(systemMessages[0].text || "") : "";
 
-    console.log(
-      `[llm-handler-gemini] 📤 Sending to Gemini: system_chars=${combinedSystemInstruction.length}, contents_count=${contents.length}`
-    );
-    
-    
+// Build Gemini request contents (oldest -> newest)
+const contents = [];
+for (let i = history.length - 1; i >= 0; i--) {
+const m = history[i];
+const t = typeof m.text === "string" ? m.text.trim() : "";
+if (!t) continue;
+contents.push({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: t }] });
+}
+contents.push({ role: "user", parts: [{ text: String(text) }] });
 
-    const resp = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GOOGLE_API_KEY,
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
+const combinedSystemInstruction = systemText ? ${systemPrompt}\n\n[System Data]\n${systemText} : systemPrompt;
 
-    
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
 
-    clearTimeout(timeoutId);
+const geminiUrl = https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent;
+const requestBody = {
+system_instruction: { role: "system", parts: [{ text: combinedSystemInstruction }] },
+contents,
+generationConfig: { temperature: 0.7 }
+};
 
-    if (!resp.ok) {
-      const errorText = await resp.text();
-      console.error(`[llm-handler-gemini] ❌ Gemini API Error:`, errorText);
-      throw new Error(`Gemini API request failed: ${resp.status} - ${errorText}`);
-    }
-
-    const data = await resp.json();
-
-    // Extract assistant text from Gemini response
-    let assistantText = '';
-    try {
-      const parts = data?.candidates?.[0]?.content?.parts || [];
-      assistantText = parts.map((p: { text?: string }) => p?.text).filter(Boolean).join(' ').trim();
-      console.log(`[llm-handler-gemini] ✅ Extracted text: ${assistantText.substring(0, 50)}...`);
-    } catch (err) {
-      console.error(`[llm-handler-gemini] ❌ Error extracting text from response:`, err);
-      // fall through to validation below
-    }
-
-    if (!assistantText) {
-      console.error(`[llm-handler-gemini] ❌ No response text from Gemini`);
-      throw new Error("No response text from Gemini");
-    }
-
-    // Sanitize assistant response
-    const sanitizedText = sanitizePlainText(assistantText);
-
-    // Extract usage metrics from Gemini response
-    const usage = {
-      total_tokens: data?.usageMetadata?.totalTokenCount ?? null,
-      input_tokens: data?.usageMetadata?.promptTokenCount ?? null,
-      output_tokens: data?.usageMetadata?.candidatesTokenCount ?? null,
-    };
-
-    const llmLatency_ms = Date.now() - requestStartTime;
-    const totalLatency_ms = Date.now() - requestStartTime;
-
-    
-
-    // Fire-and-forget TTS call - ONLY for voice mode
-    if (chattype === 'voice') {
-      const selectedVoice = (typeof voice === 'string' && voice.trim().length > 0) ? voice : 'Puck';
-
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({
-          text: sanitizedText,
-          voice: selectedVoice,
-          chat_id: chat_id
-        })
-      }).catch((err) => {
-        console.error('[llm-handler-gemini] ❌ TTS call failed:', err);
-      });
-
-      // Fire-and-forget chat-send call to save assistant message
-      const assistantClientId = crypto.randomUUID();
-      console.log(`[llm-handler-gemini] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
-
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({
-          chat_id,
-          text: sanitizedText,
-          client_msg_id: assistantClientId,
-          role: 'assistant',
-          chattype: 'voice',
-          mode: mode,
-          user_id: user_id,
-          user_name: user_name
-        })
-      }).then((response) => {
-        console.log(`[llm-handler-gemini] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
-      }).catch((err) => {
-        console.error(`[llm-handler-gemini] ❌ CHAT-SEND CALL FAILED - client_msg_id: ${assistantClientId}, error:`, err);
-      });
-    } else {
-      // Non-voice mode - also send to chat-send
-
-      const assistantClientId = crypto.randomUUID();
-      console.log(`[llm-handler-gemini] 📤 CALLING CHAT-SEND with assistant message - client_msg_id: ${assistantClientId}`);
-
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({
-          chat_id,
-          text: sanitizedText,
-          client_msg_id: assistantClientId,
-          role: 'assistant',
-          mode: mode,
-          user_id: user_id,
-          user_name: user_name
-        })
-      }).then((response) => {
-        console.log(`[llm-handler-gemini] ✅ CHAT-SEND CALL SUCCESSFUL - status: ${response.status}, client_msg_id: ${assistantClientId}`);
-      }).catch((err) => {
-        console.error(`[llm-handler-gemini] ❌ CHAT-SEND CALL FAILED - client_msg_id: ${assistantClientId}, error:`, err);
-      });
-    }
-
-    console.log('[llm-handler-gemini] ✅ Function completed successfully');
-    return new Response(JSON.stringify({
-      text: sanitizedText,
-      usage,
-      llm_latency_ms: llmLatency_ms,
-      total_latency_ms: totalLatency_ms
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
-  } catch (error) {
-    return new Response(JSON.stringify({
-      error: (error as Error)?.message ?? String(error)
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+let llmStartedAt = Date.now();
+let data;
+try {
+const resp = await fetch(geminiUrl, {
+method: "POST",
+headers: { "Content-Type": "application/json", "x-goog-api-key": GOOGLE_API_KEY },
+body: JSON.stringify(requestBody),
+signal: controller.signal
 });
+clearTimeout(timeout);
 
+if (!resp.ok) {
+  const errText = await resp.text().catch(() => "");
+  return json(502, { error: `Gemini API request failed: ${resp.status} - ${errText}` });
+}
 
+data = await resp.json();
+} catch (e) {
+clearTimeout(timeout);
+return json(504, { error: Gemini request error: ${e?.message || String(e)} });
+}
+
+const llmLatencyMs = Date.now() - llmStartedAt;
+
+// Extract assistant text
+let assistantText = "";
+try {
+const parts = data?.candidates?.[0]?.content?.parts || [];
+assistantText = parts.map((p) => p?.text || "").filter(Boolean).join(" ").trim();
+} catch {
+// ignore
+}
+if (!assistantText) return json(502, { error: "No response text from Gemini" });
+
+const sanitizedText = sanitizePlainText(assistantText) || assistantText;
+
+// Usage metadata (if present)
+const usage = {
+total_tokens: data?.usageMetadata?.totalTokenCount ?? null,
+input_tokens: data?.usageMetadata?.promptTokenCount ?? null,
+output_tokens: data?.usageMetadata?.candidatesTokenCount ?? null
+};
+
+// Fire-and-forget: TTS (voice only) and save assistant message via chat-send
+const headers = {
+"Content-Type": "application/json",
+"Authorization": Bearer ${SUPABASE_SERVICE_ROLE_KEY}
+};
+
+const assistantClientId = crypto.randomUUID();
+
+const tasks = [
+fetch(${SUPABASE_URL}/functions/v1/chat-send, {
+method: "POST",
+headers,
+body: JSON.stringify({
+chat_id,
+text: sanitizedText,
+client_msg_id: assistantClientId,
+role: "assistant",
+mode,
+user_id,
+user_name,
+chattype
+})
+})
+];
+
+if (chattype === "voice") {
+const selectedVoice = typeof voice === "string" && voice.trim() ? voice : "Puck";
+tasks.push(
+fetch(${SUPABASE_URL}/functions/v1/google-text-to-speech, {
+method: "POST",
+headers,
+body: JSON.stringify({ text: sanitizedText, voice: selectedVoice, chat_id })
+})
+);
+}
+
+Promise.allSettled(tasks).catch(() => {});
+
+const totalLatencyMs = Date.now() - startedAt;
+
+return json(200, {
+text: sanitizedText,
+usage,
+llm_latency_ms: llmLatencyMs,
+total_latency_ms: totalLatencyMs
+});
+});
