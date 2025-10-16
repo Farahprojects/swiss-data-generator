@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     requestBody = await req.json(); // Assign inside try
-    const { user_id, conversation_id, title, mode, reportType, report_data, email, name } = requestBody;
+    const { user_id, conversation_id, title, mode, reportType, report_data, email, name, request } = requestBody;
     const action = url.searchParams.get('action');
 
     // All actions require user_id
