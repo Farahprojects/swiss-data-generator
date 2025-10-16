@@ -1,6 +1,6 @@
 
 // deno-lint-ignore-file no-explicit-any
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS = {
@@ -8,7 +8,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
   const log = (msg: string, ...args: any[]) =>
     console.log(`[SIGNUP-CONFIRM:${requestId}] ${msg}`, ...args);
