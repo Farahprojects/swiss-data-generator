@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     requestBody = await req.json(); // Assign inside try
-    const { user_id, conversation_id, title, mode, reportType, report_data, email, name } = requestBody;
+    const { user_id, conversation_id, title, mode, reportType, report_data, email, name, request } = requestBody;
     const action = url.searchParams.get('action');
 
     // All actions require user_id
@@ -115,24 +115,30 @@ serve(async (req) => {
           title: newConversation.title
         });
 
-        // Route by mode - mode determines behavior
+        // Check if report data needs to be processed
+        // If request, reportType, or report_data exists, call initiate-auth-report
         let isGeneratingReport = false;
+        const hasReportData = request || reportType || report_data;
 
-        if (mode === 'insight' || (mode === 'astro' && report_data)) {
-          // Insight mode always generates report, astro mode only if report_data exists
-          console.log('[conversation-manager] MODE-BASED ROUTING: Report generation triggered', {
+        if (hasReportData) {
+          // Report fields present - trigger report processing regardless of mode
+          console.log('[conversation-manager] REPORT DATA DETECTED: Report generation triggered', {
             chat_id: newChatId,
             mode,
-            reportType: reportType || 'N/A'
+            hasRequest: !!request,
+            hasReportType: !!reportType,
+            hasReportData: !!report_data
           });
 
           // Get auth token from request for forwarding
           const authHeader = req.headers.get('Authorization');
           
-          // Call initiate-auth-report to process the astro data
+          // Call initiate-auth-report to process the report data
           const reportPayload = {
             chat_id: newChatId,
             report_data: report_data,
+            request: request,
+            reportType: reportType,
             email: email || '',
             name: name || '',
             mode: mode
@@ -153,9 +159,9 @@ serve(async (req) => {
           isGeneratingReport = true;
           console.log('[conversation-manager] Report generation initiated (async)');
         } else {
-          console.log('[conversation-manager] MODE-BASED ROUTING: No report generation', {
+          console.log('[conversation-manager] NO REPORT DATA: Skipping report generation', {
             mode,
-            reason: 'mode is chat or no report_data provided'
+            reason: 'No request, reportType, or report_data provided'
           });
         }
 
