@@ -137,7 +137,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
       
       // Ensure we have a chat_id
-      let currentChatId = chat_id;
+      // For insights variant (Insight/Pulse mode), ALWAYS create new conversation
+      // Never use existing chat_id as that would overwrite an existing conversation
+      let currentChatId = variant === 'insights' ? null : chat_id;
       
       if (!currentChatId) {
         // Build report data for conversation creation
