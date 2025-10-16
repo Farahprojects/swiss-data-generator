@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { AlertCircle } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import { ProfileSelector } from '@/components/shared/forms/ProfileSelector';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
 import { astroRequestCategories } from '@/constants/report-types';
@@ -527,17 +528,37 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               className="space-y-6"
             >
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                    Name *
-                  </Label>
-                  <Input
-                    id="name"
-                    {...register('name', { required: 'Name is required' })}
-                    placeholder="Enter your name"
-                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                  />
-                  {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                      Name *
+                    </Label>
+                    <Input
+                      id="name"
+                      {...register('name', { required: 'Name is required' })}
+                      placeholder="Enter your name"
+                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                    />
+                    {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">
+                      Profiles
+                    </Label>
+                    <ProfileSelector
+                      onProfileSelect={(profile) => {
+                        setValue('name', profile.name);
+                        setValue('birthDate', profile.birth_date);
+                        setValue('birthTime', profile.birth_time);
+                        setValue('birthLocation', profile.birth_location);
+                        if (profile.birth_latitude) setValue('birthLatitude', profile.birth_latitude);
+                        if (profile.birth_longitude) setValue('birthLongitude', profile.birth_longitude);
+                        if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
+                      }}
+                      currentValue={formValues.name}
+                    />
+                  </div>
                 </div>
 
 
@@ -641,17 +662,37 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               className="space-y-6"
             >
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
-                    Second Person's Name *
-                  </Label>
-                  <Input
-                    id="secondPersonName"
-                    {...register('secondPersonName', { required: 'Second person name is required' })}
-                    placeholder="Enter second person's name"
-                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                  />
-                  {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
+                      Second Person's Name *
+                    </Label>
+                    <Input
+                      id="secondPersonName"
+                      {...register('secondPersonName', { required: 'Second person name is required' })}
+                      placeholder="Enter second person's name"
+                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                    />
+                    {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">
+                      Profiles
+                    </Label>
+                    <ProfileSelector
+                      onProfileSelect={(profile) => {
+                        setValue('secondPersonName', profile.name);
+                        setValue('secondPersonBirthDate', profile.birth_date);
+                        setValue('secondPersonBirthTime', profile.birth_time);
+                        setValue('secondPersonBirthLocation', profile.birth_location);
+                        if (profile.birth_latitude) setValue('secondPersonLatitude', profile.birth_latitude);
+                        if (profile.birth_longitude) setValue('secondPersonLongitude', profile.birth_longitude);
+                        if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
+                      }}
+                      currentValue={formValues.secondPersonName}
+                    />
+                  </div>
                 </div>
 
                 <div>
