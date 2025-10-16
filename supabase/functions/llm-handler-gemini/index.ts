@@ -41,7 +41,7 @@ return s
 .replace(/`([^`]+)`/g, "$1") // inline code
 .replace(/!\[[^\]]+\]\([^)]+\)/g, "") // images
 .replace(/\[[^\]]+\]\([^)]+\)/g, "$1") // links
-.replace(/[>_~#]+/g, "") // md symbols
+.replace(/[>_~#*]+/g, "") // md symbols (including bold/italic *)
 .replace(/-{3,}/g, " ")
 .replace(/\s+/g, " ")
 .trim();
