@@ -30,8 +30,7 @@ export const createConversation = async (
       user_id: userId,
       title: title || 'New Chat',
       mode: mode,
-      ...(reportData?.reportType && {
-        reportType: reportData.reportType,
+      ...(reportData?.report_data && {
         report_data: reportData.report_data,
         email: reportData.email,
         name: reportData.name
