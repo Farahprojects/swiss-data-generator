@@ -83,6 +83,20 @@ serve(async (req) => {
         
         // Create conversation (owned, not shared yet)
         // No participant row added - participants are only for shared conversations
+        
+        // Build meta object with report data if present
+        const metaData: any = {};
+        if (request || reportType || report_data) {
+          metaData.report_payload = {
+            request: request,
+            reportType: reportType,
+            report_data: report_data,
+            email: email,
+            name: name,
+            submitted_at: new Date().toISOString()
+          };
+        }
+        
         const { data: newConversation, error: createError } = await supabaseClient
           .from('conversations')
           .insert({
@@ -91,7 +105,7 @@ serve(async (req) => {
             owner_user_id: user_id,
             title: title || 'New Conversation',
             mode: mode,
-            meta: {}
+            meta: metaData
           })
           .select()
           .single();
@@ -112,7 +126,8 @@ serve(async (req) => {
         console.log('[conversation-manager] CREATE SUCCESS:', {
           id: newConversation.id,
           mode: newConversation.mode,
-          title: newConversation.title
+          title: newConversation.title,
+          has_report_payload: !!(request || reportType || report_data)
         });
 
         // Check if report data needs to be processed
@@ -199,13 +214,26 @@ serve(async (req) => {
             title: title || 'New Conversation'
           });
           
+          // Build meta object with report data if present
+          const metaData: any = {};
+          if (request || reportType || report_data) {
+            metaData.report_payload = {
+              request: request,
+              reportType: reportType,
+              report_data: report_data,
+              email: email,
+              name: name,
+              submitted_at: new Date().toISOString()
+            };
+          }
+          
           const { data: newConv, error: createNewError } = await supabaseClient
             .from('conversations')
             .insert({
               user_id,
               title: title || 'New Conversation',
               mode: mode,
-              meta: {}
+              meta: metaData
             })
             .select()
             .single();
