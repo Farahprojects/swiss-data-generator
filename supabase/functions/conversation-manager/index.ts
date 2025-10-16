@@ -118,12 +118,19 @@ serve(async (req) => {
         // Route by mode - mode determines behavior
         let isGeneratingReport = false;
 
-        if (mode === 'insight' || (mode === 'astro' && report_data)) {
-          // Insight mode always generates report, astro mode only if report_data exists
+        // Check if we have any astro data to process for astro mode
+        const hasAstroData = report_data || request || reportType;
+
+        if (mode === 'insight' || (mode === 'astro' && hasAstroData)) {
+          // Insight mode always generates report
+          // Astro mode generates report if any astro data is provided (report_data, request, or reportType)
           console.log('[conversation-manager] MODE-BASED ROUTING: Report generation triggered', {
             chat_id: newChatId,
             mode,
-            reportType: reportType || 'N/A'
+            reportType: reportType || 'N/A',
+            hasReportData: !!report_data,
+            hasRequest: !!request,
+            hasReportType: !!reportType
           });
 
           // Get auth token from request for forwarding
