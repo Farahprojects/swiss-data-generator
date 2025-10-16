@@ -64,7 +64,7 @@ enableAutomaticPunctuation: true,
 ...(encodingInfo.sampleRateHertz ? { sampleRateHertz: encodingInfo.sampleRateHertz } : {})
 };
 
-const resp = await fetch(https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}, {
+const resp = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
 method: "POST",
 headers: { "Content-Type": "application/json" },
 body: JSON.stringify({ config, audio: { content: audioContent } })
