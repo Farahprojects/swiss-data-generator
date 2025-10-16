@@ -72,7 +72,7 @@ body: JSON.stringify({ config, audio: { content: audioContent } })
 
 if (!resp.ok) {
 const errorText = await resp.text().catch(() => "");
-throw new Error(Google STT error: ${resp.status} - ${errorText});
+throw new Error(`Google STT error: ${resp.status} - ${errorText}`);
 }
 
 const result = await resp.json();
