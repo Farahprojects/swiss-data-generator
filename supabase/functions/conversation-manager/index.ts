@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     requestBody = await req.json(); // Assign inside try
-    const { user_id, conversation_id, title, mode, reportType, report_data, email, name, request } = requestBody;
+    const { user_id, conversation_id, title, mode, report_data, email, name } = requestBody;
     const action = url.searchParams.get('action');
 
     // All actions require user_id
@@ -86,10 +86,8 @@ serve(async (req) => {
         
         // Build meta object with report data if present
         const metaData: any = {};
-        if (request || reportType || report_data) {
+        if (report_data) {
           metaData.report_payload = {
-            request: request,
-            reportType: reportType,
             report_data: report_data,
             email: email,
             name: name,
@@ -127,22 +125,20 @@ serve(async (req) => {
           id: newConversation.id,
           mode: newConversation.mode,
           title: newConversation.title,
-          has_report_payload: !!(request || reportType || report_data)
+          has_report_data: !!report_data
         });
 
         // Check if report data needs to be processed
-        // If request, reportType, or report_data exists, call initiate-auth-report
+        // If report_data exists, call initiate-auth-report
         let isGeneratingReport = false;
-        const hasReportData = request || reportType || report_data;
 
-        if (hasReportData) {
-          // Report fields present - trigger report processing regardless of mode
+        if (report_data) {
+          // Report data present - trigger report processing regardless of mode
           console.log('[conversation-manager] REPORT DATA DETECTED: Report generation triggered', {
             chat_id: newChatId,
             mode,
-            hasRequest: !!request,
-            hasReportType: !!reportType,
-            hasReportData: !!report_data
+            reportType: report_data.reportType || 'N/A',
+            request: report_data.request || 'N/A'
           });
 
           // Get auth token from request for forwarding
@@ -152,8 +148,6 @@ serve(async (req) => {
           const reportPayload = {
             chat_id: newChatId,
             report_data: report_data,
-            request: request,
-            reportType: reportType,
             email: email || '',
             name: name || '',
             mode: mode
@@ -176,7 +170,7 @@ serve(async (req) => {
         } else {
           console.log('[conversation-manager] NO REPORT DATA: Skipping report generation', {
             mode,
-            reason: 'No request, reportType, or report_data provided'
+            reason: 'No report_data provided'
           });
         }
 
@@ -184,7 +178,7 @@ serve(async (req) => {
         result = {
           ...newConversation,
           is_generating_report: isGeneratingReport,
-          reportType: reportType || null
+          reportType: report_data?.reportType || null
         };
         break;
 
@@ -216,10 +210,8 @@ serve(async (req) => {
           
           // Build meta object with report data if present
           const metaData: any = {};
-          if (request || reportType || report_data) {
+          if (report_data) {
             metaData.report_payload = {
-              request: request,
-              reportType: reportType,
               report_data: report_data,
               email: email,
               name: name,
