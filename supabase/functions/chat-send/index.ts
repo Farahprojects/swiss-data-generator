@@ -1,209 +1,118 @@
-// test 
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// Simplified, production-ready version
+// - Uses Deno.serve (no std/http dependency)
+// - Validates input and fails fast on missing env vars
+// - Single path for saving messages (role inferred)
+// - Awaits DB insert; fires LLM call asynchronously when needed
+// - Consistent JSON responses and CORS handling
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+"Access-Control-Allow-Origin": "*",
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
+"Access-Control-Allow-Methods": "POST, OPTIONS",
+"Vary": "Origin"
 };
 
-// Create Supabase client once at module scope for better performance
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  {
-    auth: {
-      persistSession: false
-    }
-  }
-);
+// Fail fast if env vars are missing
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-// Cache environment variables at module scope
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+if (!SUPABASE_URL) throw new Error("Missing env: SUPABASE_URL");
+if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing env: SUPABASE_SERVICE_ROLE_KEY");
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: corsHeaders
-    });
-  }
+// Create Supabase client once
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+auth: { persistSession: false }
+});
 
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', {
-      status: 405,
-      headers: corsHeaders
-    });
-  }
+const json = (status, data) =>
+new Response(JSON.stringify(data), {
+status,
+headers: { ...corsHeaders, "Content-Type": "application/json" }
+});
 
-  try {
-    const body = await req.json();
-    const { chat_id, text, client_msg_id, mode, chattype, role, sessionId, user_id, user_name } = body;
+Deno.serve(async (req) => {
+if (req.method === "OPTIONS") {
+return new Response("ok", { headers: corsHeaders });
+}
 
-    console.log(`[chat-send] 🚀 FUNCTION STARTED - chat_id: ${chat_id}, role: ${role || 'user'}, mode: ${mode}`);
-    console.log(`[chat-send] 📥 REQUEST BODY DEBUG:`, JSON.stringify({ chat_id, text: text?.substring(0, 50), client_msg_id, mode, role, sessionId }, null, 2));
+if (req.method !== "POST") {
+return json(405, { error: "Method not allowed" });
+}
 
-    if (!chat_id || !text) {
-      return new Response(JSON.stringify({
-        error: "Missing required fields: chat_id, text"
-      }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
-    }
+let body;
+try {
+body = await req.json();
+} catch {
+return json(400, { error: "Invalid JSON body" });
+}
 
-    if (!mode) {
-      return new Response(JSON.stringify({
-        error: "Missing required field: mode"
-      }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
-    }
+const {
+chat_id,
+text,
+client_msg_id,
+mode,
+chattype,
+role: rawRole,
+user_id,
+user_name
+} = body || {};
 
-    // message_number assigned automatically by DB trigger (assign_message_number)
-    // No need to await RPC - trigger handles sequencing
+if (!chat_id || typeof chat_id !== "string") {
+return json(400, { error: "Missing or invalid field: chat_id" });
+}
+if (!text || typeof text !== "string") {
+return json(400, { error: "Missing or invalid field: text" });
+}
+if (!mode || typeof mode !== "string") {
+return json(400, { error: "Missing or invalid field: mode" });
+}
 
-    // If this is an assistant message (e.g., from LLM in voice mode), save assistant only
-    if (role === 'assistant') {
-      console.log(`[chat-send] 🎯 ASSISTANT MESSAGE RECEIVED - chat_id: ${chat_id}, text: ${text.substring(0, 50)}...`);
-      
-      const assistantMessageData = {
-        chat_id,
-        role: "assistant",
-        text: text,
-        client_msg_id: client_msg_id || crypto.randomUUID(),
-        status: "complete",
-        mode: mode,
-        user_id: user_id, // Add user_id for assistant messages too
-        user_name: user_name, // Add user_name for assistant messages too
-        meta: {}
-        // message_number assigned by DB trigger (backend use only)
-      };
+const role = rawRole === "assistant" ? "assistant" : "user";
+const message = {
+chat_id,
+role,
+text,
+client_msg_id: client_msg_id ?? crypto.randomUUID(),
+status: "complete",
+mode,
+user_id: user_id ?? null,
+user_name: user_name ?? null,
+meta: {}
+};
 
-      console.log(`[chat-send] 💾 SAVING ASSISTANT MESSAGE TO DB (trigger will assign message_number)`);
-      
-      // Fire-and-forget: Save assistant message to database
-      supabase
-        .from("messages")
-        .insert(assistantMessageData, {
-          onConflict: "client_msg_id",
-          ignoreDuplicates: true,
-          returning: "minimal"
-        })
-        .then(({ data: insertData, error: assistantError }) => {
-          if (assistantError) {
-            console.error('[chat-send] ❌ FAILED TO SAVE ASSISTANT MESSAGE:', assistantError);
-          } else {
-            console.log(`[chat-send] ✅ ASSISTANT MESSAGE SAVED TO DB SUCCESSFULLY`);
-          }
-        })
-        .catch((err) => {
-          console.error('[chat-send] ❌ ASSISTANT MESSAGE SAVE ERROR:', err);
-        });
-      return new Response(JSON.stringify({
-        message: "Assistant message saved successfully",
-        assistant_message: assistantMessageData
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+const { error: insertError } = await supabase
+.from("messages")
+.insert(message, {
+onConflict: "client_msg_id",
+ignoreDuplicates: true,
+returning: "minimal"
+});
 
-    // Otherwise, treat as a user message save
-    console.log(`[chat-send] 👤 USER MESSAGE RECEIVED - chat_id: ${chat_id}, text: ${text.substring(0, 50)}...`);
-    
-    const userMessageData = {
-      chat_id,
-      role: "user",
-      text: text,
-      client_msg_id: client_msg_id || crypto.randomUUID(),
-      status: "complete",
-      mode: mode,
-      user_id: user_id, // Add user_id for user messages
-      user_name: user_name, // Add user_name for user messages
-      meta: {}
-      // message_number assigned by DB trigger (backend use only)
-    };
+if (insertError) {
+return json(500, { error: "Failed to save message" });
+}
 
-    console.log(`[chat-send] 💾 SAVING USER MESSAGE TO DB (fire-and-forget)`);
-    
-    // Fire-and-forget: Save user message to database
-    supabase
-      .from("messages")
-      .insert(userMessageData, {
-        onConflict: "client_msg_id",
-        ignoreDuplicates: true,
-        returning: "minimal"
-      })
-      .then(({ data: userInsertData, error: userError }) => {
-        if (userError) {
-          console.error('[chat-send] ❌ FAILED TO SAVE USER MESSAGE:', userError);
-        } else {
-          console.log(`[chat-send] ✅ USER MESSAGE SAVED TO DB SUCCESSFULLY`);
-        }
-      })
-      .catch((err) => {
-        console.error('[chat-send] ❌ USER MESSAGE SAVE ERROR:', err);
-      });
+// For user messages in non-voice chats, start LLM processing (fire-and-forget)
+const shouldStartLLM = role === "user" && chattype !== "voice";
+if (shouldStartLLM) {
+// No await to keep response fast
+fetch(${SUPABASE_URL}/functions/v1/llm-handler-gemini, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"Authorization": Bearer ${SUPABASE_SERVICE_ROLE_KEY}
+},
+body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
+}).catch(() => {
+// Intentionally swallow errors to avoid affecting client response
+});
+}
 
-    // For voice mode, just save user message (STT handles LLM call separately)
-    if (chattype === 'voice') {
-      console.log('[chat-send] 🎤 VOICE MODE: User message saved, no LLM call needed');
-      return new Response(JSON.stringify({
-        message: "User message saved successfully",
-        user_message: userMessageData
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-
-    // (Assistant path handled above)
-
-    // For non-voice: Now call LLM handler (user message is committed)
-    console.log(`[chat-send] 🤖 CALLING LLM HANDLER - chat_id: ${chat_id}`);
-    fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-      },
-      body: JSON.stringify({
-        chat_id,
-        text: text,
-        mode: mode,
-        user_id: user_id,
-        user_name: user_name
-      })
-    }).then((response) => {
-      console.log(`[chat-send] ✅ LLM HANDLER CALLED SUCCESSFULLY - status: ${response.status}`);
-    }).catch((err) => {
-      console.error('[chat-send] ❌ LLM HANDLER CALL FAILED:', err);
-    });
-
-    console.log('[chat-send] 🚀 USER MESSAGE SAVED, LLM PROCESSING STARTED');
-    return new Response(JSON.stringify({
-      message: "User message saved; LLM processing started",
-      user_message: userMessageData
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-
-  } catch (error) {
-    return new Response(JSON.stringify({
-      error: error.message
-    }), {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      }
-    });
-  }
+return json(200, {
+message: role === "assistant" ? "Assistant message saved" : "User message saved",
+saved: message,
+llm_started: shouldStartLLM
+});
 });
