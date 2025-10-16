@@ -35,7 +35,7 @@ const corsHeaders = {
 function mustGetEnv(key: string): string {
 const v = Deno.env.get(key);
 if (!v) {
-throw new Error(Missing required environment variable: ${key});
+throw new Error(`Missing required environment variable: ${key}`);
 }
 return v;
 }
