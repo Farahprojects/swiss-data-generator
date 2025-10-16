@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
-import { supabase } from '@/integrations/supabase/client';
 import { InsightsModal } from '@/components/insights/InsightsModal';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { ReportFormData } from '@/types/public-report';
@@ -80,38 +79,9 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
     if (!user) return;
 
     try {
-      // Create new conversation with mode in mode column
-      const { data: conversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: 'New Astro Chat',
-          mode: 'astro',
-          meta: {}
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('[NewChatDropdown] Failed to create astro conversation:', error);
-        return;
-      }
-
-      const newChatId = conversation.id;
-      
-      // Add to local threads state
-      const newThread = {
-        id: newChatId,
-        user_id: user.id,
-        title: 'New Astro Chat',
-        mode: 'astro' as const,
-        meta: {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      const currentState = useChatStore.getState();
-      useChatStore.setState({ threads: [newThread, ...currentState.threads] });
+      // Create conversation through conversation-manager edge function
+      const { addThread } = useChatStore.getState();
+      const newChatId = await addThread(user.id, 'astro', 'New Astro Chat');
       
       // Set chat_id and start conversation
       const { setChatId } = useMessageStore.getState();
