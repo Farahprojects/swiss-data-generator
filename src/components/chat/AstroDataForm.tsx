@@ -194,12 +194,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         }
       }
       
-      // Call onSubmit for profile flow and insights variant
-      if (isProfileFlow || variant === 'insights') {
-        onSubmit(data);
-        // Do NOT close the modal here; parent will handle next step
-      } else {
-        // Chat flow - just close the modal
+      // Call onSubmit with chat_id for parent to handle navigation
+      // Pass chat_id back so parent can navigate to the conversation
+      onSubmit({ ...data, chat_id: currentChatId });
+      
+      // For profile flow and insights variant, don't close modal - parent handles it
+      if (!isProfileFlow && variant !== 'insights') {
         onClose();
       }
       

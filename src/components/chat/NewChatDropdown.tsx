@@ -69,19 +69,24 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
     setShowPulseModal(true);
   };
 
-  // Handle Astro modal open
+  // Handle Astro modal open - just show the form, don't create conversation yet
   const handleOpenAstro = () => {
     setShowAstroModal(true);
   };
 
-  // Handle Astro form submission - create conversation and navigate
-  const handleAstroFormSubmit = async (data: ReportFormData) => {
+  // Handle Astro form submission - AstroDataForm creates conversation with report_data
+  const handleAstroFormSubmit = async (data: ReportFormData & { chat_id?: string }) => {
     if (!user) return;
 
     try {
-      // Create conversation through conversation-manager edge function
-      const { addThread } = useChatStore.getState();
-      const newChatId = await addThread(user.id, 'astro', 'New Astro Chat');
+      // AstroDataForm already created the conversation with report_data through conversation-manager
+      // Just need to navigate to it
+      const newChatId = data.chat_id;
+      
+      if (!newChatId) {
+        console.error('[NewChatDropdown] No chat_id returned from form submission');
+        return;
+      }
       
       // Set chat_id and start conversation
       const { setChatId } = useMessageStore.getState();
@@ -98,7 +103,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
       setShowAstroModal(false);
       navigate(`/c/${newChatId}`, { replace: true });
     } catch (error) {
-      console.error('[NewChatDropdown] Failed to create astro conversation:', error);
+      console.error('[NewChatDropdown] Failed to navigate to astro conversation:', error);
     }
   };
 
