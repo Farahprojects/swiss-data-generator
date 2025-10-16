@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,7 +6,7 @@ const corsHeaders = {
 };
 
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
   // Context injector for authenticated users - simplified version
