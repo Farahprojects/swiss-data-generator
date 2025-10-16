@@ -1,7 +1,7 @@
 
 // Supabase Edge Function – top-up queue processor (1-minute cron)
 
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 
 /*  pin Stripe & Supabase to the SAME std version  */
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
@@ -34,7 +34,7 @@ async function updateRequestStatus(id: string, status: string, msg?: string) {
 }
 
 /* main ------------------------------------------------------------------- */
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   try {

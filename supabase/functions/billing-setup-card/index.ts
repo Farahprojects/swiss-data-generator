@@ -11,7 +11,7 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 })
