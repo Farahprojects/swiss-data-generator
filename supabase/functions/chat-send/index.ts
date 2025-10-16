@@ -98,11 +98,11 @@ return json(500, { error: "Failed to save message" });
 const shouldStartLLM = role === "user" && chattype !== "voice";
 if (shouldStartLLM) {
 // No await to keep response fast
-fetch(${SUPABASE_URL}/functions/v1/llm-handler-gemini, {
+fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-"Authorization": Bearer ${SUPABASE_SERVICE_ROLE_KEY}
+"Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
 },
 body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
 }).catch(() => {

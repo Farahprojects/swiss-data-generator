@@ -124,12 +124,12 @@ contents.push({ role: m.role === "assistant" ? "model" : "user", parts: [{ text:
 }
 contents.push({ role: "user", parts: [{ text: String(text) }] });
 
-const combinedSystemInstruction = systemText ? ${systemPrompt}\n\n[System Data]\n${systemText} : systemPrompt;
+const combinedSystemInstruction = systemText ? `${systemPrompt}\n\n[System Data]\n${systemText}` : systemPrompt;
 
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
 
-const geminiUrl = https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent;
+const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const requestBody = {
 system_instruction: { role: "system", parts: [{ text: combinedSystemInstruction }] },
 contents,
@@ -155,7 +155,7 @@ if (!resp.ok) {
 data = await resp.json();
 } catch (e) {
 clearTimeout(timeout);
-return json(504, { error: Gemini request error: ${e?.message || String(e)} });
+return json(504, { error: `Gemini request error: ${e?.message || String(e)}` });
 }
 
 const llmLatencyMs = Date.now() - llmStartedAt;
@@ -182,13 +182,13 @@ output_tokens: data?.usageMetadata?.candidatesTokenCount ?? null
 // Fire-and-forget: TTS (voice only) and save assistant message via chat-send
 const headers = {
 "Content-Type": "application/json",
-"Authorization": Bearer ${SUPABASE_SERVICE_ROLE_KEY}
+"Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
 };
 
 const assistantClientId = crypto.randomUUID();
 
 const tasks = [
-fetch(${SUPABASE_URL}/functions/v1/chat-send, {
+fetch(`${SUPABASE_URL}/functions/v1/chat-send`, {
 method: "POST",
 headers,
 body: JSON.stringify({
@@ -207,7 +207,7 @@ chattype
 if (chattype === "voice") {
 const selectedVoice = typeof voice === "string" && voice.trim() ? voice : "Puck";
 tasks.push(
-fetch(${SUPABASE_URL}/functions/v1/google-text-to-speech, {
+fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
 method: "POST",
 headers,
 body: JSON.stringify({ text: sanitizedText, voice: selectedVoice, chat_id })
