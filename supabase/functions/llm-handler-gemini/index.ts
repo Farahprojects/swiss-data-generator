@@ -37,10 +37,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: {
 function sanitizePlainText(input) {
 const s = typeof input === "string" ? input : "";
 return s
-.replace(/[\s\S]*?/g, "") // code blocks
-.replace(/([^]+)`/g, "$1") // inline code
-.replace(/![[^]]]([^)])/g, "") // images
-.replace(/[([^]]+)]([^)])/g, "$1") // links
+.replace(/```[\s\S]*?```/g, "") // code blocks
+.replace(/`([^`]+)`/g, "$1") // inline code
+.replace(/!\[[^\]]+\]\([^)]+\)/g, "") // images
+.replace(/\[[^\]]+\]\([^)]+\)/g, "$1") // links
 .replace(/[>_~#]+/g, "") // md symbols
 .replace(/-{3,}/g, " ")
 .replace(/\s+/g, " ")
