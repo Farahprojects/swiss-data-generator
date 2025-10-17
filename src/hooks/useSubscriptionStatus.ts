@@ -32,15 +32,46 @@ export function useSubscriptionStatus() {
       return;
     }
 
-    // Temporarily disabled - will implement smarter caching later
-    // For now, assume all authenticated users have active subscriptions
-    setSubscriptionStatus({
-      isActive: true,
-      plan: 'active',
-      status: 'active',
-      loading: false,
-      error: null
-    });
+    try {
+      // Query profiles table for actual subscription status
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_active, subscription_status, subscription_plan')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching subscription status:', error);
+        setSubscriptionStatus({
+          isActive: false,
+          plan: null,
+          status: null,
+          loading: false,
+          error: error.message
+        });
+        return;
+      }
+
+      const isActive = data?.subscription_active && 
+                      ['active', 'trialing'].includes(data?.subscription_status || '');
+
+      setSubscriptionStatus({
+        isActive,
+        plan: data?.subscription_plan || null,
+        status: data?.subscription_status || null,
+        loading: false,
+        error: null
+      });
+    } catch (err) {
+      console.error('Exception checking subscription:', err);
+      setSubscriptionStatus({
+        isActive: false,
+        plan: null,
+        status: null,
+        loading: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
+    }
   }, [user]);
 
   // Check subscription status on mount and when user changes

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { InsightsModal } from '@/components/insights/InsightsModal';
@@ -20,6 +21,7 @@ interface NewChatButtonProps {
 
 export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) => {
   const { user } = useAuth();
+  const { isSubscriptionActive, setShowPaywall } = useSubscription();
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showAstroModal, setShowAstroModal] = useState(false);
@@ -28,6 +30,12 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
   const handleNewChat = async () => {
     if (!user) {
       console.error('[NewChatButton] Cannot create new chat: user not authenticated');
+      return;
+    }
+
+    // Check subscription status
+    if (!isSubscriptionActive) {
+      setShowPaywall(true);
       return;
     }
 
@@ -57,11 +65,21 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
 
   // Shared handleOpenInsights function
   const handleOpenInsights = () => {
+    // Check subscription status
+    if (!isSubscriptionActive) {
+      setShowPaywall(true);
+      return;
+    }
     setShowInsightsModal(true);
   };
 
   // Shared handleOpenAstro function
   const handleOpenAstro = () => {
+    // Check subscription status
+    if (!isSubscriptionActive) {
+      setShowPaywall(true);
+      return;
+    }
     setShowAstroModal(true);
   };
 

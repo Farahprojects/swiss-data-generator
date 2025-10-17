@@ -3,6 +3,7 @@ import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useUserData } from '@/hooks/useUserData';
 import { useThreads } from '@/contexts/ThreadsContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User, Settings, Bell, CreditCard, LifeBuoy, LogOut, BarChart3, ChevronDown } from 'lucide-react';
@@ -46,6 +47,7 @@ interface ChatThreadsSidebarProps {
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, onDelete, onCloseMobileSidebar }) => {
   // Use single source of truth for auth state
   const { isAuthenticated } = useAuth();
+  const { isSubscriptionActive, setShowPaywall } = useSubscription();
   const userPermissions = useUserPermissions();
   const uiConfig = getUserTypeConfig(isAuthenticated ? 'authenticated' : 'unauthenticated');
   
@@ -758,6 +760,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             {displayName}
                           </div>
                         </div>
+                        {!isSubscriptionActive && (
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowPaywall(true);
+                            }}
+                            className="px-2 py-1 text-xs font-light bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors cursor-pointer"
+                          >
+                            Upgrade
+                          </div>
+                        )}
                       </div>
                     </Button>
                   </DropdownMenuTrigger>

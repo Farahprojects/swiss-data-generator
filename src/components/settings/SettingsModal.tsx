@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard, ArrowLeft, Users } from "lucide-react";
+import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard, ArrowLeft, Users, Zap } from "lucide-react";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
@@ -14,11 +14,13 @@ import { VoiceSelectionPanel } from "./VoiceSelectionPanel";
 import DisplayNamePanel from "./panels/DisplayNamePanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useUserData } from "@/hooks/useUserData";
 
 export const SettingsModal = () => {
   const { isOpen, closeSettings, activePanel, setActivePanel } = useSettingsModal();
   const { signOut, user, loading } = useAuth();
+  const { isSubscriptionActive, setShowPaywall } = useSubscription();
   const { fetchData: fetchSettingsData } = useUserData();
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);

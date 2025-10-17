@@ -20,10 +20,9 @@ const EmbeddedCheckoutPage: React.FC = () => {
       const planId = searchParams.get('planId');
       if (!planId || !user?.id) return;
       const returnUrl = `${window.location.origin}/success`;
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
         body: {
-          planId,
-          userId: user.id,
+          priceId: planId,  // Changed from planId to priceId for subscription checkout
           embedded: true,
           returnUrl
         }

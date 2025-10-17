@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, ChevronDown, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { InsightsModal } from '@/components/insights/InsightsModal';
@@ -21,6 +22,7 @@ interface NewChatDropdownProps {
 
 export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = "" }) => {
   const { user } = useAuth();
+  const { isSubscriptionActive, setShowPaywall } = useSubscription();
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showAstroModal, setShowAstroModal] = useState(false);
@@ -32,7 +34,13 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
       return;
     }
 
-    try {
+    // Check subscription status
+    if (!isSubscriptionActive) {
+      setShowPaywall(true);
+      return;
+    }
+
+    try{
       const title = mode === 'insight' ? 'New Insight Chat' : 'New Chat';
       
       // Create conversation through conversation-manager edge function
@@ -60,11 +68,21 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
 
   // Shared handleOpenInsights function
   const handleOpenInsights = () => {
+    // Check subscription status
+    if (!isSubscriptionActive) {
+      setShowPaywall(true);
+      return;
+    }
     setShowInsightsModal(true);
   };
 
   // Handle Astro modal open - just show the form, don't create conversation yet
   const handleOpenAstro = () => {
+    // Check subscription status
+    if (!isSubscriptionActive) {
+      setShowPaywall(true);
+      return;
+    }
     setShowAstroModal(true);
   };
 
