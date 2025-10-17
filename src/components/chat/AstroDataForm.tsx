@@ -127,8 +127,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     try {
       // Always create new conversation for astro and insight modes
       const payload = buildReportPayload(data, selectedAstroType);
+      const title = mode === 'insight' ? `${data.name} - Insight` : data.name;
       const currentChatId = await createConversation(mode as 'astro' | 'insight', 
-        mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat',
+        title,
         { reportType, ...payload }
       );
 
