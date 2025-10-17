@@ -30,9 +30,9 @@ import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketSe
 import { supabase } from '@/integrations/supabase/client';
 import { SearchModal } from '@/components/search/SearchModal';
 import { NewChatDropdown } from '@/components/chat/NewChatDropdown';
-import { AddPersonButton } from '@/components/person/AddPersonButton';
-import { PersonProfilesList } from '@/components/person/PersonProfilesList';
-import { ProfileModal } from '@/components/person/ProfileModal';
+import { AddFolderButton } from '@/components/folders/AddFolderButton';
+import { FoldersList } from '@/components/folders/FoldersList';
+import { FolderModal } from '@/components/folders/FolderModal';
 import { ConversationActionsMenuContent } from '@/components/chat/ConversationActionsMenu';
 
 
@@ -87,44 +87,36 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
-  // Person profiles handlers
-  const handleCreateProfile = (name: string, birthData: any) => {
-    console.log('Creating profile:', { name, birthData });
-    // TODO: Implement actual profile creation
+  // Folder handlers
+  const handleCreateFolder = (name: string) => {
+    console.log('Creating folder:', { name });
+    // TODO: Implement actual folder creation with backend
     // For now, just add to mock data
-    const newProfile = {
+    const newFolder = {
       id: Date.now().toString(),
       name,
       chatsCount: 0,
-      journalCount: 0,
       chats: [],
-      journal: [],
     };
-    setPersonProfiles(prev => [...prev, newProfile]);
+    setFolders(prev => [...prev, newFolder]);
   };
 
-  const handleProfileClick = (profileId: string) => {
-    navigate(`/person/${profileId}`);
+  const handleEditFolder = (folderId: string, currentName: string) => {
+    setEditingFolder({ id: folderId, name: currentName });
+    setShowFolderModal(true);
   };
 
-  const handleChatClick = (profileId: string, chatId: string) => {
-    console.log('Chat clicked:', { profileId, chatId });
-    // TODO: Navigate to profile-specific chat
+  const handleDeleteFolder = (folderId: string) => {
+    console.log('Deleting folder:', folderId);
+    // TODO: Implement actual folder deletion
+    // For now, just remove from mock data
+    setFolders(prev => prev.filter(f => f.id !== folderId));
   };
 
-  const handleJournalClick = (profileId: string, journalId: string) => {
-    console.log('Journal clicked:', { profileId, journalId });
-    // TODO: Navigate to journal entry
-  };
-
-  const handleNewChat = (profileId: string) => {
-    console.log('New chat for profile:', profileId);
-    // TODO: Create new chat for this profile
-  };
-
-  const handleNewJournal = (profileId: string) => {
-    console.log('New journal for profile:', profileId);
-    // TODO: Create new journal entry for this profile
+  const handleFolderChatClick = (folderId: string, chatId: string) => {
+    console.log('Chat clicked in folder:', { folderId, chatId });
+    // Navigate to the chat
+    handleSwitchToChat(chatId);
   };
 
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
@@ -137,26 +129,28 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   
-  // Person profiles state (dev-only UI while building)
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [personProfiles, setPersonProfiles] = useState([
+  // Folders state (dev-only UI while building)
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
+  const [folders, setFolders] = useState([
     // Mock data for now - will be replaced with real data
     {
       id: '1',
-      name: 'John Smith',
+      name: 'Work Projects',
       chatsCount: 3,
-      journalCount: 5,
       chats: [
-        { id: 'c1', title: 'Relationship Reading' },
-        { id: 'c2', title: 'Transit Chat' },
-        { id: 'c3', title: 'General Questions' },
+        { id: 'c1', title: 'Q1 Strategy Discussion' },
+        { id: 'c2', title: 'Team Sync Notes' },
+        { id: 'c3', title: 'Client Requirements' },
       ],
-      journal: [
-        { id: 'j1', title: 'Session Notes - Jan 15' },
-        { id: 'j2', title: 'Transit Observations' },
-        { id: 'j3', title: 'Birth Chart Analysis' },
-        { id: 'j4', title: 'Weekly Reflection' },
-        { id: 'j5', title: 'Dream Journal Entry' },
+    },
+    {
+      id: '2',
+      name: 'Personal',
+      chatsCount: 2,
+      chats: [
+        { id: 'c4', title: 'Daily Reflections' },
+        { id: 'c5', title: 'Goal Planning' },
       ],
     },
   ]);
@@ -513,22 +507,24 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Dark gray line separator */}
           <div className="border-t border-gray-400 my-2"></div>
 
-          {/* Person Profiles Section - NEW (dev only) */}
+          {/* Folders Section - NEW (dev only) */}
           {import.meta.env.MODE !== 'production' && (
             <>
-              <AddPersonButton onClick={() => setShowProfileModal(true)} />
-              <PersonProfilesList
-                profiles={personProfiles}
-                onProfileClick={handleProfileClick}
-                onChatClick={handleChatClick}
-                onJournalClick={handleJournalClick}
-                onNewChat={handleNewChat}
-                onNewJournal={handleNewJournal}
+              <AddFolderButton onClick={() => {
+                setEditingFolder(null);
+                setShowFolderModal(true);
+              }} />
+              <FoldersList
+                folders={folders}
+                onChatClick={handleFolderChatClick}
+                onEditFolder={handleEditFolder}
+                onDeleteFolder={handleDeleteFolder}
+                activeChatId={chat_id}
               />
             </>
           )}
           
-          {/* Space between Person Profiles and Chat History */}
+          {/* Space between Folders and Chat History */}
           <div className="py-2"></div>
           
           {/* Chat history section */}
@@ -846,12 +842,16 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         }}
       />
 
-      {/* Profile Creation Modal */}
+      {/* Folder Creation/Edit Modal */}
       {import.meta.env.MODE !== 'production' && (
-        <ProfileModal
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-          onCreateProfile={handleCreateProfile}
+        <FolderModal
+          isOpen={showFolderModal}
+          onClose={() => {
+            setShowFolderModal(false);
+            setEditingFolder(null);
+          }}
+          onCreateFolder={handleCreateFolder}
+          editingFolder={editingFolder}
         />
       )}
     </div>
