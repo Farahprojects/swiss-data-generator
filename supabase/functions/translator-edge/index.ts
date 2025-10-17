@@ -304,8 +304,8 @@ Deno.serve(async (req)=>{
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, chat_id:body.chat_id, mode:body.mode });
     
-    // Call context-injector for all successful astro data reports (skip if reportType is provided)
-    if (body.chat_id && swiss.ok && !parsed.reportType) {
+    // Call context-injector for all successful astro data reports (always inject raw astro data)
+    if (body.chat_id && swiss.ok) {
       console.log(`[translator-edge-${reqId}] Calling context-injector for chat_id: ${body.chat_id}`);
       try {
         const { error: injectorError } = await sb.functions.invoke('context-injector', {
@@ -320,8 +320,6 @@ Deno.serve(async (req)=>{
       } catch (injectorErr) {
         console.error(`[translator-edge-${reqId}] Context-injector error:`, injectorErr);
       }
-    } else if (parsed.reportType) {
-      console.log(`[translator-edge-${reqId}] Skipping context-injector - reportType provided: ${parsed.reportType}`);
     }
 
     // Call report-orchestrator for all insight reports (fire-and-forget)
