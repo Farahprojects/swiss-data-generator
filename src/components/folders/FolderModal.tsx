@@ -64,7 +64,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                   handleCreate();
                 }
               }}
-              placeholder="e.g., Work, Personal, Archive"
+              placeholder="Enter folder name"
               className="rounded-xl"
               autoFocus
             />

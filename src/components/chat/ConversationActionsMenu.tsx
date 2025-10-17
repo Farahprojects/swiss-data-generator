@@ -1,17 +1,28 @@
 import React, { useState } from 'react';
-import { Share2, Sparkles, Edit3, Trash2 } from 'lucide-react';
+import { Share2, Sparkles, Edit3, Trash2, FolderInput, X } from 'lucide-react';
 import {
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { ShareConversationModal } from './ShareConversationModal';
 import { useChatStore } from '@/core/store';
 import { useReportModal } from '@/contexts/ReportModalContext';
 
+interface Folder {
+  id: string;
+  name: string;
+}
+
 interface ConversationActionsMenuProps {
   conversationId?: string; // Optional - if not provided, uses current chat_id
   onEdit?: (conversationId: string, currentTitle: string) => void;
   onDelete?: (conversationId: string) => void;
+  onMoveToFolder?: (conversationId: string, folderId: string | null) => void;
+  folders?: Folder[];
+  currentFolderId?: string | null;
   align?: 'start' | 'end' | 'center';
   currentTitle?: string;
 }
@@ -20,6 +31,9 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
   conversationId,
   onEdit,
   onDelete,
+  onMoveToFolder,
+  folders = [],
+  currentFolderId,
   align = 'end',
   currentTitle = '',
 }) => {
@@ -49,6 +63,12 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
   const handleDeleteClick = () => {
     if (onDelete && targetConversationId) {
       onDelete(targetConversationId);
+    }
+  };
+
+  const handleMoveToFolder = (folderId: string | null) => {
+    if (onMoveToFolder && targetConversationId) {
+      onMoveToFolder(targetConversationId, folderId);
     }
   };
 
@@ -85,6 +105,42 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
               <span>Edit</span>
             </div>
           </DropdownMenuItem>
+        )}
+        
+        {onMoveToFolder && folders.length > 0 && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md">
+              <div className="flex items-center gap-2">
+                <FolderInput className="w-4 h-4" />
+                <span>Move to Folder</span>
+              </div>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="bg-white border border-gray-200 shadow-lg rounded-lg p-1">
+              {currentFolderId && (
+                <DropdownMenuItem
+                  onClick={() => handleMoveToFolder(null)}
+                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <X className="w-4 h-4" />
+                    <span>Remove from folder</span>
+                  </div>
+                </DropdownMenuItem>
+              )}
+              {folders.map((folder) => (
+                <DropdownMenuItem
+                  key={folder.id}
+                  onClick={() => handleMoveToFolder(folder.id)}
+                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                  disabled={folder.id === currentFolderId}
+                >
+                  <span className={folder.id === currentFolderId ? 'font-medium' : ''}>
+                    {folder.name}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         )}
         
         {onDelete && (

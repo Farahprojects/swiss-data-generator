@@ -34,6 +34,7 @@ import { AddFolderButton } from '@/components/folders/AddFolderButton';
 import { FoldersList } from '@/components/folders/FoldersList';
 import { FolderModal } from '@/components/folders/FolderModal';
 import { ConversationActionsMenuContent } from '@/components/chat/ConversationActionsMenu';
+import { getUserFolders, createFolder, updateFolderName, deleteFolder, getFolderConversations, moveConversationToFolder } from '@/services/folders';
 
 
 interface ChatThreadsSidebarProps {
@@ -87,18 +88,70 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
-  // Folder handlers
-  const handleCreateFolder = (name: string) => {
-    console.log('Creating folder:', { name });
-    // TODO: Implement actual folder creation with backend
-    // For now, just add to mock data
-    const newFolder = {
-      id: Date.now().toString(),
-      name,
-      chatsCount: 0,
-      chats: [],
+  // Load folders on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const loadFolders = async () => {
+      try {
+        const userFolders = await getUserFolders(user.id);
+        
+        // Load conversations for each folder
+        const foldersWithChats = await Promise.all(
+          userFolders.map(async (folder) => {
+            const conversations = await getFolderConversations(folder.id);
+            return {
+              id: folder.id,
+              name: folder.name,
+              chatsCount: conversations.length,
+              chats: conversations.map(conv => ({
+                id: conv.id,
+                title: conv.title || 'New Chat',
+              })),
+            };
+          })
+        );
+        
+        setFolders(foldersWithChats);
+      } catch (error) {
+        console.error('[ChatThreadsSidebar] Failed to load folders:', error);
+      }
     };
-    setFolders(prev => [...prev, newFolder]);
+    
+    loadFolders();
+  }, [user?.id]);
+
+  // Folder handlers
+  const handleCreateFolder = async (name: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // If editing, update the folder name
+      if (editingFolder) {
+        await updateFolderName(editingFolder.id, name);
+        
+        // Update local state
+        setFolders(prev => prev.map(f => 
+          f.id === editingFolder.id ? { ...f, name } : f
+        ));
+        
+        setEditingFolder(null);
+        return;
+      }
+      
+      // Otherwise, create new folder
+      const newFolder = await createFolder(user.id, name);
+      
+      // Add to local state
+      setFolders(prev => [...prev, {
+        id: newFolder.id,
+        name: newFolder.name,
+        chatsCount: 0,
+        chats: [],
+      }]);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to create/update folder:', error);
+    }
   };
 
   const handleEditFolder = (folderId: string, currentName: string) => {
@@ -106,17 +159,59 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     setShowFolderModal(true);
   };
 
-  const handleDeleteFolder = (folderId: string) => {
-    console.log('Deleting folder:', folderId);
-    // TODO: Implement actual folder deletion
-    // For now, just remove from mock data
-    setFolders(prev => prev.filter(f => f.id !== folderId));
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      await deleteFolder(folderId);
+      
+      // Remove from local state
+      setFolders(prev => prev.filter(f => f.id !== folderId));
+      
+      // Reload threads to show conversations that were in the deleted folder
+      const { loadThreads } = useChatStore.getState();
+      await loadThreads(user.id);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to delete folder:', error);
+    }
   };
 
   const handleFolderChatClick = (folderId: string, chatId: string) => {
-    console.log('Chat clicked in folder:', { folderId, chatId });
     // Navigate to the chat
     handleSwitchToChat(chatId);
+  };
+
+  const handleMoveToFolder = async (conversationId: string, folderId: string | null) => {
+    if (!user?.id) return;
+    
+    try {
+      await moveConversationToFolder(conversationId, folderId);
+      
+      // Reload folders to update counts and chat lists
+      const userFolders = await getUserFolders(user.id);
+      const foldersWithChats = await Promise.all(
+        userFolders.map(async (folder) => {
+          const conversations = await getFolderConversations(folder.id);
+          return {
+            id: folder.id,
+            name: folder.name,
+            chatsCount: conversations.length,
+            chats: conversations.map(conv => ({
+              id: conv.id,
+              title: conv.title || 'New Chat',
+            })),
+          };
+        })
+      );
+      
+      setFolders(foldersWithChats);
+      
+      // Reload threads to update the main chat list
+      const { loadThreads } = useChatStore.getState();
+      await loadThreads(user.id);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to move conversation to folder:', error);
+    }
   };
 
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
@@ -132,28 +227,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Folders state (dev-only UI while building)
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
-  const [folders, setFolders] = useState([
-    // Mock data for now - will be replaced with real data
-    {
-      id: '1',
-      name: 'Work Projects',
-      chatsCount: 3,
-      chats: [
-        { id: 'c1', title: 'Q1 Strategy Discussion' },
-        { id: 'c2', title: 'Team Sync Notes' },
-        { id: 'c3', title: 'Client Requirements' },
-      ],
-    },
-    {
-      id: '2',
-      name: 'Personal',
-      chatsCount: 2,
-      chats: [
-        { id: 'c4', title: 'Daily Reflections' },
-        { id: 'c5', title: 'Goal Planning' },
-      ],
-    },
-  ]);
+  const [folders, setFolders] = useState<Array<{
+    id: string;
+    name: string;
+    chatsCount: number;
+    chats: Array<{ id: string; title: string }>;
+  }>>([]);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -605,6 +684,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             setConversationToDelete(conversationId);
                             setShowDeleteConfirm(true);
                           }}
+                          onMoveToFolder={handleMoveToFolder}
+                          folders={folders.map(f => ({ id: f.id, name: f.name }))}
+                          currentFolderId={conversation.folder_id || null}
                           align="end"
                         />
                       </DropdownMenu>

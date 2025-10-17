@@ -48,11 +48,7 @@ export const FoldersList: React.FC<FoldersListProps> = ({
   };
 
   if (folders.length === 0) {
-    return (
-      <div className="text-xs text-gray-500 px-3 py-2">
-        No folders yet. Create your first folder to organize chats!
-      </div>
-    );
+    return null;
   }
 
   return (

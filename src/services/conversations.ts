@@ -9,6 +9,7 @@ export interface Conversation {
   meta?: Record<string, any> | null;
   mode?: 'chat' | 'astro' | 'insight';
   is_public?: boolean;
+  folder_id?: string | null;
 }
 
 /**
