@@ -743,6 +743,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                         {displayName}
                       </div>
                     </div>
+                    {!isSubscriptionActive && (
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPaywall(true);
+                        }}
+                        className="px-3 py-1 text-xs font-light bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
+                      >
+                        Upgrade
+                      </div>
+                    )}
                     <Settings className="h-4 w-4 text-gray-500" />
                   </div>
               </Button>
@@ -766,7 +777,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                               e.stopPropagation();
                               setShowPaywall(true);
                             }}
-                            className="px-2 py-1 text-xs font-light bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors cursor-pointer"
+                            className="px-3 py-1 text-xs font-light bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
                           >
                             Upgrade
                           </div>
