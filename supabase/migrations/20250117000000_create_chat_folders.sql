@@ -61,5 +61,4 @@ CREATE TRIGGER chat_folders_updated_at
 
 -- Grant permissions
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_folders TO authenticated;
-GRANT USAGE ON SEQUENCE chat_folders_id_seq TO authenticated;
 
