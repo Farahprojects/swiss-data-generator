@@ -127,11 +127,14 @@ class UnifiedWebSocketService {
               text_preview: payload.new?.text?.substring(0, 50)
             });
             
-            // Emit global event - no callbacks
-            // For both assistant and user messages, notify the store to fetch latest from DB
-            console.log(`[UnifiedWebSocket] 🔔 Emitting message event for chat_id:`, chat_id);
+            // Emit global event with full message data (no DB refetch needed)
+            console.log(`[UnifiedWebSocket] 🔔 Emitting message event with data for chat_id:`, chat_id);
             window.dispatchEvent(new CustomEvent('assistant-message', { 
-              detail: { chat_id, role }
+              detail: { 
+                chat_id, 
+                role,
+                message: payload.new // ⚡ Pass full message data to avoid refetch
+              }
             }));
             console.log(`[UnifiedWebSocket] ✅ Event dispatched`);
           }

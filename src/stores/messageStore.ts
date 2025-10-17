@@ -270,10 +270,10 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       }
       
 
-      // NOW: Fetch messages since conversation is valid
+      // NOW: Fetch messages since conversation is valid (optimized: removed meta field)
       const { data, error } = await supabase
         .from('messages')
-        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
+        .select('id, chat_id, role, text, created_at, client_msg_id, status, context_injected, message_number, user_id, user_name')
         .eq('chat_id', chat_id)
         .order('created_at', { ascending: true })
         .limit(50);
@@ -305,7 +305,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
+        .select('id, chat_id, role, text, created_at, client_msg_id, status, context_injected, message_number, user_id, user_name')
         .eq('chat_id', chat_id)
         .eq('role', 'assistant')
         .order('created_at', { ascending: false })
@@ -363,7 +363,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
+        .select('id, chat_id, role, text, created_at, client_msg_id, status, context_injected, message_number, user_id, user_name')
         .eq('chat_id', chat_id)
         .lt('created_at', oldestMessage.createdAt)
         .order('created_at', { ascending: true })
@@ -402,14 +402,14 @@ export const triggerMessageStoreSelfClean = async () => {
 if (typeof window !== 'undefined') {
   // Listen for message events from WebSocket
   window.addEventListener('assistant-message', async (event: any) => {
-    const { chat_id, role } = event.detail;
-    console.log('[MessageStore] 🔔 Assistant message event received:', { 
+    const { chat_id, role, message: messageData } = event.detail;
+    console.log('[MessageStore] 🔔 Message event received:', { 
       event_chat_id: chat_id,
-      role
+      role,
+      hasMessageData: !!messageData
     });
     
-    // Fetch from DB (source of truth)
-    const { fetchLatestAssistantMessage, chat_id: currentChatId, messages } = useMessageStore.getState();
+    const { addMessage, chat_id: currentChatId, messages } = useMessageStore.getState();
     
     console.log('[MessageStore] Current store state:', { 
       currentChatId, 
@@ -417,35 +417,18 @@ if (typeof window !== 'undefined') {
       matchesEvent: chat_id === currentChatId 
     });
     
-    // Only fetch if this is for the current chat
-    if (chat_id === currentChatId) {
-      console.log('[MessageStore] Chat IDs match, fetching latest message');
-      if (role === 'assistant') {
-        await fetchLatestAssistantMessage(chat_id);
-      } else {
-        // Fetch latest user message
-        try {
-          const { data, error } = await supabase
-            .from('messages')
-            .select('id, chat_id, role, text, created_at, meta, client_msg_id, status, context_injected, message_number, user_id, user_name')
-            .eq('chat_id', chat_id)
-            .eq('role', 'user')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (!error && data) {
-            const message = mapDbToMessage(data);
-            const messageWithSource = { ...message, source: 'websocket' as const };
-            const { messages } = useMessageStore.getState();
-            const exists = messages.some(m => m.id === data.id);
-            if (!exists) {
-              useMessageStore.getState().addMessage(messageWithSource);
-            }
-          }
-        } catch (e) {
-          console.error('[MessageStore] Failed to fetch latest user message', e);
-        }
+    // Only process if this is for the current chat
+    if (chat_id === currentChatId && messageData) {
+      console.log('[MessageStore] ⚡ Using WebSocket payload directly (no DB refetch)');
+      
+      // Use message data directly from WebSocket payload
+      const message = mapDbToMessage(messageData);
+      const messageWithSource = { ...message, source: 'websocket' as const };
+      
+      // Check if message already exists (deduplication)
+      const exists = messages.some(m => m.id === messageData.id);
+      if (!exists) {
+        addMessage(messageWithSource);
       }
       
       // Handle side-effects

@@ -10,6 +10,40 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+// ⚡ MEMOIZED USER MESSAGE - Only re-renders when message data changes
+const UserMessage = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
+  <div className={`flex items-end gap-3 ${isOwn ? 'justify-end' : 'justify-end'} mb-4`}>
+    <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
+      message.pending ? (isOwn ? 'bg-gray-200 opacity-75' : 'bg-blue-100 opacity-75') : (isOwn ? 'bg-gray-200' : 'bg-blue-100')
+    }`}>
+      {(!isOwn && message.user_name) && (
+        <div className="text-xs font-medium text-blue-700 mb-1">{message.user_name}</div>
+      )}
+      <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
+        {message.text || ''}
+      </p>
+      {message.pending && (
+        <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
+      )}
+    </div>
+  </div>
+));
+UserMessage.displayName = 'UserMessage';
+
+// ⚡ MEMOIZED ASSISTANT MESSAGE - Only re-renders when message data changes
+const AssistantMessage = React.memo(({ message }: { message: Message }) => (
+  <div className="flex items-end gap-3 justify-start mb-8">
+    <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+      <p className="text-base font-light leading-relaxed text-left selectable-text">
+        <span className="whitespace-pre-wrap">
+          {message.text || ''}
+        </span>
+      </p>
+    </div>
+  </div>
+));
+AssistantMessage.displayName = 'AssistantMessage';
+
 // Simple message rendering - no complex turn grouping needed with message_number ordering
 const renderMessages = (messages: Message[], currentUserId?: string) => {
   const elements: React.ReactNode[] = [];
@@ -26,55 +60,22 @@ const renderMessages = (messages: Message[], currentUserId?: string) => {
     if (message.role === 'user') {
       // Treat missing user_id as own message to avoid mis-coloring older rows
       const isOwn = message.user_id ? (currentUserId === message.user_id) : true;
-      const bubble = (
-        <div className={`px-4 py-3 rounded-2xl max-w-[75%] text-black ${
-          message.pending ? (isOwn ? 'bg-gray-200 opacity-75' : 'bg-blue-100 opacity-75') : (isOwn ? 'bg-gray-200' : 'bg-blue-100')
-        }`}>
-          {(!isOwn && message.user_name) && (
-            <div className="text-xs font-medium text-blue-700 mb-1">{message.user_name}</div>
-          )}
-          <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
-            {message.text || ''}
-          </p>
-          {message.pending && (
-            <div className="text-xs text-gray-500 mt-1 italic">Sending...</div>
-          )}
-        </div>
-      );
       elements.push(
-        <div key={message.id} className={`flex items-end gap-3 ${isOwn ? 'justify-end' : 'justify-end'} mb-4`}>
-          {bubble}
-        </div>
+        <UserMessage key={message.id} message={message} isOwn={isOwn} />
       );
     }
     
     // Render assistant messages
     if (message.role === 'assistant') {
       elements.push(
-        <div key={message.id} className="flex items-end gap-3 justify-start mb-8">
-          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
-            <p className="text-base font-light leading-relaxed text-left selectable-text">
-              <span className="whitespace-pre-wrap">
-                {message.text || ''}
-              </span>
-            </p>
-          </div>
-        </div>
+        <AssistantMessage key={message.id} message={message} />
       );
     }
     
     // Render system messages as assistant messages
     if (message.role === 'system') {
       elements.push(
-        <div key={message.id} className="flex items-end gap-3 justify-start mb-8">
-          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
-            <p className="text-base font-light leading-relaxed text-left selectable-text">
-              <span className="whitespace-pre-wrap">
-                {message.text || ''}
-              </span>
-            </p>
-          </div>
-        </div>
+        <AssistantMessage key={message.id} message={message} />
       );
     }
   }
