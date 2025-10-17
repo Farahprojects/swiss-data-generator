@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import { updateConversationTitle } from '@/services/conversations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getUserFolders, getFolderConversations, moveConversationToFolder } from '@/services/folders';
 
 interface ChatMenuButtonProps {
   className?: string;
@@ -28,10 +29,28 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editTitle, setEditTitle] = useState('');
+  const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
 
-  // Get current conversation title
+  // Get current conversation title and folder
   const currentConversation = threads.find(t => t.id === chat_id);
   const currentTitle = currentConversation?.title || '';
+  const currentFolderId = currentConversation?.folder_id || null;
+
+  // Load folders on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const loadFolders = async () => {
+      try {
+        const userFolders = await getUserFolders(user.id);
+        setFolders(userFolders.map(f => ({ id: f.id, name: f.name })));
+      } catch (error) {
+        console.error('[ChatMenuButton] Failed to load folders:', error);
+      }
+    };
+    
+    loadFolders();
+  }, [user?.id]);
 
   const handleEdit = async (conversationId: string, title: string) => {
     setEditTitle(title);
@@ -90,6 +109,26 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
     }
   };
 
+  const handleMoveToFolder = async (conversationId: string, folderId: string | null) => {
+    if (!user?.id) return;
+    
+    try {
+      await moveConversationToFolder(conversationId, folderId);
+      
+      // Update local state
+      const updatedThreads = threads.map(t => 
+        t.id === conversationId ? { ...t, folder_id: folderId } : t
+      );
+      useChatStore.setState({ threads: updatedThreads });
+
+      // Reload folders to update counts
+      const userFolders = await getUserFolders(user.id);
+      setFolders(userFolders.map(f => ({ id: f.id, name: f.name })));
+    } catch (error) {
+      console.error('[ChatMenuButton] Failed to move conversation to folder:', error);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -101,9 +140,13 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
         
         <ConversationActionsMenuContent 
           align="end"
+          conversationId={chat_id}
           currentTitle={currentTitle}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onMoveToFolder={handleMoveToFolder}
+          folders={folders}
+          currentFolderId={currentFolderId}
         />
       </DropdownMenu>
 

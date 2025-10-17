@@ -725,7 +725,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       </div>
 
       {/* Clean Footer - Sticky at bottom */}
-      <div className="mt-auto pt-4 px-3 shrink-0">
+      <div className="mt-auto pt-4 shrink-0">
         {isAuthenticated ? (
           /* Authenticated User - Settings Menu */
           <div className="space-y-2">
@@ -736,10 +736,10 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 className="w-full justify-start p-0 h-auto rounded-none bg-transparent hover:bg-gray-100 hover:text-gray-900"
                 onClick={() => handleOpenSettings('general')}
               >
-                  <div className="flex items-center gap-3 px-3 py-3 w-full">
-                    <UserAvatar size="sm" />
+                  <div className="flex items-center gap-3 px-3 py-2 w-full">
+                    <UserAvatar size="xs" />
                     <div className="flex-1 text-left min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate pr-2">
+                      <div className="text-sm font-medium text-gray-900">
                         {displayName}
                       </div>
                     </div>
@@ -749,42 +749,41 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                           e.stopPropagation();
                           setShowPaywall(true);
                         }}
-                        className="px-3 py-1 text-xs font-light bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
+                        className="flex-shrink-0 px-3 py-1 text-xs font-light bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
                       >
                         Upgrade
                       </div>
                     )}
-                    <Settings className="h-4 w-4 text-gray-500" />
+                    <Settings className="h-4 w-4 text-gray-500 flex-shrink-0" />
                   </div>
               </Button>
             ) : (
               /* Desktop: Dropdown Menu */
               <DropdownMenu>
-                {/* Wrapper controls full-row hover and padding */}
-                <div className="w-full rounded-none hover:bg-gray-100 transition-colors">
+                {/* Wrapper with flex layout */}
+                <div className="w-full flex items-center gap-2 px-3 py-2 rounded-none hover:bg-gray-100 transition-colors">
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-start p-0 h-auto rounded-none bg-transparent !hover:bg-gray-100 !hover:text-gray-900">
-                      <div className="flex items-center gap-3 px-3 py-3 w-full">
-                        <UserAvatar size="sm" />
-                        <div className="flex-1 text-left min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate pr-2">
-                            {displayName}
-                          </div>
+                    <button className="flex items-center gap-3 flex-1 min-w-0 bg-transparent hover:bg-transparent">
+                      <UserAvatar size="xs" />
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="text-sm font-medium text-gray-900">
+                          {displayName}
                         </div>
-                        {!isSubscriptionActive && (
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowPaywall(true);
-                            }}
-                            className="px-3 py-1 text-xs font-light bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors cursor-pointer"
-                          >
-                            Upgrade
-                          </div>
-                        )}
                       </div>
-                    </Button>
+                    </button>
                   </DropdownMenuTrigger>
+                  
+                  {!isSubscriptionActive && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPaywall(true);
+                      }}
+                      className="flex-shrink-0 px-3 py-1 text-xs font-light bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
+                    >
+                      Upgrade
+                    </button>
+                  )}
                 </div>
                 <DropdownMenuContent align="end" className="min-w-48 rounded-xl border border-gray-200 shadow-lg p-1">
                   

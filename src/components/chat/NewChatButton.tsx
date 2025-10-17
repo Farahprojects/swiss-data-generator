@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Sparkles } from 'lucide-react';
+import { SquarePen, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -120,9 +120,8 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className={`flex items-center gap-2 px-3 py-1.5 text-sm font-light text-black hover:bg-gray-100 rounded-lg transition-colors ${className}`}>
-            <Plus className="w-4 h-4" />
-            New
+          <button className={`flex items-center justify-center p-2 text-black hover:bg-gray-100 rounded-lg transition-colors ${className}`}>
+            <SquarePen className="w-5 h-5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">

@@ -2,7 +2,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 
-export const UserAvatar = ({ size = "default" }: { size?: "sm" | "default" | "lg" }) => {
+export const UserAvatar = ({ size = "default" }: { size?: "xs" | "sm" | "default" | "lg" }) => {
   const { user } = useAuth();
   
   const getInitial = () => {
@@ -11,6 +11,7 @@ export const UserAvatar = ({ size = "default" }: { size?: "sm" | "default" | "lg
   };
   
   const sizeClasses = {
+    xs: "h-6 w-6 text-xs",
     sm: "h-8 w-8 text-sm",
     default: "h-12 w-12 text-lg",
     lg: "h-16 w-16 text-2xl"

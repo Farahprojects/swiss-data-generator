@@ -114,9 +114,9 @@ const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, onSuccess 
         </main>
 
         {/* Footer with timing tool kit */}
-        <footer className="py-8 text-center text-sm text-gray-500 font-light border-t border-gray-100">
+        <footer className="py-3 text-center text-sm text-gray-500 font-light border-t border-gray-100">
           <div className="max-w-4xl mx-auto px-4">
-            <p className="mb-4">© {new Date().getFullYear()} Therai. All rights reserved.</p>
+            <p className="mb-2">© {new Date().getFullYear()} Therai. All rights reserved.</p>
             <div className="text-xs text-gray-400">
               <p>Secure payment processed by Stripe. Cancel anytime.</p>
             </div>

@@ -273,7 +273,7 @@ export const ChatInput = () => {
         </div>
       </div>
       <div className="max-w-4xl mx-auto mt-2">
-        <p className="text-xs text-gray-400 font-light text-center">
+        <p className="text-xs text-gray-600 font-light text-center">
           Therai can make mistakes. Check important info.
         </p>
       </div>
