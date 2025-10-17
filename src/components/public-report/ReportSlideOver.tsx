@@ -194,8 +194,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
       >
         <div className="flex flex-col h-full">
           <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
-            <SheetTitle className="text-lg font-medium text-gray-900">Astrological Report</SheetTitle>
-            <SheetDescription className="text-sm text-gray-600">Your personalized astrological insights and data</SheetDescription>
+            <SheetTitle className="text-lg font-medium text-gray-900">Astro data</SheetTitle>
             <div className="flex items-center gap-3">
             </div>
             <div></div>

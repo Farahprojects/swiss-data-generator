@@ -31,7 +31,29 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
   const astroData = parseAstroData(swissData);
   const { subject, natal, transits } = astroData;
 
-  const birthDate = reportData.guest_report?.report_data?.birthDate;
+  // Extract birth date from swiss_data blocks.natal.meta
+  let birthDate = reportData.guest_report?.report_data?.birthDate;
+  
+  // If not in guest_report, try to extract from swiss_data
+  if (!birthDate && swissData?.blocks?.natal?.meta) {
+    const natalMeta = swissData.blocks.natal.meta;
+    // Extract date from UTC timestamp or use meta.date and meta.time
+    if (natalMeta.utc) {
+      const date = new Date(natalMeta.utc);
+      birthDate = date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric'
+      });
+    } else if (natalMeta.date && natalMeta.time) {
+      const date = new Date(`${natalMeta.date}T${natalMeta.time}`);
+      birthDate = date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric'
+      });
+    }
+  }
   
   return (
     <div className={`font-inter max-w-4xl mx-auto py-4 md:py-8 px-4 md:px-0 ${className}`}>
