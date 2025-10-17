@@ -148,26 +148,6 @@ Deno.serve(async (req) => {
     console.log(`[context-injector][${requestId}] ✅ ${contextType} context injected successfully in ${processingTime}ms`);
     console.log(`[context-injector][${requestId}] 📝 Message ID: ${contextMessage.id}, Chat ID: ${chat_id}`);
     
-    // Fire-and-forget insights table update - mark report as ready
-    // Only for report injection (not swiss_data)
-    if (injection_type === 'report' && chat_id) {
-      console.log(`[context-injector][${requestId}] Updating insights table for chat_id: ${chat_id}`);
-      supabase.from("insights")
-        .update({ 
-          is_ready: true,
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', chat_id) // chat_id = insight_id for insights reports
-        .then(({ error }) => {
-          if (error) {
-            console.error(`[context-injector][${requestId}] Insights update failed:`, error);
-          } else {
-            console.log(`[context-injector][${requestId}] Insights table updated successfully`);
-          }
-        });
-    }
-    
     return new Response(
       JSON.stringify({ 
         success: true,

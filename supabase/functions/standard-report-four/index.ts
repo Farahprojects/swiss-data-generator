@@ -265,6 +265,24 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
         report_type: reportData.reportType || reportData.report_type
       });
   });
+  
+  // Fire-and-forget insights table update for insight mode reports
+  if (reportData.mode === 'insight' && reportData.chat_id) {
+    supabase.from("insights")
+      .update({ 
+        is_ready: true,
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', reportData.chat_id)
+      .then(({ error }) => {
+        if (error) {
+          console.error(`${logPrefix} Insights update failed:`, error);
+        } else {
+          console.log(`${logPrefix} Insights table updated: ${reportData.chat_id}`);
+        }
+      });
+  }
 }
 
 // Main handler function
