@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ConversationActionsMenuContent } from '@/components/chat/ConversationActionsMenu';
 
 interface FolderItem {
   id: string;
@@ -24,6 +25,10 @@ interface FoldersListProps {
   onChatClick: (folderId: string, chatId: string) => void;
   onEditFolder: (folderId: string, currentName: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  onEditChat?: (conversationId: string, currentTitle: string) => void;
+  onDeleteChat?: (conversationId: string) => void;
+  onMoveToFolder?: (conversationId: string, folderId: string | null) => void;
+  allFolders?: Array<{ id: string; name: string }>;
   activeChatId?: string;
 }
 
@@ -33,6 +38,10 @@ export const FoldersList: React.FC<FoldersListProps> = ({
   onChatClick,
   onEditFolder,
   onDeleteFolder,
+  onEditChat,
+  onDeleteChat,
+  onMoveToFolder,
+  allFolders = [],
   activeChatId,
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -104,18 +113,43 @@ export const FoldersList: React.FC<FoldersListProps> = ({
                   const isActive = chat.id === activeChatId;
                   
                   return (
-                    <button
+                    <div
                       key={chat.id}
-                      onClick={() => onChatClick(folder.id, chat.id)}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors font-light ${
-                        isActive 
-                          ? 'bg-gray-100 text-gray-900' 
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
+                      className="relative group"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-gray-500" />
-                      <span className="flex-1 text-left truncate">{chat.title}</span>
-                    </button>
+                      <div className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                        isActive 
+                          ? 'bg-gray-100' 
+                          : 'hover:bg-gray-100'
+                      }`}>
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer flex items-center gap-2"
+                          onClick={() => onChatClick(folder.id, chat.id)}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-gray-500" />
+                          <span className="text-sm font-medium text-gray-900 truncate">{chat.title}</span>
+                        </div>
+                        
+                        {/* Three dots menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-1 hover:bg-gray-200 rounded transition-colors">
+                              <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <ConversationActionsMenuContent
+                            conversationId={chat.id}
+                            currentTitle={chat.title}
+                            onEdit={onEditChat}
+                            onDelete={onDeleteChat}
+                            onMoveToFolder={onMoveToFolder}
+                            folders={allFolders}
+                            currentFolderId={folder.id}
+                            align="end"
+                          />
+                        </DropdownMenu>
+                      </div>
+                    </div>
                   );
                 })}
               </div>

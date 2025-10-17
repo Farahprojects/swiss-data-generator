@@ -598,6 +598,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 onChatClick={handleFolderChatClick}
                 onEditFolder={handleEditFolder}
                 onDeleteFolder={handleDeleteFolder}
+                onEditChat={handleEditTitle}
+                onDeleteChat={(conversationId) => {
+                  setConversationToDelete(conversationId);
+                  setShowDeleteConfirm(true);
+                }}
+                onMoveToFolder={handleMoveToFolder}
+                allFolders={folders.map(f => ({ id: f.id, name: f.name }))}
                 activeChatId={chat_id}
               />
             </>
