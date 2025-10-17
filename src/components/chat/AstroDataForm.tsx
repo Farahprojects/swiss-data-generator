@@ -1,43 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Heart, Target, ArrowLeft, Users } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { AlertCircle } from 'lucide-react';
-import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
-import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
-import { ProfileSelector } from '@/components/shared/forms/ProfileSelector';
-import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
-import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
-import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase } from '@/integrations/supabase/client';
-import { SUPABASE_URL } from '@/integrations/supabase/config';
 import { toast } from 'sonner';
-import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMode } from '@/contexts/ModeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-// Removed - using single source of truth in useChatStore
-import { chatController } from '@/features/chat/ChatController';
+
+// Custom hooks
+import { useAstroConversation } from '@/hooks/useAstroConversation';
+import { useAstroFormValidation } from '@/hooks/useAstroFormValidation';
+import { useAstroReportPayload } from '@/hooks/useAstroReportPayload';
+
+// Step components
+import { AstroTypeStep } from './AstroForm/AstroTypeStep';
+import { AstroDetailsStep } from './AstroForm/AstroDetailsStep';
+import { AstroSecondPersonStep } from './AstroForm/AstroSecondPersonStep';
 
 interface AstroDataFormProps {
   onClose: () => void;
   onSubmit: (data: ReportFormData) => void;
   preselectedType?: string;
   reportType?: string;
-  // Universal ID parameter - can be chat_id or user_id
   contextId?: string;
-  // Whether this form is being used in profile flow (should trigger onSubmit)
   isProfileFlow?: boolean;
-  // UI variant: when 'insights', suppress internal header/type step
   variant?: 'standalone' | 'insights';
-  // Explicit mode when opened from specific contexts (overrides ModeContext)
   mode?: 'chat' | 'astro' | 'insight';
 }
+
+const DEFAULT_FORM_VALUES: ReportFormData = {
+  name: '',
+  email: '',
+  birthDate: '',
+  birthTime: '',
+  birthLocation: '',
+  birthLatitude: undefined,
+  birthLongitude: undefined,
+  birthPlaceId: '',
+  secondPersonName: '',
+  secondPersonBirthDate: '',
+  secondPersonBirthTime: '',
+  secondPersonBirthLocation: '',
+  secondPersonLatitude: undefined,
+  secondPersonLongitude: undefined,
+  secondPersonPlaceId: '',
+  request: '',
+  reportType: null,
+};
 
 export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onClose,
@@ -49,59 +61,38 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   variant = 'standalone',
   mode: explicitMode,
 }) => {
+  // State
   const isInsights = variant === 'insights';
   const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson'>(
-    isInsights ? 'details' : (preselectedType ? 'details' : 'type')
+    isInsights ? 'details' : preselectedType ? 'details' : 'type'
   );
   const [selectedAstroType, setSelectedAstroType] = useState<string>(preselectedType || '');
-  const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
+  const [activeSelector, setActiveSelector] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Hooks
   const isMobile = useIsMobile();
-  
-  // Auth detection - use route-based logic
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // Route-based authentication: /c routes are authenticated
-  const isAuthenticated = location.pathname.startsWith('/c/');
-  
-  // Conversation management for authenticated users
-  const { addThread } = useChatStore();
-  const chat_id = useChatStore((state) => state.chat_id);
   const { mode: contextMode } = useMode();
-  
-  // Use explicit mode prop if provided, otherwise fall back to ModeContext
-  const mode = explicitMode || contextMode;
-  
-  // Universal ID logic: use provided contextId or fall back to chat store
-  const finalContextId = contextId || chat_id;
+  const { createConversation, cleanupEmptyConversation } = useAstroConversation();
+  const { validatePrimaryPerson, validateSecondPerson } = useAstroFormValidation();
+  const { buildReportPayload } = useAstroReportPayload();
 
+  const mode = explicitMode || contextMode;
+  const isAuthenticated = location.pathname.startsWith('/c/');
+  const shouldDisableAnimations = isProfileFlow;
+
+  // Form setup
   const form = useForm<ReportFormData>({
-    defaultValues: {
-      name: '',
-      email: '',
-      birthDate: '',
-      birthTime: '',
-      birthLocation: '',
-      birthLatitude: undefined,
-      birthLongitude: undefined,
-      birthPlaceId: '',
-      secondPersonName: '',
-      secondPersonBirthDate: '',
-      secondPersonBirthTime: '',
-      secondPersonBirthLocation: '',
-      secondPersonLatitude: undefined,
-      secondPersonLongitude: undefined,
-      secondPersonPlaceId: '',
-      request: preselectedType || '',
-      reportType: reportType || null,
-    },
+    defaultValues: { ...DEFAULT_FORM_VALUES, request: preselectedType || '', reportType },
   });
 
   const { register, handleSubmit, setValue, setError, watch, formState: { errors } } = form;
   const formValues = watch();
 
+  // Handlers
   const handleAstroTypeSelect = (type: string) => {
     setSelectedAstroType(type);
     setValue('request', type);
@@ -109,296 +100,68 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     setCurrentStep('details');
   };
 
-  const handlePlaceSelect = (place: PlaceData) => {
-    setValue('birthLocation', place.name);
-    if (place.latitude) setValue('birthLatitude', place.latitude);
-    if (place.longitude) setValue('birthLongitude', place.longitude);
-    if (place.placeId) setValue('birthPlaceId', place.placeId);
+  const handleDetailsFormSubmit = () => {
+    if (!validatePrimaryPerson(formValues, setError)) return;
+
+    if (selectedAstroType === 'sync') {
+      setCurrentStep('secondPerson');
+    } else {
+      handleFormSubmission(formValues);
+    }
   };
 
-  // Lightweight guards to ensure lat/lng are present before progressing
-  const isPrimaryLocationPending = Boolean(
-    (formValues.birthLocation && formValues.birthLocation.trim().length > 0) &&
-    (formValues.birthLatitude === undefined || formValues.birthLongitude === undefined)
-  );
+  const handleSecondPersonFormSubmit = () => {
+    if (!validateSecondPerson(formValues, setError)) return;
+    handleFormSubmission(formValues);
+  };
 
-  // Handle form submission for authenticated users
-  const handleAuthenticatedSubmit = async (data: ReportFormData) => {
+  const handleFormSubmission = async (data: ReportFormData) => {
     if (!user) return;
-    
+    if (!mode || (mode !== 'astro' && mode !== 'insight')) {
+      toast.error('Please select a mode from the dropdown menu before submitting.');
+      return;
+    }
+
     setIsProcessing(true);
-    
+
     try {
-      // Ensure we have a mode selected
-      if (!mode) {
-        toast.error('Please select a mode from the dropdown menu before submitting.');
-        setIsProcessing(false);
-        return;
-      }
-      
-      // Ensure we have a chat_id
-      // For insights variant (Insight/Pulse mode), ALWAYS create new conversation
-      // Never use existing chat_id as that would overwrite an existing conversation
-      let currentChatId = variant === 'insights' ? null : chat_id;
-      
-      if (!currentChatId) {
-        // Build report data for conversation creation
-        const reportPayload = buildAuthReportPayload(data, '');
-        
-        // For authenticated users - create conversation with report data
-        const title = mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat';
-        const conversationResult = await addThread(user.id, mode, title, {
-          reportType: reportType,
-          report_data: reportPayload.report_data,
-          email: user?.email || '',
-          name: data.name
-        });
-        
-        // conversation-manager returns the ID and tells us if report is generating
-        currentChatId = conversationResult;
-        chatController.initializeConversation(currentChatId);
-        
-        console.log('[AstroDataForm] Conversation created, mode-based routing handled by backend:', {
-          chat_id: currentChatId,
-          mode
-        });
+      // Always create new conversation for astro and insight modes
+      const payload = buildReportPayload(data, selectedAstroType);
+      const currentChatId = await createConversation(mode as 'astro' | 'insight', 
+        mode === 'insight' ? 'New Insight Chat' : 'New Astro Chat',
+        { reportType, ...payload }
+      );
 
-        // If insight mode, add to pending map
-        if (mode === 'insight') {
-          const { pendingInsightThreads } = useChatStore.getState();
-          const newPendingMap = new Map(pendingInsightThreads);
-          newPendingMap.set(currentChatId, { reportType: reportType || '', timestamp: Date.now() });
-          useChatStore.setState({ pendingInsightThreads: newPendingMap });
-          console.log('[AstroDataForm] Added new insight to pending map:', currentChatId);
-        }
-      } else {
-        // If chat_id already exists, call initiate-auth-report directly
-        const payload = buildAuthReportPayload(data, currentChatId);
-        
-        const { data: responseData, error } = await supabase.functions.invoke('initiate-auth-report', {
-          body: payload
-        });
-
-        if (error) {
-          console.error('[AstroDataForm] Initiate-auth-report error:', error);
-          toast.error('Failed to process astro data. Please try again.');
-          setIsProcessing(false);
-          return;
-        }
-
-        // If report is generating, add to pending map
-        if (responseData?.is_generating_report && responseData?.report_id) {
-          const { pendingInsightThreads } = useChatStore.getState();
-          const newPendingMap = new Map(pendingInsightThreads);
-          newPendingMap.set(responseData.report_id, { reportType: reportType || '', timestamp: Date.now() });
-          useChatStore.setState({ pendingInsightThreads: newPendingMap });
-          console.log('[AstroDataForm] Added to pending insights:', responseData.report_id);
-        }
-      }
-      
-      // Call onSubmit with chat_id for parent to handle navigation
-      // Pass chat_id back so parent can navigate to the conversation
       onSubmit({ ...data, chat_id: currentChatId });
-      
-      // For profile flow and insights variant, don't close modal - parent handles it
+
       if (!isProfileFlow && variant !== 'insights') {
         onClose();
       }
-      
     } catch (error) {
-      console.error('[AstroDataForm] Error submitting astro data:', error);
+      console.error('[AstroDataForm] Submission error:', error);
       toast.error('Failed to submit astro data. Please try again.');
+    } finally {
       setIsProcessing(false);
     }
   };
 
-  // Helper function to convert DD/MM/YYYY to YYYY-MM-DD
-  const convertDateFormat = (dateStr: string): string => {
-    if (!dateStr) return dateStr;
-    
-    // If already in YYYY-MM-DD format, return as is
-    if (dateStr.includes('-') && dateStr.length === 10) {
-      return dateStr;
-    }
-    
-    // Convert DD/MM/YYYY to YYYY-MM-DD
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/');
-      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-        const [day, month, year] = parts;
-        return `${year}-${month}-${day}`;
-      }
-    }
-    
-    return dateStr;
-  };
-
-  // Build payload for initiate-auth-report
-  const buildAuthReportPayload = (data: ReportFormData, contextId: string) => {
-    // Build person_a data
-    const personA: any = {
-      birth_date: convertDateFormat(data.birthDate),
-      birth_time: data.birthTime,
-      location: data.birthLocation,
-      latitude: data.birthLatitude,
-      longitude: data.birthLongitude,
-      name: data.name,
-    };
-    
-    // Add optional fields if present
-    if (data.timezone) personA.timezone = data.timezone;
-    if (data.houseSystem) personA.house_system = data.houseSystem;
-
-    const reportData: any = {
-      request: data.request || selectedAstroType,
-      reportType: data.reportType, // Always use the reportType from form data - no guessing
-      person_a: personA,
-    };
-
-    // Add person_b for compatibility requests
-    if (selectedAstroType === 'sync' && data.secondPersonName) {
-      const personB: any = {
-        birth_date: convertDateFormat(data.secondPersonBirthDate),
-        birth_time: data.secondPersonBirthTime,
-        location: data.secondPersonBirthLocation,
-        latitude: data.secondPersonLatitude,
-        longitude: data.secondPersonLongitude,
-        name: data.secondPersonName,
-      };
-      
-      // Add optional fields for person_b if present
-      if (data.secondPersonTimezone) personB.timezone = data.secondPersonTimezone;
-      if (data.secondPersonHouseSystem) personB.house_system = data.secondPersonHouseSystem;
-      
-      reportData.person_b = personB;
-    }
-
-    return {
-      chat_id: contextId, // Use the conversation ID
-      report_data: reportData,
-      email: user?.email || '',
-      name: data.name,
-      mode: mode || 'chat', // Fallback to 'chat' for payload only (should never be null here due to validation)
-    };
-  };
-
-  const handleFormSubmit = (data: ReportFormData) => {
-    // Ensure required fields are set before moving on
-    if (!data.name?.trim()) {
-      setError('name', { type: 'manual', message: 'Name is required' });
-      return;
-    }
-    if (!data.birthDate) {
-      setError('birthDate' as any, { type: 'manual', message: 'Date of birth is required' });
-      return;
-    }
-    if (!data.birthTime) {
-      setError('birthTime' as any, { type: 'manual', message: 'Time of birth is required' });
-      return;
-    }
-    if (!data.birthLocation?.trim()) {
-      setError('birthLocation', { type: 'manual', message: 'Location is required' });
-      return;
-    }
-    // Require coordinates from a confirmed selection
-    if (data.birthLatitude === undefined || data.birthLongitude === undefined) {
-      setError('birthLocation', { type: 'manual', message: 'Please select a suggestion to confirm coordinates' });
-      toast.error('Please select a location from suggestions to add latitude and longitude.');
-      return;
-    }
-    // If compatibility type is selected, go to second person form
-    if (selectedAstroType === 'sync') {
-      setCurrentStep('secondPerson');
-    } else {
-      // Submit directly for authenticated users
-      handleAuthenticatedSubmit(data);
-    }
-  };
-
-  const handleSecondPersonSubmit = (data: ReportFormData) => {
-    // Require second person fields when on compatibility flow
-    if (!data.secondPersonName?.trim()) {
-      setError('secondPersonName', { type: 'manual', message: 'Second person name is required' });
-      return;
-    }
-    if (!data.secondPersonBirthDate) {
-      setError('secondPersonBirthDate' as any, { type: 'manual', message: 'Date of birth is required' });
-      return;
-    }
-    if (!data.secondPersonBirthTime) {
-      setError('secondPersonBirthTime' as any, { type: 'manual', message: 'Time of birth is required' });
-      return;
-    }
-    if (!data.secondPersonBirthLocation?.trim()) {
-      setError('secondPersonBirthLocation', { type: 'manual', message: 'Location is required' });
-      return;
-    }
-    if (data.secondPersonLatitude === undefined || data.secondPersonLongitude === undefined) {
-      setError('secondPersonBirthLocation', { type: 'manual', message: 'Please select a suggestion to confirm coordinates' });
-      toast.error('Please select a location for the second person to add latitude and longitude.');
-      return;
-    }
-    // Submit directly for authenticated users
-    handleAuthenticatedSubmit(data);
-  };
-
-  const handleSecondPlaceSelect = (place: PlaceData) => {
-    setValue('secondPersonBirthLocation', place.name);
-    if (place.latitude) setValue('secondPersonLatitude', place.latitude);
-    if (place.longitude) setValue('secondPersonLongitude', place.longitude);
-    if (place.placeId) setValue('secondPersonPlaceId', place.placeId);
-  };
-
-  // Unified close handler for mobile overlay: restore page state and let parent handle routing/modal
-  const handleClose = () => {
+  const handleClose = async () => {
     try {
-      const html = document.documentElement;
-      const scrollY = html.getAttribute('data-scroll-y');
-      html.classList.remove('lock-scroll');
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY, 10));
-        html.removeAttribute('data-scroll-y');
-      }
-      document.body.classList.remove('astro-form-open');
-    } catch {}
-    // Auto-delete empty conversation if user exits without processing
-    (async () => {
-      try {
-        // Only for authenticated chat flow
-        if (!isAuthenticated || !user?.id) return;
-        const currentChatId = chat_id;
-        if (!currentChatId) return;
-
-        // Check if chat has any messages
-        const { count, error: countError } = await supabase
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('chat_id', currentChatId);
-        if (countError) return;
-
-        // If empty, delete conversation (owned by user)
-        if ((count ?? 0) === 0) {
-          await supabase
-            .from('conversations')
-            .delete()
-            .eq('id', currentChatId)
-            .eq('user_id', user.id);
-          // Remove from UI store immediately
-          const { removeThread, clearChat } = useChatStore.getState();
-          removeThread(currentChatId);
-          clearChat();
-          
-          // Redirect away from deleted chat URL
-          if (location.pathname.includes(currentChatId)) {
-            navigate('/therai', { replace: true });
-          }
+      // Restore scroll state on mobile
+      if (isMobile) {
+        const html = document.documentElement;
+        const scrollY = html.getAttribute('data-scroll-y');
+        html.classList.remove('lock-scroll');
+        if (scrollY) {
+          window.scrollTo(0, parseInt(scrollY, 10));
+          html.removeAttribute('data-scroll-y');
         }
-      } catch {}
-    })();
+        document.body.classList.remove('astro-form-open');
+      }
+    } catch {}
+    
     onClose();
   };
-
-
 
   const goBackToType = () => {
     setCurrentStep('type');
@@ -409,379 +172,97 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     setCurrentStep('details');
   };
 
-
-  const ErrorMsg = ({ msg }: { msg: string }) => (
-    <div className="text-sm text-red-500 mt-1 flex items-center gap-2">
-      <AlertCircle className="w-4 h-4" />
-      <span>{msg}</span>
-    </div>
-  );
-
   return (
     <>
       {/* Mobile backdrop */}
       {isMobile && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={shouldDisableAnimations ? undefined : { opacity: 0 }}
+          animate={shouldDisableAnimations ? undefined : { opacity: 1 }}
+          exit={shouldDisableAnimations ? undefined : { opacity: 0 }}
+          transition={shouldDisableAnimations ? { duration: 0 } : undefined}
           className="fixed inset-0 bg-black/50 z-40"
           onClick={handleClose}
         />
       )}
-      
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        initial={shouldDisableAnimations ? undefined : { opacity: 0, y: 20 }}
+        animate={shouldDisableAnimations ? undefined : { opacity: 1, y: 0 }}
+        exit={shouldDisableAnimations ? undefined : { opacity: 0, y: -20 }}
+        transition={shouldDisableAnimations ? { duration: 0 } : undefined}
         className={`bg-white overflow-hidden ${
-          isMobile 
-            ? 'fixed inset-0 z-50 rounded-none flex flex-col' 
-            : 'rounded-2xl'
+          isMobile
+            ? 'fixed inset-0 z-50 rounded-none flex flex-col'
+            : 'rounded-full'
         }`}
       >
+        {/* Mobile close button */}
+        {isMobile && (
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+            <h2 className="text-lg font-light text-gray-900">
+              {currentStep === 'type'
+                ? 'Choose Your Path'
+                : currentStep === 'details'
+                  ? 'Your Details'
+                  : 'Partner Details'}
+            </h2>
+            <Button
+              type="button"
+              onClick={handleClose}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </Button>
+          </div>
+        )}
 
-      {/* Mobile close button */}
-      {isMobile && (
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <h2 className="text-lg font-light text-gray-900">
-            {currentStep === 'type' ? 'Choose Your Path' : 
-             currentStep === 'details' ? 'Your Details' : 
-             'Partner Details'}
-          </h2>
-          <Button
-            type="button"
-            onClick={handleClose}
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-gray-100"
-          >
-            <X className="h-5 w-5 text-gray-600" />
-          </Button>
+        {/* Content */}
+        <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'}`}>
+          <AnimatePresence mode="wait">
+            {currentStep === 'type' && !isInsights ? (
+              <AstroTypeStep
+                key="type"
+                selectedType={selectedAstroType}
+                onSelectType={handleAstroTypeSelect}
+                shouldDisableAnimations={shouldDisableAnimations}
+              />
+            ) : currentStep === 'details' ? (
+              <AstroDetailsStep
+                key="details"
+                register={register}
+                errors={errors}
+                setValue={setValue}
+                watch={watch}
+                isMobile={isMobile}
+                activeSelector={activeSelector}
+                setActiveSelector={setActiveSelector}
+                onBack={goBackToType}
+                onNext={handleDetailsFormSubmit}
+                isProcessing={isProcessing}
+                isInsights={isInsights}
+                shouldDisableAnimations={shouldDisableAnimations}
+              />
+            ) : currentStep === 'secondPerson' ? (
+              <AstroSecondPersonStep
+                key="secondPerson"
+                register={register}
+                errors={errors}
+                setValue={setValue}
+                watch={watch}
+                isMobile={isMobile}
+                activeSelector={activeSelector}
+                setActiveSelector={setActiveSelector}
+                onBack={goBackToDetails}
+                onSubmit={handleSecondPersonFormSubmit}
+                isProcessing={isProcessing}
+                shouldDisableAnimations={shouldDisableAnimations}
+              />
+            ) : null}
+          </AnimatePresence>
         </div>
-      )}
-
-      {/* Content */}
-      <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'}`}>
-        <AnimatePresence mode="wait">
-          {currentStep === 'type' && !isInsights ? (
-            <motion.div
-              key="type"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              <p className="text-gray-600 text-center mb-6 col-span-full">
-                How would you like to explore today
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {astroRequestCategories.map((category) => {
-                const IconComponent = category.icon;
-                const isSelected = selectedAstroType === category.value;
-                
-                return (
-                  <motion.button
-                    key={category.value}
-                    type="button"
-                    onClick={() => handleAstroTypeSelect(category.value)}
-                    className={`w-full p-4 rounded-xl border transition-all duration-200 ${
-                      isSelected 
-                        ? 'border-gray-900 bg-gray-900 text-white' 
-                        : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 flex items-center justify-center rounded-full ${
-                        isSelected ? 'bg-white/20' : 'bg-gray-100'
-                      }`}>
-                        <IconComponent className={`w-5 h-5 ${
-                          isSelected ? 'text-white' : 'text-gray-600'
-                        }`} />
-                      </div>
-                      <div className="text-left">
-                        <h3 className={`font-medium ${
-                          isSelected ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {category.title}
-                        </h3>
-                        <p className={`text-sm ${
-                          isSelected ? 'text-white/80' : 'text-gray-600'
-                        }`}>
-                          {category.description}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.button>
-                );
-              })}
-              </div>
-            </motion.div>
-          ) : currentStep === 'details' ? (
-            <motion.form
-              key="details"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleSubmit(handleFormSubmit)}
-              className="space-y-6"
-            >
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                      Name *
-                    </Label>
-                    <Input
-                      id="name"
-                      {...register('name', { required: 'Name is required' })}
-                      placeholder="Enter your name"
-                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                    />
-                    {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">
-                      Profiles
-                    </Label>
-                    <ProfileSelector
-                      onProfileSelect={(profile) => {
-                        setValue('name', profile.name);
-                        setValue('birthDate', profile.birth_date);
-                        setValue('birthTime', profile.birth_time);
-                        setValue('birthLocation', profile.birth_location);
-                        if (profile.birth_latitude) setValue('birthLatitude', profile.birth_latitude);
-                        if (profile.birth_longitude) setValue('birthLongitude', profile.birth_longitude);
-                        if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
-                      }}
-                      currentValue={formValues.name}
-                    />
-                  </div>
-                </div>
-
-
-                <div>
-                  {isMobile ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <InlineDateTimeSelector
-                          type="date"
-                          value={formValues.birthDate || ''}
-                          onChange={(date) => setValue('birthDate', date)}
-                          onConfirm={() => setActiveSelector(null)}
-                          onCancel={() => setActiveSelector(null)}
-                          isOpen={activeSelector === 'date'}
-                          placeholder="Select date"
-                          hasError={!!errors.birthDate}
-                          onOpen={() => setActiveSelector('date')}
-                        />
-                        {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
-                      </div>
-                      <div>
-                        <InlineDateTimeSelector
-                          type="time"
-                          value={formValues.birthTime || ''}
-                          onChange={(time) => setValue('birthTime', time)}
-                          onConfirm={() => setActiveSelector(null)}
-                          onCancel={() => setActiveSelector(null)}
-                          isOpen={activeSelector === 'time'}
-                          placeholder="Select time"
-                          hasError={!!errors.birthTime}
-                          onOpen={() => setActiveSelector('time')}
-                        />
-                        {errors.birthTime && <ErrorMsg msg={errors.birthTime.message || ''} />}
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <SimpleDateTimePicker
-                        dateValue={formValues.birthDate || ''}
-                        timeValue={formValues.birthTime || ''}
-                        onDateChange={(date) => {
-                          setValue('birthDate', date);
-                        }}
-                        onTimeChange={(time) => {
-                          setValue('birthTime', time);
-                        }}
-                        hasDateError={!!errors.birthDate}
-                        hasTimeError={!!errors.birthTime}
-                      />
-                      <div className="grid grid-cols-2 gap-4 mt-1">
-                        <div>
-                          {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
-                        </div>
-                        <div>
-                          {errors.birthTime && <ErrorMsg msg={errors.birthTime.message || ''} />}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <CleanPlaceAutocomplete
-                    value={formValues.birthLocation || ''}
-                    onChange={(val) => setValue('birthLocation', val)}
-                    onPlaceSelect={handlePlaceSelect}
-                     placeholder="Enter birth city, state, country"
-                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                  />
-                  {errors.birthLocation && <ErrorMsg msg={errors.birthLocation.message || ''} />}
-                </div>
-              </div>
-
-              <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
-                {isInsights ? null : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={goBackToType}
-                    className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
-                  >
-                    Back
-                  </Button>
-                )}
-                <Button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {isProcessing ? 'Processing...' : 'Next'}
-                </Button>
-              </div>
-            </motion.form>
-          ) : currentStep === 'secondPerson' ? (
-            <motion.form
-              key="secondPerson"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleSubmit(handleSecondPersonSubmit)}
-              className="space-y-6"
-            >
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
-                      Second Person's Name *
-                    </Label>
-                    <Input
-                      id="secondPersonName"
-                      {...register('secondPersonName', { required: 'Second person name is required' })}
-                      placeholder="Enter second person's name"
-                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                    />
-                    {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">
-                      Profiles
-                    </Label>
-                    <ProfileSelector
-                      onProfileSelect={(profile) => {
-                        setValue('secondPersonName', profile.name);
-                        setValue('secondPersonBirthDate', profile.birth_date);
-                        setValue('secondPersonBirthTime', profile.birth_time);
-                        setValue('secondPersonBirthLocation', profile.birth_location);
-                        if (profile.birth_latitude) setValue('secondPersonLatitude', profile.birth_latitude);
-                        if (profile.birth_longitude) setValue('secondPersonLongitude', profile.birth_longitude);
-                        if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
-                      }}
-                      currentValue={formValues.secondPersonName}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  {isMobile ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <InlineDateTimeSelector
-                          type="date"
-                          value={formValues.secondPersonBirthDate || ''}
-                          onChange={(date) => setValue('secondPersonBirthDate', date)}
-                          onConfirm={() => setActiveSelector(null)}
-                          onCancel={() => setActiveSelector(null)}
-                          isOpen={activeSelector === 'secondDate'}
-                          placeholder="Select date"
-                          hasError={!!errors.secondPersonBirthDate}
-                          onOpen={() => setActiveSelector('secondDate')}
-                        />
-                        {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
-                      </div>
-
-                      <div>
-                        <InlineDateTimeSelector
-                          type="time"
-                          value={formValues.secondPersonBirthTime || ''}
-                          onChange={(time) => setValue('secondPersonBirthTime', time)}
-                          onConfirm={() => setActiveSelector(null)}
-                          onCancel={() => setActiveSelector(null)}
-                          isOpen={activeSelector === 'secondTime'}
-                          placeholder="Select time"
-                          hasError={!!errors.secondPersonBirthTime}
-                          onOpen={() => setActiveSelector('secondTime')}
-                        />
-                        {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
-                      </div>
-                    </div>
-                  ) : (
-                    <SimpleDateTimePicker
-                      dateValue={formValues.secondPersonBirthDate || ''}
-                      timeValue={formValues.secondPersonBirthTime || ''}
-                      onDateChange={(date) => setValue('secondPersonBirthDate', date)}
-                      onTimeChange={(time) => setValue('secondPersonBirthTime', time)}
-                      hasDateError={!!errors.secondPersonBirthDate}
-                      hasTimeError={!!errors.secondPersonBirthTime}
-                    />
-                  )}
-                  {(errors.secondPersonBirthDate || errors.secondPersonBirthTime) && (
-                    <div className="mt-2 space-y-1">
-                      {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
-                      {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <CleanPlaceAutocomplete
-                    value={formValues.secondPersonBirthLocation || ''}
-                    onChange={(val) => setValue('secondPersonBirthLocation', val)}
-                    onPlaceSelect={handleSecondPlaceSelect}
-                    placeholder="Enter birth city, state, country"
-                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                  />
-                  {errors.secondPersonBirthLocation && <ErrorMsg msg={errors.secondPersonBirthLocation.message || ''} />}
-                </div>
-              </div>
-
-              <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep('details')}
-                  className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
-                >
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {isProcessing ? 'Processing...' : 'Create Astro Data'}
-                </Button>
-              </div>
-            </motion.form>
-          ) : null}
-        </AnimatePresence>
-      </div>
-
       </motion.div>
     </>
   );
