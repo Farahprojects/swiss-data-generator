@@ -431,18 +431,26 @@ if (typeof window !== 'undefined') {
         addMessage(messageWithSource);
       }
       
-      // Handle side-effects
-      const { setAssistantTyping } = useChatStore.getState();
-      setAssistantTyping(false);
+      // Handle side-effects ONLY for assistant messages
+      if (role === 'assistant') {
+        // Wait for React to render the message before clearing the typing state
+        // This ensures the stop icon stays visible until the message appears on screen
+        requestAnimationFrame(() => {
+          const { setAssistantTyping } = useChatStore.getState();
+          setAssistantTyping(false);
+        });
+      }
       
       // Remove pending status from user messages
-      const { messages: updatedMessages, updateMessage } = useMessageStore.getState();
-      console.log('[MessageStore] Clearing pending flags on', updatedMessages.length, 'messages');
-      updatedMessages.forEach(userMsg => {
-        if (userMsg.role === 'user' && userMsg.pending) {
-          updateMessage(userMsg.id, { pending: false });
-        }
-      });
+      if (role === 'user') {
+        const { messages: updatedMessages, updateMessage } = useMessageStore.getState();
+        console.log('[MessageStore] Clearing pending flags on', updatedMessages.length, 'messages');
+        updatedMessages.forEach(userMsg => {
+          if (userMsg.role === 'user' && userMsg.pending) {
+            updateMessage(userMsg.id, { pending: false });
+          }
+        });
+      }
     } else {
       console.log('[MessageStore] Chat ID mismatch, ignoring event');
     }
