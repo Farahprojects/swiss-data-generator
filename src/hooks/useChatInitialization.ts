@@ -81,7 +81,7 @@ export const useChatInitialization = () => {
                     const threadExists = currentState.threads.some(thread => thread.id === chatId);
                     if (threadExists) {
                       // Redirect to the last chat
-                      navigate(`/chat/${chatId}`, { replace: true });
+                      navigate(`/c/${chatId}`, { replace: true });
                     }
                   }
                 };
@@ -92,7 +92,7 @@ export const useChatInitialization = () => {
                 const threadExists = threads.some(thread => thread.id === chatId);
                 if (threadExists) {
                   // Redirect to the last chat
-                  navigate(`/chat/${chatId}`, { replace: true });
+                  navigate(`/c/${chatId}`, { replace: true });
                 }
               }
             }

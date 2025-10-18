@@ -16,7 +16,7 @@ const UserSettings = () => {
     openSettings(panel);
     
     // Redirect to chat
-    navigate('/chat', { replace: true });
+    navigate('/therai', { replace: true });
   }, [navigate, openSettings]);
   
   // This component will not render anything as it immediately redirects

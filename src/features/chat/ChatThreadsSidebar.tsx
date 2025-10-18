@@ -945,7 +945,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         onClose={() => setShowSearchModal(false)}
         onSelectMessage={(chatId, messageId) => {
           // Navigate to the selected conversation and scroll to the message
-          navigate(`/chat/${chatId}`);
+          navigate(`/c/${chatId}`);
           // TODO: Implement scroll to specific message
         }}
       />
