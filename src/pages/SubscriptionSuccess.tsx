@@ -28,7 +28,7 @@ const SubscriptionSuccess: React.FC = () => {
       if (data?.subscription_active) {
         // Success! Redirect to main page after a brief moment
         setTimeout(() => {
-          navigate('/chat', { replace: true });
+          navigate('/therai', { replace: true });
         }, 2000);
       } else {
         setError('Subscription verification failed. Please try again.');
@@ -207,7 +207,7 @@ const SubscriptionSuccess: React.FC = () => {
 
               <div className="pt-4">
                 <Button
-                  onClick={() => navigate('/chat', { replace: true })}
+                  onClick={() => navigate('/therai', { replace: true })}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
                 >
                   Continue to Dashboard

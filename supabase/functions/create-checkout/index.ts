@@ -136,9 +136,9 @@ Deno.serve(async (req) => {
       ],
       mode: 'payment',
       // Hosted Checkout uses success/cancel URLs; Embedded uses ui_mode + return_url + client_secret
-      success_url: embedded ? undefined : (successUrl || `${req.headers.get("origin")}/chat?payment_status=success`),
-      cancel_url: embedded ? undefined : (cancelUrl || `${req.headers.get("origin")}/chat?payment_status=cancelled`),
-      return_url: embedded ? (returnUrl || `${req.headers.get("origin")}/chat?payment_status=success`) : undefined,
+      success_url: embedded ? undefined : (successUrl || `${req.headers.get("origin")}/therai?payment_status=success`),
+      cancel_url: embedded ? undefined : (cancelUrl || `${req.headers.get("origin")}/therai?payment_status=cancelled`),
+      return_url: embedded ? (returnUrl || `${req.headers.get("origin")}/therai?payment_status=success`) : undefined,
       ui_mode: embedded ? 'embedded' : undefined,
       metadata: {
         user_id: userId,
