@@ -18,7 +18,7 @@ interface PricingData {
 
 const SubscriptionPaywall: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(false);
+  const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
   const [pricingPlans, setPricingPlans] = useState<PricingData[]>([]);
   
   const isCancelled = searchParams.get('subscription') === 'cancelled';
@@ -48,7 +48,7 @@ const SubscriptionPaywall: React.FC = () => {
 
   const handleUnlock = async (planId: string) => {
     try {
-      setLoading(true);
+      setLoadingPlanId(planId);
       
       // Check if user came from signup and needs verification email
       const pendingEmail = localStorage.getItem('pendingVerificationEmail');
@@ -65,6 +65,7 @@ const SubscriptionPaywall: React.FC = () => {
       if (error) {
         console.error('Checkout error:', error);
         toast.error('Failed to create checkout session. Please try again.');
+        setLoadingPlanId(null);
         return;
       }
 
@@ -72,12 +73,12 @@ const SubscriptionPaywall: React.FC = () => {
         window.location.href = data.url;
       } else {
         toast.error('No checkout URL received. Please try again.');
+        setLoadingPlanId(null);
       }
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast.error('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
+      setLoadingPlanId(null);
     }
   };
 
@@ -164,14 +165,14 @@ const SubscriptionPaywall: React.FC = () => {
                       >
                         <Button
                           onClick={() => handleUnlock(plan.id)}
-                          disabled={loading}
+                          disabled={loadingPlanId === plan.id}
                           className={`w-full font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 ${
                             plan.id === 'subscription_professional' 
                               ? 'bg-gray-900 hover:bg-gray-800 text-white' 
                               : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300'
                           }`}
                         >
-                          {loading ? 'Processing...' : isCancelled ? 'Try Again' : 'Get Started'}
+                          {loadingPlanId === plan.id ? 'Processing...' : isCancelled ? 'Try Again' : 'Get Started'}
                         </Button>
                       </motion.div>
 
