@@ -20,7 +20,6 @@ const SubscriptionPaywall: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [pricingPlans, setPricingPlans] = useState<PricingData[]>([]);
-  const [pricingLoading, setPricingLoading] = useState(true);
   
   const isCancelled = searchParams.get('subscription') === 'cancelled';
 
@@ -41,8 +40,6 @@ const SubscriptionPaywall: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching pricing:', error);
-      } finally {
-        setPricingLoading(false);
       }
     };
 
@@ -84,17 +81,6 @@ const SubscriptionPaywall: React.FC = () => {
     }
   };
 
-  if (pricingLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading pricing...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <header className="w-full py-8 flex justify-center border-b border-gray-100">
@@ -128,14 +114,7 @@ const SubscriptionPaywall: React.FC = () => {
           </div>
 
           {/* Pricing Cards */}
-          {pricingLoading ? (
-            <div className="flex justify-center">
-              <div className="animate-pulse">
-                <div className="h-64 bg-gray-200 rounded-xl w-80"></div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {pricingPlans.map((plan, index) => (
                 <motion.div
                   key={plan.id}
@@ -204,8 +183,7 @@ const SubscriptionPaywall: React.FC = () => {
                   </Card>
                 </motion.div>
               ))}
-            </div>
-          )}
+          </div>
         </div>
       </main>
 

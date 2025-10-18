@@ -195,7 +195,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         className={`bg-white overflow-hidden ${
           isMobile
             ? 'fixed inset-0 z-50 rounded-none flex flex-col'
-            : 'rounded-full'
+            : 'rounded-3xl'
         }`}
       >
         {/* Mobile close button */}

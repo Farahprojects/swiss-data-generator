@@ -12,7 +12,7 @@ export const SubscriptionToast: React.FC<SubscriptionToastProps> = ({ isVisible,
   const navigate = useNavigate();
 
   const handleUpgrade = () => {
-    navigate('/stripe?planId=10_monthly');
+    navigate('/subscription');
     onDismiss();
   };
 

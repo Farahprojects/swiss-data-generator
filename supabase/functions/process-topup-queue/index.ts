@@ -1,4 +1,4 @@
-
+// @ts-nocheck - Deno runtime, types checked at deployment
 // Supabase Edge Function – top-up queue processor (1-minute cron)
 
 

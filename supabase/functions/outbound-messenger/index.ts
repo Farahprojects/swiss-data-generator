@@ -1,3 +1,4 @@
+// @ts-nocheck - Deno runtime, types checked at deployment
 // Outbound message sender via SMTP endpoint
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";

@@ -35,7 +35,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
 
     // Check subscription status
     if (!isSubscriptionActive) {
-      navigate('/stripe?planId=10_monthly');
+      navigate('/subscription');
       return;
     }
 
@@ -67,7 +67,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
   const handleOpenInsights = () => {
     // Check subscription status
     if (!isSubscriptionActive) {
-      navigate('/stripe?planId=10_monthly');
+      navigate('/subscription');
       return;
     }
     setShowInsightsModal(true);
@@ -77,7 +77,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
   const handleOpenAstro = () => {
     // Check subscription status
     if (!isSubscriptionActive) {
-      navigate('/stripe?planId=10_monthly');
+      navigate('/subscription');
       return;
     }
     setShowAstroModal(true);

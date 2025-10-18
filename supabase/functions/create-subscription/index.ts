@@ -1,4 +1,4 @@
-
+// @ts-nocheck - Deno runtime, types checked at deployment
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -28,11 +28,15 @@ Deno.serve(async (req) => {
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated");
 
+    // Get planId from request body
+    const { planId, successUrl, cancelUrl } = await req.json();
+    const selectedPlanId = planId || "subscription1"; // Default to subscription1 if not provided
+
     // Fetch pricing from database
     const { data: pricingData, error: pricingError } = await supabaseClient
       .from("price_list")
       .select("name, description, unit_price_usd")
-      .eq("id", "subscription1")
+      .eq("id", selectedPlanId)
       .single();
 
     let pricing;
@@ -76,7 +80,6 @@ Deno.serve(async (req) => {
       stripe_customer_id: customerId,
     });
 
-    const { successUrl, cancelUrl } = await req.json();
     const origin = req.headers.get("origin") || "https://api.therai.co";
 
     // Create subscription checkout session with dynamic pricing
@@ -103,12 +106,12 @@ Deno.serve(async (req) => {
       client_reference_id: user.id, // Critical for webhook resolution
       metadata: {
         user_id: user.id,
-        subscription_plan: "10_monthly",
+        subscription_plan: selectedPlanId,
       },
       subscription_data: {
         metadata: {
           user_id: user.id,
-          subscription_plan: "10_monthly",
+          subscription_plan: selectedPlanId,
         },
       },
     });

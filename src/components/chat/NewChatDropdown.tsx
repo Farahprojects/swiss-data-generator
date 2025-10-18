@@ -36,7 +36,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
 
     // Check subscription status
     if (!isSubscriptionActive) {
-      navigate('/stripe?planId=10_monthly');
+      navigate('/subscription');
       return;
     }
 
@@ -70,7 +70,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   const handleOpenInsights = () => {
     // Check subscription status
     if (!isSubscriptionActive) {
-      navigate('/stripe?planId=10_monthly');
+      navigate('/subscription');
       return;
     }
     setShowInsightsModal(true);
@@ -80,7 +80,7 @@ export const NewChatDropdown: React.FC<NewChatDropdownProps> = ({ className = ""
   const handleOpenAstro = () => {
     // Check subscription status
     if (!isSubscriptionActive) {
-      navigate('/stripe?planId=10_monthly');
+      navigate('/subscription');
       return;
     }
     setShowAstroModal(true);
