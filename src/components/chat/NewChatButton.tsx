@@ -21,7 +21,7 @@ interface NewChatButtonProps {
 
 export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) => {
   const { user } = useAuth();
-  const { isSubscriptionActive, setShowPaywall } = useSubscription();
+  const { isSubscriptionActive } = useSubscription();
   const navigate = useNavigate();
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showAstroModal, setShowAstroModal] = useState(false);
@@ -35,7 +35,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
 
     // Check subscription status
     if (!isSubscriptionActive) {
-      setShowPaywall(true);
+      navigate('/stripe?planId=10_monthly');
       return;
     }
 
@@ -67,7 +67,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
   const handleOpenInsights = () => {
     // Check subscription status
     if (!isSubscriptionActive) {
-      setShowPaywall(true);
+      navigate('/stripe?planId=10_monthly');
       return;
     }
     setShowInsightsModal(true);
@@ -77,7 +77,7 @@ export const NewChatButton: React.FC<NewChatButtonProps> = ({ className = "" }) 
   const handleOpenAstro = () => {
     // Check subscription status
     if (!isSubscriptionActive) {
-      setShowPaywall(true);
+      navigate('/stripe?planId=10_monthly');
       return;
     }
     setShowAstroModal(true);
