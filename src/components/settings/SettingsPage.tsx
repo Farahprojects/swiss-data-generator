@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User, CreditCard, Bell, Shield } from 'lucide-react'
+import { BillingPanel } from '@/components/settings/panels/BillingPanel'
 
 
 export default function SettingsPage() {
@@ -49,8 +50,8 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Billing Information</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">Billing features have been removed</p>
+            <CardContent className="p-0">
+              <BillingPanel />
             </CardContent>
           </Card>
         </TabsContent>
