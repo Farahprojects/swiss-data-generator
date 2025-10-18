@@ -5,7 +5,6 @@ import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { PaymentMethodCard } from '@/components/billing/PaymentMethodCard';
 import { CancelSubscriptionModal } from '@/components/billing/CancelSubscriptionModal';
 
 interface SubscriptionData {
@@ -14,11 +13,6 @@ interface SubscriptionData {
   nextCharge: string | null;
   active: boolean | null;
   subscriptionId: string | null;
-}
-
-interface PaymentMethod {
-  brand: string | null;
-  lastFour: string | null;
 }
 
 interface Plan {
@@ -33,7 +27,6 @@ export const BillingPanel: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
   const [updatingPlanId, setUpdatingPlanId] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -59,21 +52,6 @@ export const BillingPanel: React.FC = () => {
         active: profileData?.subscription_active || null,
         subscriptionId: profileData?.stripe_subscription_id || null,
       });
-
-      // Fetch payment method
-      const { data: paymentData } = await supabase
-        .from('payment_method')
-        .select('card_brand, card_last4')
-        .eq('user_id', user.id)
-        .eq('active', true)
-        .single();
-
-      if (paymentData) {
-        setPaymentMethod({
-          brand: paymentData.card_brand,
-          lastFour: paymentData.card_last4,
-        });
-      }
 
       // Fetch available plans
       const { data: plansData, error: plansError } = await supabase
@@ -150,126 +128,183 @@ export const BillingPanel: React.FC = () => {
     return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  const handleResubscribe = async (plan: Plan) => {
+    if (!plan.stripe_price_id) {
+      toast.error('Invalid plan configuration');
+      return;
+    }
+
+    setUpdatingPlanId(plan.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+        body: {
+          priceId: plan.id,
+          embedded: false,
+        },
+      });
+
+      if (error) {
+        toast.error('Failed to start checkout');
+        return;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error('Resubscribe error:', err);
+      toast.error('Failed to start checkout');
+    } finally {
+      setUpdatingPlanId(null);
+    }
+  };
 
   const isSubscriptionActive = subscription?.active && ['active', 'trialing'].includes(subscription?.status || '');
   const canChangePlan = isSubscriptionActive && subscription?.status !== 'past_due';
+  const isCanceled = subscription?.status === 'canceled' || !subscription?.active;
 
   return (
     <div className="space-y-6 p-6">
-      {/* Current Subscription Status */}
-      <Card className="border border-gray-200 rounded-xl">
-        <CardContent className="p-6 space-y-4">
-          <div>
-            <h3 className="text-lg font-light text-gray-900 mb-4">Current Subscription</h3>
-          </div>
+      {/* Current Subscription Status - Only show if subscription is active */}
+      {!isCanceled && (
+        <Card className="border border-gray-200 rounded-xl">
+          <CardContent className="p-6 space-y-4">
+            <div>
+              <h3 className="text-lg font-light text-gray-900 mb-4">Current Subscription</h3>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <p className="text-sm font-light text-gray-600 mb-1">Status</p>
-              <p className={`text-base font-normal ${getStatusColor(subscription?.status)}`}>
-                {getStatusText(subscription?.status)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-light text-gray-600 mb-1">Plan</p>
-              <p className="text-base font-normal text-gray-900">
-                {subscription?.plan || 'No active plan'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-light text-gray-600 mb-1">Next Billing Date</p>
-              <p className="text-base font-normal text-gray-900">
-                {formatDate(subscription?.nextCharge)}
-              </p>
-            </div>
-          </div>
-
-          {!isSubscriptionActive && (
-            <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200 mt-4">
-              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-normal text-blue-900">
-                  {subscription?.status === 'canceled' 
-                    ? 'Your subscription has been canceled'
-                    : 'You don\'t have an active subscription'}
-                </p>
-                <p className="text-sm font-light text-blue-800 mt-1">
-                  Choose a plan below to get started with premium features.
-                </p>
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-sm font-light text-gray-600 mb-1">Status</p>
+                  <div className="h-6 w-24 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-sm font-light text-gray-600 mb-1">Plan</p>
+                  <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-sm font-light text-gray-600 mb-1">Next Billing Date</p>
+                  <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Payment Method */}
-      <PaymentMethodCard brand={paymentMethod?.brand} lastFour={paymentMethod?.lastFour} />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-sm font-light text-gray-600 mb-1">Status</p>
+                  <p className={`text-base font-normal ${getStatusColor(subscription?.status)}`}>
+                    {getStatusText(subscription?.status)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-light text-gray-600 mb-1">Plan</p>
+                  <p className="text-base font-normal text-gray-900">
+                    {subscription?.plan || 'No active plan'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-light text-gray-600 mb-1">Next Billing Date</p>
+                  <p className="text-base font-normal text-gray-900">
+                    {formatDate(subscription?.nextCharge)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Available Plans */}
       <div>
-        <h3 className="text-lg font-light text-gray-900 mb-4">Available Plans</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {availablePlans.map((plan) => {
-            const isCurrentPlan = subscription?.plan === plan.name;
-            const isUpdating = updatingPlanId === plan.id;
-
-            return (
-              <Card
-                key={plan.id}
-                className={`border-2 rounded-xl transition-all ${
-                  isCurrentPlan
-                    ? 'border-gray-900 bg-gray-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
+        <h3 className="text-lg font-light text-gray-900 mb-4">
+          {isCanceled ? 'Choose Your Plan' : 'Available Plans'}
+        </h3>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <Card key={i} className="border-2 border-gray-200 rounded-xl">
                 <CardContent className="p-6 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="text-base font-normal text-gray-900">{plan.name}</h4>
-                      {plan.description && (
-                        <p className="text-sm font-light text-gray-600 mt-1">{plan.description}</p>
-                      )}
-                    </div>
-                    {isCurrentPlan && (
-                      <CheckCircle2 className="w-5 h-5 text-gray-900 flex-shrink-0" />
-                    )}
-                  </div>
-
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-light text-gray-900">
-                      ${plan.unit_price_usd.toFixed(2)}
-                    </span>
-                    <span className="text-sm font-light text-gray-600">/month</span>
-                  </div>
-
-                  {!isCurrentPlan && canChangePlan && (
-                    <Button
-                      onClick={() => handleUpdatePlan(plan)}
-                      disabled={isUpdating}
-                      className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-full font-light"
-                    >
-                      {isUpdating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        'Switch to this plan'
-                      )}
-                    </Button>
-                  )}
+                  <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-10 w-full bg-gray-200 rounded-full animate-pulse" />
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {availablePlans.map((plan) => {
+              const isCurrentPlan = subscription?.plan === plan.name;
+              const isUpdating = updatingPlanId === plan.id;
+
+              return (
+                <Card
+                  key={plan.id}
+                  className={`border-2 rounded-xl transition-all ${
+                    isCurrentPlan
+                      ? 'border-gray-900 bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-base font-normal text-gray-900">{plan.name}</h4>
+                        {plan.description && (
+                          <p className="text-sm font-light text-gray-600 mt-1">{plan.description}</p>
+                        )}
+                      </div>
+                      {isCurrentPlan && !isCanceled && (
+                        <CheckCircle2 className="w-5 h-5 text-gray-900 flex-shrink-0" />
+                      )}
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-light text-gray-900">
+                        ${plan.unit_price_usd.toFixed(2)}
+                      </span>
+                      <span className="text-sm font-light text-gray-600">/month</span>
+                    </div>
+
+                    {!isCurrentPlan && canChangePlan && (
+                      <Button
+                        onClick={() => handleUpdatePlan(plan)}
+                        disabled={isUpdating}
+                        className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-full font-light"
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          'Switch to this plan'
+                        )}
+                      </Button>
+                    )}
+
+                    {isCanceled && (
+                      <Button
+                        onClick={() => handleResubscribe(plan)}
+                        disabled={isUpdating}
+                        className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-full font-light"
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Subscribe to this plan'
+                        )}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Cancel Subscription */}
