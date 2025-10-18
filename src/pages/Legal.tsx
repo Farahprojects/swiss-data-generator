@@ -67,31 +67,41 @@ const Legal = () => {
         <section className="relative overflow-hidden bg-white py-24">
           <div className="container relative z-10 mx-auto px-4">
             <div className="mx-auto max-w-4xl">
-              <h1 className="mb-8 text-4xl font-bold text-primary text-center">
-                Legal Documents
+              <h1 className="mb-12 text-4xl font-light italic text-gray-900 text-center">
+                Legal information
               </h1>
 
-              <Tabs defaultValue="privacy_policy" className="space-y-6">
-                <TabsList className="w-full">
-                  <TabsTrigger value="privacy_policy" className="w-1/2">Privacy Policy</TabsTrigger>
-                  <TabsTrigger value="terms_of_service" className="w-1/2">Terms of Service</TabsTrigger>
+              <Tabs defaultValue="privacy_policy" className="space-y-8">
+                <TabsList className="w-full grid grid-cols-2 h-auto p-1 bg-gray-50 rounded-2xl border border-gray-200">
+                  <TabsTrigger 
+                    value="privacy_policy" 
+                    className="rounded-xl py-3 font-light text-gray-600 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
+                  >
+                    Privacy Policy
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="terms_of_service" 
+                    className="rounded-xl py-3 font-light text-gray-600 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
+                  >
+                    Terms of Service
+                  </TabsTrigger>
                 </TabsList>
 
                 {['privacy_policy', 'terms_of_service'].map((docType) => {
                   const doc = documents[docType];
                   return doc && (
-                    <TabsContent key={docType} value={docType} className="mt-6">
-                      <div className="rounded-lg border bg-card p-6">
-                        <div className="mb-6 flex justify-between items-center border-b pb-4">
-                          <h2 className="text-2xl font-semibold">{doc.title}</h2>
-                          <div className="text-sm text-muted-foreground">
+                    <TabsContent key={docType} value={docType} className="mt-8">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+                        <div className="mb-6 flex justify-between items-start border-b border-gray-100 pb-6">
+                          <h2 className="text-2xl font-light text-gray-900">{doc.title}</h2>
+                          <div className="text-xs font-light text-gray-500 text-right">
                             <p>Version {doc.version}</p>
-                            <p>Last updated: {doc.published_date}</p>
+                            <p className="mt-1">Last updated: {doc.published_date}</p>
                           </div>
                         </div>
                         <ScrollArea className="h-[60vh]">
                           <div 
-                            className="prose prose-slate max-w-none whitespace-pre-wrap"
+                            className="prose prose-slate max-w-none whitespace-pre-wrap font-light text-gray-700 leading-relaxed"
                           >
                             {doc.content}
                           </div>
