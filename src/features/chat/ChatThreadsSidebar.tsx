@@ -588,29 +588,25 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Dark gray line separator */}
           <div className="border-t border-gray-400 my-2"></div>
 
-          {/* Folders Section - NEW (dev only) */}
-          {import.meta.env.MODE !== 'production' && (
-            <>
-              <AddFolderButton onClick={() => {
-                setEditingFolder(null);
-                setShowFolderModal(true);
-              }} />
-              <FoldersList
-                folders={folders}
-                onChatClick={handleFolderChatClick}
-                onEditFolder={handleEditFolder}
-                onDeleteFolder={handleDeleteFolder}
-                onEditChat={handleEditTitle}
-                onDeleteChat={(conversationId) => {
-                  setConversationToDelete(conversationId);
-                  setShowDeleteConfirm(true);
-                }}
-                onMoveToFolder={handleMoveToFolder}
-                allFolders={folders.map(f => ({ id: f.id, name: f.name }))}
-                activeChatId={chat_id}
-              />
-            </>
-          )}
+          {/* Folders Section */}
+          <AddFolderButton onClick={() => {
+            setEditingFolder(null);
+            setShowFolderModal(true);
+          }} />
+          <FoldersList
+            folders={folders}
+            onChatClick={handleFolderChatClick}
+            onEditFolder={handleEditFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onEditChat={handleEditTitle}
+            onDeleteChat={(conversationId) => {
+              setConversationToDelete(conversationId);
+              setShowDeleteConfirm(true);
+            }}
+            onMoveToFolder={handleMoveToFolder}
+            allFolders={folders.map(f => ({ id: f.id, name: f.name }))}
+            activeChatId={chat_id}
+          />
           
           {/* Space between Folders and Chat History */}
           <div className="py-2"></div>
@@ -955,17 +951,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       />
 
       {/* Folder Creation/Edit Modal */}
-      {import.meta.env.MODE !== 'production' && (
-        <FolderModal
-          isOpen={showFolderModal}
-          onClose={() => {
-            setShowFolderModal(false);
-            setEditingFolder(null);
-          }}
-          onCreateFolder={handleCreateFolder}
-          editingFolder={editingFolder}
-        />
-      )}
+      <FolderModal
+        isOpen={showFolderModal}
+        onClose={() => {
+          setShowFolderModal(false);
+          setEditingFolder(null);
+        }}
+        onCreateFolder={handleCreateFolder}
+        editingFolder={editingFolder}
+      />
     </div>
   );
 };
