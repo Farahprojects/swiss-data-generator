@@ -49,6 +49,11 @@ const EmbeddedCheckoutPage: React.FC = () => {
             <Logo size="lg" asLink={false} />
           </div>
           <h1 className="text-4xl font-light italic">Therai partners with Stripe for simplified billing.</h1>
+          <div className="text-xs text-gray-400 mt-6">
+            <div>Therai.co is brand by Farah Projects PTY LTD</div>
+            <div>ACN 676 280 229</div>
+            <div>Australian registered company (fully legit as)</div>
+          </div>
         </div>
         <div className="max-w-md w-full space-y-4 text-center text-sm text-gray-500">
           <div className="flex items-center justify-center space-x-2">
