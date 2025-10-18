@@ -22,13 +22,11 @@ import MobileLanding from './pages/MobileLanding';
 import NotFound from './pages/NotFound';
 const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
 import Beats from './pages/Beats';
-import PersonProfile from './pages/PersonProfile';
 
 // This shell contains all routes that can rely on context providers. Providers are now applied at the App root.
 const AuthedAppShell: React.FC = () => {
   const isMobile = useIsMobile();
   const isNativeApp = useIsNativeApp();
-  const isDev = import.meta.env.MODE !== 'production';
 
   return (
     <Routes>
@@ -68,11 +66,6 @@ const AuthedAppShell: React.FC = () => {
       
       {/* Auth clean page - no auto thread creation */}
       <Route path="/therai" element={<AuthGuard><ChatContainer /></AuthGuard>} />
-
-      {/* Person profile route - dev only */}
-      {isDev && (
-        <Route path="/person/:id" element={<AuthGuard><PersonProfile /></AuthGuard>} />
-      )}
       
       {/* Protected routes */}
       <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
