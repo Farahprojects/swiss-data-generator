@@ -65,14 +65,17 @@ const ConfirmEmail: React.FC = () => {
       return;
     }
 
+    // Sign out any auto-created session from the magic link
+    // This ensures users must sign in manually after verification
+    await supabase.auth.signOut();
+    console.log('[EMAIL-VERIFY] ✓ Signed out auto-created session');
+
     setStatus('success');
     const msg = kind === 'signup'
       ? 'Email verified! Please sign in to continue.'
       : 'Email updated! Please sign in to continue.';
     setMessage(msg);
     toast({ variant: 'success', title: 'Success', description: msg });
-
-    // No session creation - user will sign in fresh
   };
 
   useEffect(() => {

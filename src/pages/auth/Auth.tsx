@@ -55,6 +55,11 @@ const Auth: React.FC = () => {
 
       console.log('[EMAIL-VERIFY] ✓ Email verification successful:', data.message);
 
+      // Sign out any auto-created session from the magic link
+      // This ensures users must sign in manually after verification
+      await supabase.auth.signOut();
+      console.log('[EMAIL-VERIFY] ✓ Signed out auto-created session');
+
     } catch (error) {
       console.error('[EMAIL-VERIFY] Critical verification error:', error);
       setStatus('error');

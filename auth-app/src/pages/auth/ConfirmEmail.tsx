@@ -39,6 +39,8 @@ const ConfirmEmail: React.FC = () => {
 
       // Handle already verified case gracefully
       if (error && error.message?.includes('already verified')) {
+        // Sign out any auto-created session
+        await supabase.auth.signOut();
         setStatus('success');
         setMessage('Email already verified! Please sign in to continue.');
         setTimeout(() => {
@@ -59,6 +61,8 @@ const ConfirmEmail: React.FC = () => {
     } catch (error) {
       // Check if it's a "token already used" error (400 status)
       if (error instanceof Error && error.message.includes('400')) {
+        // Sign out any auto-created session
+        await supabase.auth.signOut();
         setStatus('success');
         setMessage('Email already verified! Please sign in to continue.');
         setTimeout(() => {
@@ -72,6 +76,11 @@ const ConfirmEmail: React.FC = () => {
       setMessage('Failed to verify your email. Please try again or contact support.');
       return;
     }
+
+    // Sign out any auto-created session from the magic link
+    // This ensures users must sign in manually after verification
+    await supabase.auth.signOut();
+    console.log('[AUTH-APP-CONFIRMEMAIL] ✓ Signed out auto-created session');
 
     setStatus('success');
     const msg = kind === 'signup'
