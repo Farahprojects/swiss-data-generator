@@ -270,6 +270,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     chatsCount: number;
     chats: Array<{ id: string; title: string }>;
   }>>([]);
+  const [areFoldersExpanded, setAreFoldersExpanded] = useState(true);
   
   // Lazy loading state
   const [visibleThreads, setVisibleThreads] = useState(10); // Show first 10 threads initially
@@ -624,25 +625,31 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           <div className="border-t border-gray-400 my-2"></div>
 
           {/* Folders Section */}
-          <AddFolderButton onClick={() => {
-            setEditingFolder(null);
-            setShowFolderModal(true);
-          }} />
-          <FoldersList
-            folders={folders}
-            onChatClick={handleFolderChatClick}
-            onEditFolder={handleEditFolder}
-            onDeleteFolder={handleDeleteFolder}
-            onEditChat={handleEditTitle}
-            onDeleteChat={(conversationId) => {
-              setConversationToDelete(conversationId);
-              setShowDeleteConfirm(true);
+          <AddFolderButton 
+            onClick={() => {
+              setEditingFolder(null);
+              setShowFolderModal(true);
             }}
-            onMoveToFolder={handleMoveToFolder}
-            onCreateFolder={handleCreateFolderAndMove}
-            allFolders={folders.map(f => ({ id: f.id, name: f.name }))}
-            activeChatId={chat_id}
+            isExpanded={areFoldersExpanded}
+            onToggleExpand={() => setAreFoldersExpanded(!areFoldersExpanded)}
           />
+          {areFoldersExpanded && (
+            <FoldersList
+              folders={folders}
+              onChatClick={handleFolderChatClick}
+              onEditFolder={handleEditFolder}
+              onDeleteFolder={handleDeleteFolder}
+              onEditChat={handleEditTitle}
+              onDeleteChat={(conversationId) => {
+                setConversationToDelete(conversationId);
+                setShowDeleteConfirm(true);
+              }}
+              onMoveToFolder={handleMoveToFolder}
+              onCreateFolder={handleCreateFolderAndMove}
+              allFolders={folders.map(f => ({ id: f.id, name: f.name }))}
+              activeChatId={chat_id}
+            />
+          )}
           
           {/* Space between Folders and Chat History */}
           <div className="py-2"></div>
