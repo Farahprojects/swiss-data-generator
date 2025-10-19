@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -269,6 +270,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }
             </Button>
           </div>
         )}
+
+        <p className="text-center text-sm text-gray-600 font-light">
+          Don't have an account?{' '}
+          <Link to="/signup" className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1">
+            Sign up
+          </Link>
+        </p>
       </div>
       </div>
     </div>
