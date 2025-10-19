@@ -17,13 +17,13 @@ export default function Login() {
 
   // Redirect if already authenticated
   if (user && !authLoading) {
-    const from = (location.state as any)?.from?.pathname || '/chat';
+    const from = (location.state as any)?.from?.pathname || '/therai';
     navigate(from, { replace: true });
     return null;
   }
 
   const handleSuccess = () => {
-    const from = (location.state as any)?.from?.pathname || '/chat';
+    const from = (location.state as any)?.from?.pathname || '/therai';
     navigate(from, { replace: true });
   };
 

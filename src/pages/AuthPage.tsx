@@ -10,9 +10,9 @@ export const AuthPage = () => {
   useEffect(() => {
     if (loading) return;
 
-    // If user is authenticated after email verification, redirect to chat
+    // If user is authenticated after email verification, redirect to therai
     if (user && session) {
-      navigate('/chat', { replace: true });
+      navigate('/therai', { replace: true });
       return;
     }
 
