@@ -41,10 +41,13 @@ const PLANETARY_FREQUENCIES = [
 export default function Beats() {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [brainwaveType, setBrainwaveType] = useState<'delta' | 'alpha' | 'gamma'>('alpha');
+  const [centerFrequency, setCenterFrequency] = useState(136.10);
   
+  // Initialize tones with alpha offset (136.10 - 5 = 131.10, 136.10 + 5 = 141.10)
   const [tones, setTones] = useState<ToneSource[]>([
-    { id: 'low', label: 'Low Tone', frequency: 136.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null },
-    { id: 'high', label: 'High Tone', frequency: 144.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null },
+    { id: 'low', label: 'Low Tone', frequency: 131.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null },
+    { id: 'high', label: 'High Tone', frequency: 141.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null },
   ]);
   
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([
@@ -179,9 +182,18 @@ export default function Beats() {
     }));
   };
 
-  // Apply preset frequency
-  const applyPreset = (toneId: string, frequency: number) => {
-    updateFrequency(toneId, frequency);
+  // Apply preset frequency with brainwave offset
+  const applyPresetWithBrainwave = (frequency: number, brainwave: 'delta' | 'alpha' | 'gamma') => {
+    let offset = 0;
+    switch (brainwave) {
+      case 'delta': offset = 1; break;  // 2 Hz beat
+      case 'alpha': offset = 5; break;  // 10 Hz beat
+      case 'gamma': offset = 20; break; // 40 Hz beat
+    }
+    
+    setCenterFrequency(frequency);
+    updateFrequency('low', frequency - offset);
+    updateFrequency('high', frequency + offset);
   };
 
   // Handle audio file upload
@@ -312,6 +324,21 @@ export default function Beats() {
     };
   }, [audioContext, tones]);
 
+  // Auto-initialize audio on mount (may be blocked by browser, will retry on first interaction)
+  useEffect(() => {
+    initializeAudio();
+  }, []);
+
+  // Ensure audio context is ready before playing
+  const ensureAudioReady = () => {
+    if (!audioContext || audioContext.state === 'suspended') {
+      initializeAudio();
+      if (audioContext) {
+        audioContext.resume();
+      }
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -379,28 +406,6 @@ export default function Beats() {
           }
         `}</style>
         <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-light text-gray-900 tracking-tight italic">
-            Binaural Beats Generator
-          </h1>
-          <p className="text-lg text-gray-600 font-light">
-            Explore planetary frequencies and binaural soundscapes
-          </p>
-        </div>
-
-        {/* Initialize Button */}
-        {!isInitialized && (
-          <div className="text-center">
-            <Button
-              onClick={initializeAudio}
-              className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-xl font-light"
-            >
-              Start Audio Engine
-            </Button>
-          </div>
-        )}
-
          {/* Unified Binaural Mixer */}
          {isInitialized && (
            <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -424,24 +429,10 @@ export default function Beats() {
                        className="w-4 h-4 rounded border-gray-300 focus:ring-gray-900"
                      />
                      <span className="text-sm font-light text-gray-700">Low Tone</span>
-                   </label>
-                 </div>
+                  </label>
+                </div>
 
-                 {/* Preset */}
-                 <select
-                   value={tones.find(t => t.id === 'low')?.frequency || 136.10}
-                   onChange={(e) => applyPreset('low', parseFloat(e.target.value))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                 >
-                   <option value={136.10}>Custom ({tones.find(t => t.id === 'low')?.frequency.toFixed(1)} Hz)</option>
-                   {PLANETARY_FREQUENCIES.map((preset) => (
-                     <option key={preset.name} value={preset.hz}>
-                       {preset.name} - {preset.hz} Hz
-                     </option>
-                   ))}
-                 </select>
-
-                 {/* Frequency Input */}
+                {/* Frequency Input */}
                  <div className="space-y-1">
                    <input
                      type="number"
@@ -453,28 +444,12 @@ export default function Beats() {
                      className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                    />
                    {tones.find(t => t.id === 'low')?.isPlaying && actualFrequencies['low'] && (
-                     <div className="text-xs text-green-600 font-light text-center">
-                       {actualFrequencies['low'].toFixed(1)} Hz
-                     </div>
-                   )}
-                 </div>
-
-                 {/* Vertical Volume Slider */}
-                 <div className="flex flex-col items-center space-y-2">
-                   <div className="text-xs font-light text-gray-500">
-                     {Math.round((tones.find(t => t.id === 'low')?.volume || 0) * 100)}%
-                   </div>
-                   <input
-                     type="range"
-                     min="0"
-                     max="1"
-                     step="0.01"
-                     value={tones.find(t => t.id === 'low')?.volume || 0}
-                     onChange={(e) => updateVolume('low', parseFloat(e.target.value))}
-                     className="w-6 h-20 slider-vertical"
-                   />
-                 </div>
-               </div>
+                    <div className="text-xs text-green-600 font-light text-center">
+                      {actualFrequencies['low'].toFixed(1)} Hz
+                    </div>
+                  )}
+                </div>
+              </div>
 
                {/* CENTER: Audio Upload Section */}
                <div className="space-y-4 text-center">
@@ -527,47 +502,48 @@ export default function Beats() {
                            )}
                          </Button>
                        </div>
-                       
-                       {/* Volume Control */}
-                       <div className="space-y-1">
-                         <div className="text-xs font-light text-gray-500">
-                           Volume ({Math.round((audioLayers[0]?.volume || 0) * 100)}%)
-                         </div>
-                         <input
-                           type="range"
-                           min="0"
-                           max="1"
-                           step="0.01"
-                           value={audioLayers[0]?.volume || 0}
-                           onChange={(e) => updateLayerVolume('layer1', parseFloat(e.target.value))}
-                           className="w-full h-1"
-                         />
-                       </div>
-                     </div>
-                   )}
-                 </div>
+                    </div>
+                  )}
+                </div>
 
-                 {/* Quick Presets */}
-                 <div className="space-y-2">
-                   <div className="text-xs font-light text-gray-600">Quick Presets</div>
-                   <select
-                     onChange={(e) => {
-                       const preset = PLANETARY_FREQUENCIES.find(p => p.name === e.target.value);
-                       if (preset) {
-                         updateFrequency('low', preset.hz);
-                         updateFrequency('high', preset.hz + 8); // 8Hz binaural beat
-                       }
-                     }}
-                     className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                   >
-                     <option value="">Select Preset</option>
-                     {PLANETARY_FREQUENCIES.map((preset) => (
-                       <option key={preset.name} value={preset.name}>
-                         {preset.name}
-                       </option>
-                     ))}
-                   </select>
-                 </div>
+                {/* Brainwave Type Selector */}
+                <div className="space-y-2">
+                  <div className="text-xs font-light text-gray-600">Brainwave Type</div>
+                  <select
+                    value={brainwaveType}
+                    onChange={(e) => {
+                      const newBrainwave = e.target.value as 'delta' | 'alpha' | 'gamma';
+                      setBrainwaveType(newBrainwave);
+                      applyPresetWithBrainwave(centerFrequency, newBrainwave);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  >
+                    <option value="delta">Delta (2 Hz beat)</option>
+                    <option value="alpha">Alpha (10 Hz beat)</option>
+                    <option value="gamma">Gamma (40 Hz beat)</option>
+                  </select>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="space-y-2">
+                  <div className="text-xs font-light text-gray-600">Planetary Frequency</div>
+                  <select
+                    value={centerFrequency}
+                    onChange={(e) => {
+                      const selectedHz = parseFloat(e.target.value);
+                      if (!isNaN(selectedHz)) {
+                        applyPresetWithBrainwave(selectedHz, brainwaveType);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  >
+                    {PLANETARY_FREQUENCIES.map((preset) => (
+                      <option key={preset.name} value={preset.hz}>
+                        {preset.name} ({preset.hz} Hz)
+                      </option>
+                    ))}
+                  </select>
+                </div>
                </div>
 
                {/* RIGHT: High Tone */}
@@ -581,24 +557,10 @@ export default function Beats() {
                        className="w-4 h-4 rounded border-gray-300 focus:ring-gray-900"
                      />
                      <span className="text-sm font-light text-gray-700">High Tone</span>
-                   </label>
-                 </div>
+                  </label>
+                </div>
 
-                 {/* Preset */}
-                 <select
-                   value={tones.find(t => t.id === 'high')?.frequency || 144.10}
-                   onChange={(e) => applyPreset('high', parseFloat(e.target.value))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                 >
-                   <option value={144.10}>Custom ({tones.find(t => t.id === 'high')?.frequency.toFixed(1)} Hz)</option>
-                   {PLANETARY_FREQUENCIES.map((preset) => (
-                     <option key={preset.name} value={preset.hz}>
-                       {preset.name} - {preset.hz} Hz
-                     </option>
-                   ))}
-                 </select>
-
-                 {/* Frequency Input */}
+                {/* Frequency Input */}
                  <div className="space-y-1">
                    <input
                      type="number"
@@ -609,35 +571,20 @@ export default function Beats() {
                      onChange={(e) => updateFrequency('high', parseFloat(e.target.value) || 0)}
                      className="w-full px-3 py-2 border border-gray-300 rounded-lg font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                    />
-                   {tones.find(t => t.id === 'high')?.isPlaying && actualFrequencies['high'] && (
-                     <div className="text-xs text-green-600 font-light text-center">
-                       {actualFrequencies['high'].toFixed(1)} Hz
-                     </div>
-                   )}
-                 </div>
-
-                 {/* Vertical Volume Slider */}
-                 <div className="flex flex-col items-center space-y-2">
-                   <div className="text-xs font-light text-gray-500">
-                     {Math.round((tones.find(t => t.id === 'high')?.volume || 0) * 100)}%
-                   </div>
-                   <input
-                     type="range"
-                     min="0"
-                     max="1"
-                     step="0.01"
-                     value={tones.find(t => t.id === 'high')?.volume || 0}
-                     onChange={(e) => updateVolume('high', parseFloat(e.target.value))}
-                     className="w-6 h-20 slider-vertical"
-                   />
-                 </div>
-               </div>
+                  {tones.find(t => t.id === 'high')?.isPlaying && actualFrequencies['high'] && (
+                    <div className="text-xs text-green-600 font-light text-center">
+                      {actualFrequencies['high'].toFixed(1)} Hz
+                    </div>
+                  )}
+                </div>
+              </div>
              </div>
 
              {/* Bottom: Single Play/Stop Button */}
              <div className="mt-6 flex justify-center">
                <Button
                  onClick={() => {
+                   ensureAudioReady(); // Ensure audio context is ready
                    const hasPlaying = tones.some(t => t.isPlaying);
                    if (hasPlaying) {
                      // Stop all
@@ -669,7 +616,6 @@ export default function Beats() {
              </div>
            </div>
          )}
-
       </div>
     </div>
   );
