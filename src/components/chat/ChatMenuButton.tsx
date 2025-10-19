@@ -10,7 +10,8 @@ import { updateConversationTitle } from '@/services/conversations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { getUserFolders, getFolderConversations, moveConversationToFolder } from '@/services/folders';
+import { getUserFolders, getFolderConversations, moveConversationToFolder, createFolder } from '@/services/folders';
+import { FolderModal } from '@/components/folders/FolderModal';
 
 interface ChatMenuButtonProps {
   className?: string;
@@ -30,6 +31,8 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [conversationToMoveToNewFolder, setConversationToMoveToNewFolder] = useState<string | null>(null);
 
   // Get current conversation title and folder
   const currentConversation = threads.find(t => t.id === chat_id);
@@ -129,6 +132,38 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
     }
   };
 
+  const handleCreateFolderAndMove = (conversationId: string) => {
+    setConversationToMoveToNewFolder(conversationId);
+    setShowFolderModal(true);
+  };
+
+  const handleCreateFolder = async (name: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // Create new folder
+      const newFolder = await createFolder(user.id, name);
+      
+      // If there's a conversation waiting to be moved, move it now
+      if (conversationToMoveToNewFolder) {
+        await moveConversationToFolder(conversationToMoveToNewFolder, newFolder.id);
+        setConversationToMoveToNewFolder(null);
+        
+        // Update local state
+        const updatedThreads = threads.map(t => 
+          t.id === conversationToMoveToNewFolder ? { ...t, folder_id: newFolder.id } : t
+        );
+        useChatStore.setState({ threads: updatedThreads });
+      }
+      
+      // Reload folders to update counts
+      const userFolders = await getUserFolders(user.id);
+      setFolders(userFolders.map(f => ({ id: f.id, name: f.name })));
+    } catch (error) {
+      console.error('[ChatMenuButton] Failed to create folder:', error);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -145,6 +180,7 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
           onEdit={handleEdit}
           onDelete={handleDelete}
           onMoveToFolder={handleMoveToFolder}
+          onCreateFolder={handleCreateFolderAndMove}
           folders={folders}
           currentFolderId={currentFolderId}
         />
@@ -206,6 +242,17 @@ export const ChatMenuButton: React.FC<ChatMenuButtonProps> = ({
           </div>
         </div>
       )}
+
+      {/* Folder Creation Modal */}
+      <FolderModal
+        isOpen={showFolderModal}
+        onClose={() => {
+          setShowFolderModal(false);
+          setConversationToMoveToNewFolder(null);
+        }}
+        onCreateFolder={handleCreateFolder}
+        editingFolder={null}
+      />
     </>
   );
 };

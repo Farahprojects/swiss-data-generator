@@ -28,6 +28,7 @@ interface FoldersListProps {
   onEditChat?: (conversationId: string, currentTitle: string) => void;
   onDeleteChat?: (conversationId: string) => void;
   onMoveToFolder?: (conversationId: string, folderId: string | null) => void;
+  onCreateFolder?: (conversationId: string) => void;
   allFolders?: Array<{ id: string; name: string }>;
   activeChatId?: string;
 }
@@ -41,6 +42,7 @@ export const FoldersList: React.FC<FoldersListProps> = ({
   onEditChat,
   onDeleteChat,
   onMoveToFolder,
+  onCreateFolder,
   allFolders = [],
   activeChatId,
 }) => {
@@ -143,6 +145,7 @@ export const FoldersList: React.FC<FoldersListProps> = ({
                             onEdit={onEditChat}
                             onDelete={onDeleteChat}
                             onMoveToFolder={onMoveToFolder}
+                            onCreateFolder={onCreateFolder}
                             folders={allFolders}
                             currentFolderId={folder.id}
                             align="end"

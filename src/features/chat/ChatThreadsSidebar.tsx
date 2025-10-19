@@ -144,13 +144,42 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       // Otherwise, create new folder
       const newFolder = await createFolder(user.id, name);
       
-      // Add to local state
-      setFolders(prev => [...prev, {
-        id: newFolder.id,
-        name: newFolder.name,
-        chatsCount: 0,
-        chats: [],
-      }]);
+      // If there's a conversation waiting to be moved, move it now
+      if (conversationToMoveToNewFolder) {
+        await moveConversationToFolder(conversationToMoveToNewFolder, newFolder.id);
+        setConversationToMoveToNewFolder(null);
+        
+        // Reload folders with updated counts and chat lists
+        const userFolders = await getUserFolders(user.id);
+        const foldersWithChats = await Promise.all(
+          userFolders.map(async (folder) => {
+            const conversations = await getFolderConversations(folder.id);
+            return {
+              id: folder.id,
+              name: folder.name,
+              chatsCount: conversations.length,
+              chats: conversations.map(conv => ({
+                id: conv.id,
+                title: conv.title || 'New Chat',
+              })),
+            };
+          })
+        );
+        
+        setFolders(foldersWithChats);
+        
+        // Reload threads to update the main chat list
+        const { loadThreads } = useChatStore.getState();
+        await loadThreads(user.id);
+      } else {
+        // Add to local state (no conversation to move)
+        setFolders(prev => [...prev, {
+          id: newFolder.id,
+          name: newFolder.name,
+          chatsCount: 0,
+          chats: [],
+        }]);
+      }
     } catch (error) {
       console.error('[ChatThreadsSidebar] Failed to create/update folder:', error);
     }
@@ -216,6 +245,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
   };
 
+  const handleCreateFolderAndMove = (conversationId: string) => {
+    setConversationToMoveToNewFolder(conversationId);
+    setShowFolderModal(true);
+  };
+
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -229,6 +263,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Folders state (dev-only UI while building)
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
+  const [conversationToMoveToNewFolder, setConversationToMoveToNewFolder] = useState<string | null>(null);
   const [folders, setFolders] = useState<Array<{
     id: string;
     name: string;
@@ -604,6 +639,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               setShowDeleteConfirm(true);
             }}
             onMoveToFolder={handleMoveToFolder}
+            onCreateFolder={handleCreateFolderAndMove}
             allFolders={folders.map(f => ({ id: f.id, name: f.name }))}
             activeChatId={chat_id}
           />
@@ -690,6 +726,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                             setShowDeleteConfirm(true);
                           }}
                           onMoveToFolder={handleMoveToFolder}
+                          onCreateFolder={handleCreateFolderAndMove}
                           folders={folders.map(f => ({ id: f.id, name: f.name }))}
                           currentFolderId={conversation.folder_id || null}
                           align="end"
@@ -956,6 +993,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         onClose={() => {
           setShowFolderModal(false);
           setEditingFolder(null);
+          setConversationToMoveToNewFolder(null);
         }}
         onCreateFolder={handleCreateFolder}
         editingFolder={editingFolder}

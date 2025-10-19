@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Share2, Sparkles, Edit3, Trash2, FolderInput, X } from 'lucide-react';
+import { Share2, Sparkles, Edit3, Trash2, FolderInput, X, Folder } from 'lucide-react';
 import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ShareConversationModal } from './ShareConversationModal';
 import { useChatStore } from '@/core/store';
@@ -21,6 +22,7 @@ interface ConversationActionsMenuProps {
   onEdit?: (conversationId: string, currentTitle: string) => void;
   onDelete?: (conversationId: string) => void;
   onMoveToFolder?: (conversationId: string, folderId: string | null) => void;
+  onCreateFolder?: (conversationId: string) => void;
   folders?: Folder[];
   currentFolderId?: string | null;
   align?: 'start' | 'end' | 'center';
@@ -32,6 +34,7 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
   onEdit,
   onDelete,
   onMoveToFolder,
+  onCreateFolder,
   folders = [],
   currentFolderId,
   align = 'end',
@@ -72,6 +75,12 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
     }
   };
 
+  const handleCreateFolder = () => {
+    if (onCreateFolder && targetConversationId) {
+      onCreateFolder(targetConversationId);
+    }
+  };
+
   return (
     <>
       <DropdownMenuContent align={align} className="bg-white border border-gray-200 shadow-lg min-w-fit rounded-lg p-1">
@@ -107,7 +116,7 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
           </DropdownMenuItem>
         )}
         
-        {onMoveToFolder && folders.length > 0 && (
+        {onMoveToFolder && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md">
               <div className="flex items-center gap-2">
@@ -116,6 +125,22 @@ export const ConversationActionsMenuContent: React.FC<ConversationActionsMenuPro
               </div>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-white border border-gray-200 shadow-lg rounded-lg p-1">
+              {onCreateFolder && (
+                <DropdownMenuItem
+                  onClick={handleCreateFolder}
+                  className="px-3 py-1.5 text-sm text-black hover:bg-gray-100 hover:text-black focus:bg-gray-100 focus:text-black cursor-pointer rounded-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <Folder className="w-4 h-4" />
+                    <span>New Folder</span>
+                  </div>
+                </DropdownMenuItem>
+              )}
+              
+              {onCreateFolder && folders.length > 0 && (
+                <DropdownMenuSeparator className="my-1" />
+              )}
+              
               {currentFolderId && (
                 <DropdownMenuItem
                   onClick={() => handleMoveToFolder(null)}
