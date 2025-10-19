@@ -303,6 +303,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * ─────────────────────────────────*/
   const signIn = async (email: string, password: string) => {
     try {
+      // Clean up any existing localStorage data before signing in
+      // This ensures no stale data from previous sessions
+      const { cleanupAuthState } = await import('@/utils/authCleanup');
+      await cleanupAuthState();
+      log('debug', 'Cleaned up existing auth state before signin', null, 'auth');
+
       // Note: 400 errors in console are expected for invalid credentials - handled gracefully below
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
@@ -330,6 +336,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     try {
       log('debug', 'Starting signup process', { email }, 'auth');
+
+      // Clean up any existing localStorage data before creating new account
+      // This ensures a fresh start for the new user
+      const { cleanupAuthState } = await import('@/utils/authCleanup');
+      await cleanupAuthState();
+      log('debug', 'Cleaned up existing auth state before signup', null, 'auth');
 
       // Call the new Edge Function that handles user creation and email verification
       const { data, error } = await supabase.functions.invoke('create-user-and-verify', {

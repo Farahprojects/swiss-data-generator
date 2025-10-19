@@ -48,6 +48,16 @@ class AuthManager {
    * Routes to correct flow based on platform automatically
    */
   async signInWithOAuth(provider: OAuthProvider): Promise<{ error: Error | null }> {
+    // Clean up any existing localStorage data before OAuth sign-in
+    // This ensures no stale data from previous sessions
+    try {
+      const { cleanupAuthState } = await import('../utils/authCleanup');
+      await cleanupAuthState();
+      console.log('[AuthManager] Cleaned up existing auth state before OAuth');
+    } catch (error) {
+      console.warn('[AuthManager] Failed to cleanup auth state:', error);
+    }
+
     if (this.isNativeApp()) {
       return await this.signInNative(provider);
     } else {
