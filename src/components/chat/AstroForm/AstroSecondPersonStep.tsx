@@ -8,6 +8,7 @@ import { AlertCircle } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ProfileSelector } from '@/components/shared/forms/ProfileSelector';
+import { SaveProfileButton } from '@/components/shared/forms/SaveProfileButton';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
 import { ReportFormData } from '@/types/public-report';
@@ -71,22 +72,22 @@ export const AstroSecondPersonStep: React.FC<AstroSecondPersonStepProps> = ({
       className="space-y-6"
     >
       <div className="space-y-4">
+        <div>
+          <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
+            Second Person's Name *
+          </Label>
+          <Input
+            id="secondPersonName"
+            {...register('secondPersonName', { required: 'Second person name is required' })}
+            placeholder="Enter second person's name"
+            className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
+          />
+          {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
-              Second Person's Name *
-            </Label>
-            <Input
-              id="secondPersonName"
-              {...register('secondPersonName', { required: 'Second person name is required' })}
-              placeholder="Enter second person's name"
-              className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
-            />
-            {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Profiles</Label>
+            <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
             <ProfileSelector
               onProfileSelect={(profile) => {
                 setValue('secondPersonName', profile.name);
@@ -98,6 +99,21 @@ export const AstroSecondPersonStep: React.FC<AstroSecondPersonStepProps> = ({
                 if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
               }}
               currentValue={formValues.secondPersonName}
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Save Profile</Label>
+            <SaveProfileButton
+              profileData={{
+                name: formValues.secondPersonName || '',
+                birthDate: formValues.secondPersonBirthDate || '',
+                birthTime: formValues.secondPersonBirthTime || '',
+                birthLocation: formValues.secondPersonBirthLocation || '',
+                birthLatitude: formValues.secondPersonLatitude,
+                birthLongitude: formValues.secondPersonLongitude,
+                birthPlaceId: formValues.secondPersonPlaceId,
+              }}
             />
           </div>
         </div>

@@ -8,6 +8,7 @@ import { AlertCircle } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ProfileSelector } from '@/components/shared/forms/ProfileSelector';
+import { SaveProfileButton } from '@/components/shared/forms/SaveProfileButton';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
 import { ReportFormData } from '@/types/public-report';
@@ -71,22 +72,22 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
       className="space-y-6"
     >
       <div className="space-y-4">
+        <div>
+          <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+            Name *
+          </Label>
+          <Input
+            id="name"
+            {...register('name', { required: 'Name is required' })}
+            placeholder="Enter your name"
+            className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
+          />
+          {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-              Name *
-            </Label>
-            <Input
-              id="name"
-              {...register('name', { required: 'Name is required' })}
-              placeholder="Enter your name"
-              className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
-            />
-            {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Profiles</Label>
+            <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
             <ProfileSelector
               onProfileSelect={(profile) => {
                 setValue('name', profile.name);
@@ -98,6 +99,21 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
                 if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
               }}
               currentValue={formValues.name}
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Save Profile</Label>
+            <SaveProfileButton
+              profileData={{
+                name: formValues.name || '',
+                birthDate: formValues.birthDate || '',
+                birthTime: formValues.birthTime || '',
+                birthLocation: formValues.birthLocation || '',
+                birthLatitude: formValues.birthLatitude,
+                birthLongitude: formValues.birthLongitude,
+                birthPlaceId: formValues.birthPlaceId,
+              }}
             />
           </div>
         </div>
