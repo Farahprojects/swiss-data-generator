@@ -1,6 +1,6 @@
 # Edge Functions Usage Analysis - UPDATED 2025-10-20
 
-## Currently Active Edge Functions (42 total)
+## Currently Active Edge Functions (41 total)
 After comprehensive cleanup, these functions remain:
 
 ### Authentication & User Management (7)
@@ -27,7 +27,7 @@ After comprehensive cleanup, these functions remain:
 - ✅ `conversation-manager` - Manage conversations (CRUD operations)
 
 ### Voice/Audio (3)
-- ✅ `google-whisper` - Speech-to-text (Google STT)
+- ✅ `google-whisper` - **PRIMARY** Speech-to-text (Google STT)
 - ✅ `google-text-to-speech` - **CRITICAL** Text-to-speech called by llm-handler-gemini for voice chat
 - ✅ `openai-whisper` - Alternative STT option
 
@@ -94,8 +94,9 @@ After comprehensive cleanup, these functions remain:
 - ❌ `initiate-report-flow`
 - ❌ `trigger-report-generation`
 
-### Deleted - Audio/Voice (1)
+### Deleted - Audio/Voice (2)
 - ❌ `google-speech-to-text` (replaced by google-whisper)
+- ❌ `openai-whisper` (keeping google-whisper as primary)
 
 ### Deleted - Authentication (1)
 - ❌ `signup_token`
@@ -190,19 +191,20 @@ CancelModal.tsx           →   cancel-subscription            →   Cancels sub
 ### Functions to Review:
 1. ⚠️ **create-checkout** - Check if duplicate of create-subscription-checkout
 2. ⚠️ **create-payment-intent** - Verify if one-time payments are used
-3. ⚠️ **google-speech-to-text** - Confirm google-whisper fully replaced it
-4. ⚠️ **openai-whisper** - Check if still used or can be removed
-5. ⚠️ **inboundMessenger** - Verify actual usage
-6. ⚠️ **verification-emailer** - Check if email-verification covers this
-7. ⚠️ **validate-promo-code** - Confirm promo codes are still supported
-8. ⚠️ **keep-warm** - Review if still needed or update function list
+3. ⚠️ **openai-whisper** - Check if still used or can be removed (google-whisper is primary)
+4. ⚠️ **inboundMessenger** - Verify actual usage
+5. ⚠️ **verification-emailer** - Check if email-verification covers this
+6. ⚠️ **validate-promo-code** - Confirm promo codes are still supported
+7. ⚠️ **keep-warm** - Review if still needed or update function list
 
 ---
 
 ## Summary Statistics
 
-- **Total Active Functions**: 42
-- **Total Deleted**: 30+
+- **Total Active Functions**: 41
+- **Total Deleted**: 31+
 - **Primary AI Stack**: 100% Google/Gemini (OpenAI fully removed)
-- **Lines of Code Removed**: ~5,000+
-- **Cleanup Progress**: ~42% reduction in edge functions
+- **Primary STT**: google-whisper (Google Cloud Speech-to-Text)
+- **Primary TTS**: google-text-to-speech (Google Cloud Text-to-Speech)
+- **Lines of Code Removed**: ~5,100+
+- **Cleanup Progress**: ~43% reduction in edge functions
