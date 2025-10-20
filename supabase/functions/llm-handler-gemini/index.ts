@@ -28,7 +28,14 @@ const GEMINI_TIMEOUT_MS = 30000;
 
 if (!SUPABASE_URL) throw new Error("Missing env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing env: SUPABASE_SERVICE_ROLE_KEY");
-if (!GOOGLE_API_KEY) throw new Error("Missing env: GOOGLE-LLM-NEW");
+if (!GOOGLE_API_KEY) {
+  console.error("[llm-handler-gemini] ❌ GOOGLE-LLM-NEW environment variable is not set");
+  throw new Error("Missing env: GOOGLE-LLM-NEW");
+}
+
+// Log API key info (first/last 4 chars only for security)
+console.log("[llm-handler-gemini] ✅ API Key loaded:", GOOGLE_API_KEY.substring(0, 4) + "..." + GOOGLE_API_KEY.substring(GOOGLE_API_KEY.length - 4));
+console.log("[llm-handler-gemini] 📊 Using model:", GEMINI_MODEL);
 
 // Supabase client (module scope)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -139,6 +146,12 @@ generationConfig: { temperature: 0.7 }
 let llmStartedAt = Date.now();
 let data;
 try {
+console.log("[llm-handler-gemini] 🚀 Calling Gemini API...", {
+  model: GEMINI_MODEL,
+  url: geminiUrl,
+  chat_id: chat_id
+});
+
 const resp = await fetch(geminiUrl, {
 method: "POST",
 headers: { "Content-Type": "application/json", "x-goog-api-key": GOOGLE_API_KEY },
@@ -147,14 +160,27 @@ signal: controller.signal
 });
 clearTimeout(timeout);
 
+console.log("[llm-handler-gemini] 📡 Gemini API response status:", resp.status);
+
 if (!resp.ok) {
   const errText = await resp.text().catch(() => "");
+  console.error("[llm-handler-gemini] ❌ Gemini API error:", {
+    status: resp.status,
+    statusText: resp.statusText,
+    error: errText
+  });
   return json(502, { error: `Gemini API request failed: ${resp.status} - ${errText}` });
 }
 
 data = await resp.json();
+console.log("[llm-handler-gemini] ✅ Gemini API success, response time:", Date.now() - llmStartedAt, "ms");
 } catch (e) {
 clearTimeout(timeout);
+console.error("[llm-handler-gemini] ❌ Gemini request exception:", {
+  error: e?.message || String(e),
+  name: e?.name,
+  stack: e?.stack
+});
 return json(504, { error: `Gemini request error: ${e?.message || String(e)}` });
 }
 
