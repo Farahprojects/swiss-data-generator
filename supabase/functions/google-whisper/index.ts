@@ -12,8 +12,8 @@ const corsHeaders = {
 };
 
 // Env (fail fast for STT key; Supabase vars are optional depending on voice flow)
-const GOOGLE_STT = Deno.env.get("GOOGLE-STT");
-if (!GOOGLE_STT) throw new Error("Missing env: GOOGLE-STT");
+const GOOGLE_STT = Deno.env.get("GOOGLE-STT-NEW");
+if (!GOOGLE_STT) throw new Error("Missing env: GOOGLE-STT-NEW");
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
