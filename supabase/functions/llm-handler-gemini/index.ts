@@ -22,13 +22,13 @@ headers: { ...corsHeaders, "Content-Type": "application/json" }
 // Env
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_1");
+const GOOGLE_API_KEY = Deno.env.get("GOOGLE-LLM-NEW");
 const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
 const GEMINI_TIMEOUT_MS = 30000;
 
 if (!SUPABASE_URL) throw new Error("Missing env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing env: SUPABASE_SERVICE_ROLE_KEY");
-if (!GOOGLE_API_KEY) throw new Error("Missing env: GOOGLE_LLM_1");
+if (!GOOGLE_API_KEY) throw new Error("Missing env: GOOGLE-LLM-NEW");
 
 // Supabase client (module scope)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
