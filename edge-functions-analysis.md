@@ -1,7 +1,7 @@
-# Edge Functions Usage Analysis - UPDATED 2025-10-19
+# Edge Functions Usage Analysis - UPDATED 2025-10-20
 
-## Currently Used Edge Functions (39)
-Based on comprehensive frontend and backend code search, these functions are actively used:
+## Currently Active Edge Functions (42 total)
+After comprehensive cleanup, these functions remain:
 
 ### Authentication & User Management (7)
 - ✅ `password_token` - Password reset token generation
@@ -12,72 +12,73 @@ Based on comprehensive frontend and backend code search, these functions are act
 - ✅ `verify-token` - General token verification
 - ✅ `delete-account` - Account deletion
 
-### Reports & AI (6)
-- ✅ `create-report` - Create reports
+### AI & Reports (5)
+- ✅ `generate-insights` - Generate AI insights from user data
 - ✅ `get-report-data` - Fetch report data (used in ReportSlideOver)
-- ✅ `generate-insights` - Generate AI insights
-- ✅ `log-user-error` - Error logging
-- ✅ `chat-send` - Chat functionality
+- ✅ `report-orchestrator` - Orchestrates report generation, calls standard-report engines
+- ✅ `standard-report-three` - Gemini-based report generation
+- ✅ `standard-report-four` - Gemini-based report generation
 - ✅ `initiate-auth-report` - **CRITICAL** Called by conversation-manager when creating conversations with report_data
 
+### LLM & Chat (3)
+- ✅ `llm-handler-gemini` - **PRIMARY** Gemini chat handler (100% Gemini stack)
+- ✅ `chat-send` - Chat message handling
+- ✅ `context-injector` - Inject context into conversations
+- ✅ `conversation-manager` - Manage conversations (CRUD operations)
+
+### Voice/Audio (3)
+- ✅ `google-whisper` - Speech-to-text (Google STT)
+- ✅ `google-text-to-speech` - **CRITICAL** Text-to-speech called by llm-handler-gemini for voice chat
+- ✅ `openai-whisper` - Alternative STT option
+
 ### Payments & Subscriptions (7)
-- ✅ `create-subscription` - Create subscriptions (SubscriptionPaywall)
+- ✅ `create-subscription-checkout` - **PRIMARY** Subscription checkout flow
 - ✅ `check-subscription` - Check subscription status
 - ✅ `customer-portal` - Stripe customer portal
 - ✅ `get-prices` - Fetch pricing data
-- ✅ `create-subscription-checkout` - Subscription checkout
 - ✅ `cancel-subscription` - Cancel subscription
 - ✅ `update-subscription` - Update subscription
+- ✅ `stripe-webhook-handler` - **CRITICAL** Handles all Stripe webhooks
 
 ### Communication (3)
 - ✅ `outbound-messenger` - Send messages (ComposeModal, ReplyModal)
 - ✅ `contact-form-handler` - Contact form submissions
-- ✅ `conversation-manager` - Manage conversations (CRUD operations)
+- ✅ `inboundMessenger` - Inbound message handling
 
 ### Location Services (2)
 - ✅ `google-places-autocomplete` - Place search
 - ✅ `google-place-details` - Place details
 
-### Audio/Voice (2)
-- ✅ `google-whisper` - Speech-to-text (used in voice/stt service)
-- ✅ `google-text-to-speech` - **CRITICAL** Text-to-speech called by llm-handler-gemini for voice chat mode
+### Ephemeris & Astrology (2)
+- ✅ `translator-edge` - Swiss ephemeris data translation **DO NOT DELETE**
+- ✅ `swiss/` - Swiss ephemeris calculations **DO NOT DELETE**
 
-### AI/LLM (3)
-- ✅ `llm-handler-openai` - OpenAI chat handler (used via chat-send)
-- ✅ `llm-handler-gemini` - Gemini chat handler (used via chat-send)
-- ✅ `context-injector` - Inject context into conversations
+### Utilities & Infrastructure (4)
+- ✅ `keep-warm` - Keep functions warm (prevents cold starts)
+- ✅ `verification-emailer` - Email verification sender
+- ✅ `validate-promo-code` - Promo code validation
+- ✅ `update-password` - Password update handler
 
-### Backend/Infrastructure (8)
-- ✅ `translator-edge` - Swiss ephemeris data translation (DO NOT DELETE)
-- ✅ `report-orchestrator` - Orchestrates report generation, calls standard-report engines (DO NOT DELETE)
-- ✅ `swiss/` - Swiss ephemeris calculations (DO NOT DELETE)
-- ✅ `standard-report` - AI report generation engine (called by orchestrator)
-- ✅ `standard-report-one` - AI report generation engine (called by orchestrator)
-- ✅ `standard-report-two` - AI report generation engine (called by orchestrator)
-- ✅ `standard-report-three` - AI report generation engine (called by orchestrator)
-- ✅ `standard-report-four` - AI report generation engine (called by orchestrator)
+### Payment Legacy (2) - REVIEW NEEDED
+- ⚠️ `create-checkout` - May be duplicate of create-subscription-checkout
+- ⚠️ `create-payment-intent` - One-time payment intents (may be unused)
 
 ---
 
-## Backend/Webhook Functions (1)
+## Recently Deleted Functions (30+)
 
-### Webhooks (KEEP)
-- ✅ `stripe-webhook-handler` - Called by Stripe webhooks (REQUIRED - handles all Stripe events, real-time subscription sync)
+### Deleted - OpenAI LLM Functions (5)
+- ❌ `llm-handler-openai` - Replaced by llm-handler-gemini
+- ❌ `standard-report` - OpenAI report engine
+- ❌ `standard-report-one` - OpenAI report engine
+- ❌ `standard-report-two` - OpenAI report engine
+- ❌ `create-report` - Old report creation
 
-**Stripe Flow Verified:**
-Frontend → `create-subscription-checkout` → Stripe → `stripe-webhook-handler` → Updates profiles/payment_method tables in real-time
-
----
-
-## SAFE TO DELETE - Unused Functions (30)
-
-### Billing & Payment Variants (14)
-These are old/duplicate billing implementations:
+### Deleted - Billing & Payment (14)
 - ❌ `api-usage-handler`
 - ❌ `billing-delete-card`
 - ❌ `billing-setup-card`
-- ❌ `create-checkout` (replaced by create-subscription-checkout)
-- ❌ `create-payment-intent`
+- ❌ `create-subscription` (duplicate)
 - ❌ `create-payment-session`
 - ❌ `get-checkout-url`
 - ❌ `get-payment-status`
@@ -86,123 +87,122 @@ These are old/duplicate billing implementations:
 - ❌ `process-topup-queue`
 - ❌ `resume-stripe-checkout`
 - ❌ `update-service-purchase-metadata`
-- ❌ `validate-promo-code`
+- ❌ `sync-subscriptions-due-today`
 
-### Report Generation Variants (3)
-Old/unused report workflow functions:
+### Deleted - Report Generation (3)
 - ❌ `create-temp-report-data`
 - ❌ `initiate-report-flow`
 - ❌ `trigger-report-generation`
 
-### Communication (2)
-- ❌ `inboundMessenger`
-- ❌ `verification-emailer`
-
-### Audio/Voice (2)
+### Deleted - Audio/Voice (1)
 - ❌ `google-speech-to-text` (replaced by google-whisper)
-- ❌ `openai-whisper` (replaced by google-whisper)
 
-### Authentication Variants (2)
-- ❌ `signup_token` (functionality merged into create-user-and-verify)
-- ❌ `update-password` (handled by Supabase Auth directly)
+### Deleted - Authentication (1)
+- ❌ `signup_token`
 
-### Utilities (7)
+### Deleted - Utilities (7)
 - ❌ `cleanup-orphaned-images`
 - ❌ `email-check`
 - ❌ `error-handler-diagnostic`
-- ❌ `keep-warm`
 - ❌ `threads-manager`
 - ❌ `generate-summary`
-- ❌ `sync-subscriptions-due-today` (redundant - Stripe webhooks handle subscription sync in real-time)
+- ❌ `create-insight-id`
+- ❌ `log-user-error`
 
 ---
 
-## Action Plan
+## Environment Variables Required
 
-### 1. Delete Immediately (30 functions)
-These are confirmed unused based on frontend code search:
-```bash
-# Billing variants (14)
-api-usage-handler
-billing-delete-card
-billing-setup-card
-create-checkout
-create-payment-intent
-create-payment-session
-get-checkout-url
-get-payment-status
-process-credits
-process-paid-report
-process-topup-queue
-resume-stripe-checkout
-update-service-purchase-metadata
-validate-promo-code
+### Core Services
+- `SUPABASE_URL` (required for all)
+- `SUPABASE_SERVICE_ROLE_KEY` (required for all)
 
-# Report variants (3)
-create-temp-report-data
-initiate-report-flow
-trigger-report-generation
+### Google/Gemini APIs (Primary Stack)
+- `GOOGLE-STT` - Speech-to-text (google-whisper)
+- `GOOGLE-TTS` - Text-to-speech (google-text-to-speech)
+- `GOOGLE_LLM_1` - Gemini chat (llm-handler-gemini)
+- `GOOGLE_API_KEY` - Gemini insights (generate-insights)
+- `GOOGLE-API-ONE` - Gemini reports (standard-report-three)
+- `GOOGLE-API-TWO` - Gemini reports (standard-report-four)
+- `GEMINI_MODEL` - Optional, defaults to "gemini-2.5-flash"
 
-# Communication (2)
-inboundMessenger
-verification-emailer
+### Configuration (Optional)
+- `MAX_API_RETRIES` (default: 3)
+- `INITIAL_RETRY_DELAY_MS` (default: 1000)
+- `RETRY_BACKOFF_FACTOR` (default: 2)
+- `API_TIMEOUT_MS` (default: 30000)
+- `MAX_DB_RETRIES` (default: 2)
 
-# Audio/Voice (2)
-google-speech-to-text
-openai-whisper
-
-# Auth variants (2)
-signup_token
-update-password
-
-# Utilities (7)
-cleanup-orphaned-images
-email-check
-error-handler-diagnostic
-keep-warm
-threads-manager
-generate-summary
-sync-subscriptions-due-today
-```
-
-### 2. Keep All (39 functions + _shared)
-All functions marked with ✅ above, including:
-- All standard-report engines (AI report generation)
-- translator-edge & swiss/ (ephemeris calculations)
-- report-orchestrator (calls standard-report engines)
-- initiate-auth-report (called by conversation-manager)
+### Stripe (Payment Processing)
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PUBLISHABLE_KEY` (frontend only)
 
 ---
 
-## Total Summary
-- **Keep**: 38 active functions + 1 webhook (stripe-webhook-handler) = **39 functions**
-- **Delete**: **30 unused functions** (including sync-subscriptions-due-today)
-- **Space saved**: ~43% of edge functions (30 deleted out of 69 total)
+## Critical Backend Connections
 
-## Critical Backend Connections (DO NOT DELETE)
 These functions are called by other edge functions, not directly from frontend:
-- `initiate-auth-report` - Called by **conversation-manager** when creating conversations with report_data
-- `google-text-to-speech` - Called by **llm-handler-gemini** for voice chat mode
-- `report-orchestrator` - Called by report generation flow
-- `standard-report` engines - Called by report-orchestrator
-- `translator-edge` - Swiss ephemeris data translation
-- `swiss/` - Swiss ephemeris calculations
 
-## Stripe Payment Flow (VERIFIED ✅)
+1. **initiate-auth-report**
+   - Called by: `conversation-manager`
+   - Purpose: Creates conversations with report data
+
+2. **google-text-to-speech**
+   - Called by: `llm-handler-gemini`
+   - Purpose: Voice chat TTS responses
+
+3. **report-orchestrator**
+   - Called by: Report generation flow
+   - Purpose: Coordinates report engines
+
+4. **standard-report-three & standard-report-four**
+   - Called by: `report-orchestrator`
+   - Purpose: Generate AI reports using Gemini
+
+5. **translator-edge & swiss/**
+   - Called by: Astrology calculation flow
+   - Purpose: Swiss ephemeris calculations
+
+---
+
+## Stripe Payment Flow (Current Architecture)
+
 ```
-Frontend                    Edge Function                    Stripe                      Webhook
-───────────────────────────────────────────────────────────────────────────────────────────────
-create-subscription         create-subscription              Creates customer            stripe-webhook-handler
-  (SubscriptionPaywall)                                       Creates checkout            - Updates profiles
-                                                              Redirects user              - Updates payment_method
-check-subscription          check-subscription               Checks status               - Handles all events
-  (SubscriptionSuccess)     
-customer-portal             customer-portal                  Opens portal                stripe-webhook-handler
-  (BillingPanel)                                              Manages subscription        - Syncs changes
-create-subscription         create-subscription-checkout     Creates checkout            stripe-webhook-handler
-  -checkout                                                   Returns session URL         - Processes completion
-cancel-subscription         cancel-subscription              Cancels subscription        stripe-webhook-handler
-  (CancelModal)                                                                           - Updates status
-update-subscription         update-subscription              Updates subscription        stripe-webhook-handler
-  (BillingPanel)                                              plan/billing                - Syncs changes
+Frontend                      Edge Function                      Stripe                    Webhook
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+useSubscription.ts        →   create-subscription-checkout   →   Creates session      →   stripe-webhook-handler
+BillingPanel.tsx          →                                      Redirects user           - Updates profiles
+EmbeddedCheckout.tsx      →                                                               - Updates subscriptions
+
+SubscriptionSuccess.tsx   →   check-subscription             →   Verifies status
+
+BillingPanel.tsx          →   customer-portal                →   Opens portal         →   stripe-webhook-handler
+                                                                 Manages billing          - Syncs changes
+
+CancelModal.tsx           →   cancel-subscription            →   Cancels sub          →   stripe-webhook-handler
+                                                                                           - Updates status
 ```
+
+---
+
+## Next Steps for Cleanup
+
+### Functions to Review:
+1. ⚠️ **create-checkout** - Check if duplicate of create-subscription-checkout
+2. ⚠️ **create-payment-intent** - Verify if one-time payments are used
+3. ⚠️ **google-speech-to-text** - Confirm google-whisper fully replaced it
+4. ⚠️ **openai-whisper** - Check if still used or can be removed
+5. ⚠️ **inboundMessenger** - Verify actual usage
+6. ⚠️ **verification-emailer** - Check if email-verification covers this
+7. ⚠️ **validate-promo-code** - Confirm promo codes are still supported
+8. ⚠️ **keep-warm** - Review if still needed or update function list
+
+---
+
+## Summary Statistics
+
+- **Total Active Functions**: 42
+- **Total Deleted**: 30+
+- **Primary AI Stack**: 100% Google/Gemini (OpenAI fully removed)
+- **Lines of Code Removed**: ~5,000+
+- **Cleanup Progress**: ~42% reduction in edge functions
