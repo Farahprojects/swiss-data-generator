@@ -76,33 +76,35 @@ export const AstroSecondPersonStep: React.FC<AstroSecondPersonStepProps> = ({
       className="space-y-6"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
-            Second Person's Name *
-          </Label>
-          <Input
-            id="secondPersonName"
-            {...register('secondPersonName', { required: 'Second person name is required' })}
-            placeholder="Enter second person's name"
-            className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
-          />
-          {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
-        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
+              Second Person's Name *
+            </Label>
+            <Input
+              id="secondPersonName"
+              {...register('secondPersonName', { required: 'Second person name is required' })}
+              placeholder="Enter second person's name"
+              className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
+            />
+            {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
+          </div>
 
-        <div>
-          <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
-          <ProfileSelector
-            onProfileSelect={(profile) => {
-              setValue('secondPersonName', profile.name);
-              setValue('secondPersonBirthDate', profile.birth_date);
-              setValue('secondPersonBirthTime', profile.birth_time);
-              setValue('secondPersonBirthLocation', profile.birth_location);
-              if (profile.birth_latitude) setValue('secondPersonLatitude', profile.birth_latitude);
-              if (profile.birth_longitude) setValue('secondPersonLongitude', profile.birth_longitude);
-              if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
-            }}
-            currentValue={formValues.secondPersonName}
-          />
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
+            <ProfileSelector
+              onProfileSelect={(profile) => {
+                setValue('secondPersonName', profile.name);
+                setValue('secondPersonBirthDate', profile.birth_date);
+                setValue('secondPersonBirthTime', profile.birth_time);
+                setValue('secondPersonBirthLocation', profile.birth_location);
+                if (profile.birth_latitude) setValue('secondPersonLatitude', profile.birth_latitude);
+                if (profile.birth_longitude) setValue('secondPersonLongitude', profile.birth_longitude);
+                if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
+              }}
+              currentValue={formValues.secondPersonName}
+            />
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 py-2">

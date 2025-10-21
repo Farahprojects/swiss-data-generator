@@ -217,7 +217,7 @@ export const CleanPlaceAutocomplete = ({
     }, []);
 
     return (
-      <div ref={wrapperRef} className={`relative space-y-2 ${className}`}>
+      <div ref={wrapperRef} className="relative space-y-2">
         {label && (
           <Label htmlFor={id} className="block">
             {label} *
@@ -240,7 +240,7 @@ export const CleanPlaceAutocomplete = ({
               spellCheck="false"
               data-lpignore="true"
               data-form-type="other"
-              className="h-12 pl-10"
+              className={`pl-10 ${className || "h-12"}`}
             />
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             {isLoading && (
@@ -307,7 +307,7 @@ export const CleanPlaceAutocomplete = ({
                     spellCheck="false"
                     data-lpignore="true"
                     data-form-type="other"
-                    className="h-12 pl-10 text-base"
+                    className="h-12 rounded-full pl-10 text-base"
                     style={{ fontSize: '16px' }}
                   />
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />

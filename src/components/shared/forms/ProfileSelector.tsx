@@ -84,7 +84,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-12 rounded-lg border-gray-200 font-light text-base text-gray-600 hover:text-gray-900 hover:bg-gray-50 mt-1"
+          className="w-full justify-between h-12 rounded-full border-gray-200 font-light text-base text-gray-600 hover:text-gray-900 hover:bg-gray-50 mt-1"
         >
           {currentValue ? currentValue : "Load saved profile..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

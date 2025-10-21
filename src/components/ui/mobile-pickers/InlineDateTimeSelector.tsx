@@ -184,7 +184,7 @@ const InlineDateTimeSelector = ({
             value={localValue}
             onChange={handleTextInputChange}
             placeholder={getInputPlaceholder()}
-            className={`h-12 text-base font-light ${
+            className={`h-12 rounded-full text-base font-light ${
               hasError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-gray-400'
             }`}
           />
@@ -202,7 +202,7 @@ const InlineDateTimeSelector = ({
             type="button"
             variant="outline"
             onClick={handleAmPmToggle}
-            className="h-12 px-3 text-sm font-medium border-gray-200 hover:bg-gray-50"
+            className="h-12 rounded-full px-3 text-sm font-medium border-gray-200 hover:bg-gray-50"
           >
             {isAm ? 'AM' : 'PM'}
           </Button>

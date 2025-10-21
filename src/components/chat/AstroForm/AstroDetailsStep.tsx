@@ -76,33 +76,35 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
       className="space-y-6"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-            Name *
-          </Label>
-          <Input
-            id="name"
-            {...register('name', { required: 'Name is required' })}
-            placeholder="Enter your name"
-            className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
-          />
-          {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
-        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+              Name *
+            </Label>
+            <Input
+              id="name"
+              {...register('name', { required: 'Name is required' })}
+              placeholder="Enter your name"
+              className="h-12 rounded-full border-gray-200 focus:border-gray-400 mt-1"
+            />
+            {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
+          </div>
 
-        <div>
-          <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
-          <ProfileSelector
-            onProfileSelect={(profile) => {
-              setValue('name', profile.name);
-              setValue('birthDate', profile.birth_date);
-              setValue('birthTime', profile.birth_time);
-              setValue('birthLocation', profile.birth_location);
-              if (profile.birth_latitude) setValue('birthLatitude', profile.birth_latitude);
-              if (profile.birth_longitude) setValue('birthLongitude', profile.birth_longitude);
-              if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
-            }}
-            currentValue={formValues.name}
-          />
+          <div>
+            <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
+            <ProfileSelector
+              onProfileSelect={(profile) => {
+                setValue('name', profile.name);
+                setValue('birthDate', profile.birth_date);
+                setValue('birthTime', profile.birth_time);
+                setValue('birthLocation', profile.birth_location);
+                if (profile.birth_latitude) setValue('birthLatitude', profile.birth_latitude);
+                if (profile.birth_longitude) setValue('birthLongitude', profile.birth_longitude);
+                if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
+              }}
+              currentValue={formValues.name}
+            />
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 py-2">
