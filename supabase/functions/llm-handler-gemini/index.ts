@@ -94,6 +94,7 @@ if (!chat_id || typeof chat_id !== "string") return json(400, { error: "Missing 
 if (!text || typeof text !== "string") return json(400, { error: "Missing or invalid field: text" });
 
 // Fetch recent messages (history + optional system)
+// OPTIMIZATION: Reduced from 20 to 8 (6 history + 2 buffer for system messages)
 const HISTORY_LIMIT = 6;
 let allMessages = [];
 try {
@@ -105,7 +106,7 @@ const { data, error } = await supabase
 .not("text", "is", null)
 .neq("text", "")
 .order("created_at", { ascending: false })
-.limit(20);
+.limit(8);
 
 if (error) {
   console.warn("[llm] messages fetch warning:", error.message);
@@ -116,10 +117,18 @@ if (error) {
 console.warn("[llm] messages fetch exception:", e?.message || String(e));
 }
 
-const history = allMessages.filter((m) => m.role !== "system").slice(0, HISTORY_LIMIT);
-const systemMessages = allMessages
-.filter((m) => m.role === "system")
-.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+// PARALLEL PROCESSING: Separate system and history messages in one pass
+const history: any[] = [];
+const systemMessages: any[] = [];
+for (const m of allMessages) {
+if (m.role === "system") {
+systemMessages.push(m);
+} else if (history.length < HISTORY_LIMIT) {
+history.push(m);
+}
+}
+
+systemMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 const systemText = systemMessages.length ? String(systemMessages[0].text || "") : "";
 
 // Build Gemini request contents (oldest -> newest)

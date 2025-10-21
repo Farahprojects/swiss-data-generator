@@ -82,6 +82,25 @@ user_name: user_name ?? null,
 meta: {}
 };
 
+// PARALLEL PROCESSING: Start LLM immediately for user messages (don't wait for DB)
+const shouldStartLLM = role === "user" && chattype !== "voice";
+let llmPromise = null;
+if (shouldStartLLM) {
+// Start LLM in parallel with DB insert (save ~50-200ms)
+llmPromise = fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+},
+body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
+}).catch((err) => {
+console.error("[chat-send] LLM call failed:", err);
+// Swallow error - don't affect user experience
+});
+}
+
+// DB insert happens in parallel with LLM start
 const { error: insertError } = await supabase
 .from("messages")
 .insert(message, {
@@ -94,22 +113,7 @@ if (insertError) {
 return json(500, { error: "Failed to save message" });
 }
 
-// For user messages in non-voice chats, start LLM processing (fire-and-forget)
-const shouldStartLLM = role === "user" && chattype !== "voice";
-if (shouldStartLLM) {
-// No await to keep response fast
-fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-},
-body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
-}).catch(() => {
-// Intentionally swallow errors to avoid affecting client response
-});
-}
-
+// LLM is already running in background (or completed)
 return json(200, {
 message: role === "assistant" ? "Assistant message saved" : "User message saved",
 saved: message,
