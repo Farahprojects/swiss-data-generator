@@ -4,6 +4,15 @@
 // - Minimal logs, clear flow, graceful fallbacks
 // - Fire-and-forget for TTS and chat-send
 
+// Deno runtime types (available in Deno environment)
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+  serve(handler: (req: Request) => Response | Promise<Response>): void;
+};
+
+// @ts-ignore - ESM import works in Deno runtime
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -96,7 +105,15 @@ if (!text || typeof text !== "string") return json(400, { error: "Missing or inv
 // Fetch recent messages (history + optional system)
 // OPTIMIZATION: Reduced from 20 to 8 (6 history + 2 buffer for system messages)
 const HISTORY_LIMIT = 6;
-let allMessages = [];
+
+// Type for message data from DB
+type MessageRow = {
+  role: string;
+  text: string;
+  created_at: string;
+};
+
+let allMessages: MessageRow[] = [];
 try {
 const { data, error } = await supabase
 .from("messages")
@@ -111,15 +128,15 @@ const { data, error } = await supabase
 if (error) {
   console.warn("[llm] messages fetch warning:", error.message);
 } else {
-  allMessages = data || [];
+  allMessages = (data || []) as MessageRow[];
 }
-} catch (e) {
+} catch (e: any) {
 console.warn("[llm] messages fetch exception:", e?.message || String(e));
 }
 
 // PARALLEL PROCESSING: Separate system and history messages in one pass
-const history: any[] = [];
-const systemMessages: any[] = [];
+const history: MessageRow[] = [];
+const systemMessages: MessageRow[] = [];
 for (const m of allMessages) {
 if (m.role === "system") {
 systemMessages.push(m);
@@ -132,7 +149,12 @@ systemMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.crea
 const systemText = systemMessages.length ? String(systemMessages[0].text || "") : "";
 
 // Build Gemini request contents (oldest -> newest)
-const contents = [];
+type GeminiContent = {
+  role: "user" | "model";
+  parts: { text: string }[];
+};
+
+const contents: GeminiContent[] = [];
 for (let i = history.length - 1; i >= 0; i--) {
 const m = history[i];
 const t = typeof m.text === "string" ? m.text.trim() : "";

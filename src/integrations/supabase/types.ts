@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_logs: {
@@ -181,9 +206,34 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_folders: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string | null
+          folder_id: string | null
           id: string
           is_public: boolean | null
           meta: Json | null
@@ -195,6 +245,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          folder_id?: string | null
           id?: string
           is_public?: boolean | null
           meta?: Json | null
@@ -206,6 +257,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          folder_id?: string | null
           id?: string
           is_public?: boolean | null
           meta?: Json | null
@@ -215,7 +267,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "chat_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations_participants: {
         Row: {
@@ -706,22 +766,7 @@ export type Database = {
           user_id?: string | null
           user_name?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_reply_to_id_fkey"
-            columns: ["reply_to_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       password_reset_tokens: {
         Row: {
@@ -865,6 +910,7 @@ export type Database = {
           name: string
           product_code: string | null
           report_type: string | null
+          stripe_price_id: string | null
           unit_price_usd: number
         }
         Insert: {
@@ -876,6 +922,7 @@ export type Database = {
           name: string
           product_code?: string | null
           report_type?: string | null
+          stripe_price_id?: string | null
           unit_price_usd: number
         }
         Update: {
@@ -887,6 +934,7 @@ export type Database = {
           name?: string
           product_code?: string | null
           report_type?: string | null
+          stripe_price_id?: string | null
           unit_price_usd?: number
         }
         Relationships: []
@@ -1922,6 +1970,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       queue_status: ["pending", "processing", "completed", "failed"],
