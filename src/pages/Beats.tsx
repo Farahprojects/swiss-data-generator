@@ -385,25 +385,25 @@ export default function Beats() {
   }, []);
 
     return (
-      <div className="min-h-screen bg-gray-50 py-16 px-4">
-        <div className="max-w-5xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gray-50 py-8 md:py-16 px-4">
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
          {/* Unified Binaural Mixer */}
          {isInitialized && (
-           <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100">
-             <div className="text-center mb-10">
-               <h2 className="text-3xl font-light italic text-gray-900 tracking-tight">
+           <div className="bg-white rounded-2xl md:rounded-3xl p-6 md:p-10 shadow-sm border border-gray-100">
+             <div className="text-center mb-6 md:mb-10">
+               <h2 className="text-2xl md:text-3xl font-light italic text-gray-900 tracking-tight">
                  Binaural Tone Mixer
                </h2>
-               <p className="text-sm font-light text-gray-500 mt-2">
+               <p className="text-xs md:text-sm font-light text-gray-500 mt-2">
                  Craft precise binaural beats with planetary frequencies
                </p>
              </div>
 
-             {/* Three-Column Layout: Low | Mix | High */}
-             <div className="grid grid-cols-3 gap-8 items-start">
+             {/* Responsive Layout: Stack on mobile, 3 columns on desktop */}
+             <div className="flex flex-col md:grid md:grid-cols-3 gap-6 md:gap-8">
                
               {/* LEFT: Low Tone */}
-              <div className="space-y-5 bg-gray-50 rounded-2xl p-6 border border-gray-100">
+              <div className="space-y-4 md:space-y-5 bg-gray-50 rounded-2xl p-5 md:p-6 border border-gray-100">
                 <div className="flex items-center justify-center pb-3 border-b border-gray-200">
                   <label className="flex items-center space-x-3 cursor-pointer group">
                     <div className="relative">
@@ -411,10 +411,10 @@ export default function Beats() {
                         type="checkbox"
                         checked={!tones.find(t => t.id === 'low')?.isMuted}
                         onChange={() => toggleMute('low')}
-                        className="w-5 h-5 rounded-md border-2 border-gray-300 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 transition-all"
+                        className="w-6 h-6 md:w-5 md:h-5 rounded-md border-2 border-gray-300 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 transition-all"
                       />
                     </div>
-                    <span className="text-base font-light text-gray-900 group-hover:text-gray-700 transition-colors">Left Tone</span>
+                    <span className="text-lg md:text-base font-light text-gray-900 group-hover:text-gray-700 transition-colors">Left Tone</span>
                  </label>
                </div>
 
@@ -430,7 +430,7 @@ export default function Beats() {
                        updateFrequency('low', selectedHz);
                      }
                    }}
-                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
+                   className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
                  >
                    {PLANETARY_FREQUENCIES.map((preset) => (
                      <option key={preset.name} value={preset.hz}>
@@ -454,7 +454,7 @@ export default function Beats() {
                       setLowTonePlanet(newFreq);
                       updateFrequency('low', newFreq);
                     }}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm text-center focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
+                    className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-base md:text-sm text-center focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
                   />
                   {tones.find(t => t.id === 'low')?.isPlaying && actualFrequencies['low'] && (
                    <div className="text-xs text-emerald-600 font-medium text-center tracking-wide mt-1">
@@ -465,9 +465,9 @@ export default function Beats() {
              </div>
 
               {/* CENTER: Audio Upload Section */}
-              <div className="space-y-6 px-2">
-                <div className="bg-gradient-to-b from-gray-50 to-white rounded-2xl p-6 border border-gray-100">
-                  <div className="text-sm font-light text-gray-500 uppercase tracking-wide mb-4 text-center">Audio Layer</div>
+              <div className="space-y-5 md:space-y-6 px-0 md:px-2 order-last md:order-none">
+                <div className="bg-gradient-to-b from-gray-50 to-white rounded-2xl p-5 md:p-6 border border-gray-100">
+                  <div className="text-xs md:text-sm font-light text-gray-500 uppercase tracking-wide mb-4 text-center">Audio Layer</div>
                   
                   {/* Audio Upload */}
                   <div className="space-y-3">
@@ -480,7 +480,7 @@ export default function Beats() {
                           handleAudioUpload('layer1', file);
                         }
                       }}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all hover:border-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-light file:bg-gray-900 file:text-white file:cursor-pointer"
+                      className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all hover:border-gray-300 file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-light file:bg-gray-900 file:text-white file:cursor-pointer"
                     />
                     
                     {/* Audio Controls */}
@@ -489,28 +489,28 @@ export default function Beats() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => toggleLayerMute('layer1')}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            className="p-2.5 md:p-2 hover:bg-gray-100 rounded-full transition-colors"
                           >
                             {audioLayers[0].isMuted ? (
-                              <VolumeX className="w-4 h-4 text-gray-400" />
+                              <VolumeX className="w-5 h-5 md:w-4 md:h-4 text-gray-400" />
                             ) : (
-                              <Volume2 className="w-4 h-4 text-gray-700" />
+                              <Volume2 className="w-5 h-5 md:w-4 md:h-4 text-gray-700" />
                             )}
                           </button>
                           <Button
                             onClick={() => toggleAudioLayer('layer1')}
                             variant={audioLayers[0].audioElement.paused ? "outline" : "default"}
                             size="sm"
-                            className="rounded-full px-5 font-light"
+                            className="rounded-full px-6 md:px-5 py-5 md:py-4 font-light"
                           >
                             {audioLayers[0].audioElement.paused ? (
                               <>
-                                <Play className="w-3 h-3 mr-1.5" />
+                                <Play className="w-4 h-4 md:w-3 md:h-3 mr-1.5" />
                                 Play
                               </>
                             ) : (
                               <>
-                                <Pause className="w-3 h-3 mr-1.5" />
+                                <Pause className="w-4 h-4 md:w-3 md:h-3 mr-1.5" />
                                 Stop
                               </>
                             )}
@@ -531,7 +531,7 @@ export default function Beats() {
                      setBrainwaveType(newBrainwave);
                      applyPresetWithBrainwave(centerFrequency, newBrainwave);
                    }}
-                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
+                   className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
                  >
                    <option value="delta">Delta (2 Hz)</option>
                    <option value="alpha">Alpha (10 Hz)</option>
@@ -550,7 +550,7 @@ export default function Beats() {
                        applyPresetWithBrainwave(selectedHz, brainwaveType);
                      }
                    }}
-                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
+                   className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
                  >
                    {PLANETARY_FREQUENCIES.map((preset) => (
                      <option key={preset.name} value={preset.hz}>
@@ -562,7 +562,7 @@ export default function Beats() {
               </div>
 
               {/* RIGHT: High Tone */}
-              <div className="space-y-5 bg-gray-50 rounded-2xl p-6 border border-gray-100">
+              <div className="space-y-4 md:space-y-5 bg-gray-50 rounded-2xl p-5 md:p-6 border border-gray-100">
                 <div className="flex items-center justify-center pb-3 border-b border-gray-200">
                   <label className="flex items-center space-x-3 cursor-pointer group">
                     <div className="relative">
@@ -570,10 +570,10 @@ export default function Beats() {
                         type="checkbox"
                         checked={!tones.find(t => t.id === 'high')?.isMuted}
                         onChange={() => toggleMute('high')}
-                        className="w-5 h-5 rounded-md border-2 border-gray-300 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 transition-all"
+                        className="w-6 h-6 md:w-5 md:h-5 rounded-md border-2 border-gray-300 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 transition-all"
                       />
                     </div>
-                    <span className="text-base font-light text-gray-900 group-hover:text-gray-700 transition-colors">Right Tone</span>
+                    <span className="text-lg md:text-base font-light text-gray-900 group-hover:text-gray-700 transition-colors">Right Tone</span>
                  </label>
                </div>
 
@@ -589,7 +589,7 @@ export default function Beats() {
                        updateFrequency('high', selectedHz);
                      }
                    }}
-                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
+                   className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
                  >
                    {PLANETARY_FREQUENCIES.map((preset) => (
                      <option key={preset.name} value={preset.hz}>
@@ -613,7 +613,7 @@ export default function Beats() {
                       setHighTonePlanet(newFreq);
                       updateFrequency('high', newFreq);
                     }}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-full font-light text-sm text-center focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
+                    className="w-full px-4 py-3.5 md:py-3 bg-white border border-gray-200 rounded-full font-light text-base md:text-sm text-center focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all hover:border-gray-300"
                   />
                  {tones.find(t => t.id === 'high')?.isPlaying && actualFrequencies['high'] && (
                    <div className="text-xs text-emerald-600 font-medium text-center tracking-wide mt-1">
@@ -625,7 +625,7 @@ export default function Beats() {
              </div>
 
             {/* Bottom: Single Play/Stop Button */}
-            <div className="mt-10 flex justify-center">
+            <div className="mt-8 md:mt-10 flex justify-center px-4">
               <Button
                 onClick={() => {
                   ensureAudioReady(); // Ensure audio context is ready
@@ -644,7 +644,7 @@ export default function Beats() {
                 }}
                 variant={tones.some(t => t.isPlaying) ? "default" : "outline"}
                 size="lg"
-                className="rounded-full px-12 py-6 text-base font-light shadow-sm hover:shadow-md transition-all"
+                className="w-full md:w-auto rounded-full px-10 md:px-12 py-7 md:py-6 text-base md:text-base font-light shadow-sm hover:shadow-md transition-all"
               >
                 {tones.some(t => t.isPlaying) ? (
                   <>
