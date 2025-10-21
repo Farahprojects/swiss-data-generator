@@ -1,8 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
+const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS-NEW");
 if (!GOOGLE_TTS_API_KEY) {
-console.error("[google-tts] Missing GOOGLE-TTS API key");
+  throw new Error("Missing env: GOOGLE-TTS-NEW");
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
