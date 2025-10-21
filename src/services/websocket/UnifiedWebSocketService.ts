@@ -140,9 +140,11 @@ class UnifiedWebSocketService {
           }
         )
         .subscribe((status) => {
+          console.log(`[UnifiedWebSocket] 🔌 Status changed:`, status, `for chat_id: ${chat_id}`);
           this.realtimeStatus = status as any;
           
                  if (status === 'SUBSCRIBED') {
+                   console.log(`[UnifiedWebSocket] ✅ CONNECTED & LISTENING for chat_id: ${chat_id}`);
                    this.subscriptionRetryCount = 0;
             this.coldReconnectAttempts = 0;
             if (this.connectTimeoutId !== null) {
