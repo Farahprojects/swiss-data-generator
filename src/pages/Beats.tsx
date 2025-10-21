@@ -11,6 +11,7 @@ interface ToneSource {
   isPlaying: boolean;
   oscillator: OscillatorNode | null;
   gainNode: GainNode | null;
+  pannerNode: StereoPannerNode | null;
 }
 
 interface AudioLayer {
@@ -50,8 +51,8 @@ export default function Beats() {
   
   // Initialize tones with alpha offset (136.10 - 5 = 131.10, 136.10 + 5 = 141.10)
   const [tones, setTones] = useState<ToneSource[]>([
-    { id: 'low', label: 'Low Tone', frequency: 131.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null },
-    { id: 'high', label: 'High Tone', frequency: 141.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null },
+    { id: 'low', label: 'Low Tone', frequency: 131.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null, pannerNode: null },
+    { id: 'high', label: 'High Tone', frequency: 141.10, volume: 0.5, isMuted: false, isPlaying: false, oscillator: null, gainNode: null, pannerNode: null },
   ]);
   
   const [audioLayers, setAudioLayers] = useState<AudioLayer[]>([
@@ -103,6 +104,7 @@ export default function Beats() {
             tone.oscillator.onended = () => {
               try { tone.oscillator!.disconnect(); } catch {}
               try { tone.gainNode!.disconnect(); } catch {}
+              try { tone.pannerNode!.disconnect(); } catch {}
             };
             tone.oscillator.stop(stopTime);
           } catch {
@@ -111,14 +113,20 @@ export default function Beats() {
               try { tone.oscillator!.stop(); } catch {}
               try { tone.oscillator!.disconnect(); } catch {}
               try { tone.gainNode!.disconnect(); } catch {}
+              try { tone.pannerNode!.disconnect(); } catch {}
             }, 40);
           }
         }
-        return { ...tone, isPlaying: false, oscillator: null, gainNode: null };
+        return { ...tone, isPlaying: false, oscillator: null, gainNode: null, pannerNode: null };
       } else {
         // Start tone with precise frequency and smooth fade-in
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
+        const pannerNode = audioContext.createStereoPanner();
+        
+        // Pan left tone fully left (-1), right tone fully right (+1)
+        const panValue = tone.id === 'low' ? -1 : 1;
+        pannerNode.pan.setValueAtTime(panValue, audioContext.currentTime);
         
         oscillator.type = 'sine';
         // Use setValueAtTime for maximum precision instead of direct assignment
@@ -129,14 +137,16 @@ export default function Beats() {
         gainNode.gain.setValueAtTime(0, audioContext.currentTime);
         gainNode.gain.linearRampToValueAtTime(targetVolume, audioContext.currentTime + 0.05); // 50ms fade-in
         
+        // Connect: Oscillator -> Gain -> Panner -> Destination
         oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        gainNode.connect(pannerNode);
+        pannerNode.connect(audioContext.destination);
         
         oscillator.start();
         
-        console.log(`[Beats] Started ${tone.label} at ${tone.frequency} Hz (target precision: ±0.01 Hz)`);
+        console.log(`[Beats] Started ${tone.label} at ${tone.frequency} Hz (pan: ${panValue}) (target precision: ±0.01 Hz)`);
         
-        return { ...tone, isPlaying: true, oscillator, gainNode };
+        return { ...tone, isPlaying: true, oscillator, gainNode, pannerNode };
       }
     }));
   };
@@ -357,6 +367,7 @@ export default function Beats() {
           tone.oscillator.disconnect();
         }
         if (tone.gainNode) tone.gainNode.disconnect();
+        if (tone.pannerNode) tone.pannerNode.disconnect();
       });
       
       audioLayers.forEach(layer => {
