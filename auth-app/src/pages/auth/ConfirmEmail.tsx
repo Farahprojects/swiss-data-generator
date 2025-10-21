@@ -80,7 +80,6 @@ const ConfirmEmail: React.FC = () => {
     // Sign out any auto-created session from the magic link
     // This ensures users must sign in manually after verification
     await supabase.auth.signOut();
-    console.log('[AUTH-APP-CONFIRMEMAIL] ✓ Signed out auto-created session');
 
     setStatus('success');
     const msg = kind === 'signup'
@@ -95,14 +94,10 @@ const ConfirmEmail: React.FC = () => {
   };
 
   const finishPasswordSuccess = async (token: string) => {
-    console.log(`[AUTH-APP-CONFIRMEMAIL] Password reset verification started`);
-
     setMessage('Setting up password reset...');
 
     try {
       // Call secure edge function to verify token and get session
-      console.log('[AUTH-APP-CONFIRMEMAIL] Calling verify-token edge function...');
-
       const { data, error } = await supabase.functions.invoke('verify-token', {
         body: {
           token
@@ -111,8 +106,6 @@ const ConfirmEmail: React.FC = () => {
       });
 
       if (error) {
-        console.error('[AUTH-APP-CONFIRMEMAIL] Edge function error:', error);
-        
         // Handle different types of edge function errors
         if (error.message?.includes('non-2xx status code')) {
           throw new Error('Token verification failed. Please try again or request a new reset link.');
@@ -124,29 +117,23 @@ const ConfirmEmail: React.FC = () => {
       }
 
       if (!data?.success) {
-        console.error('[AUTH-APP-CONFIRMEMAIL] Verification failed:', data?.error);
         throw new Error(data?.error || 'Token verification failed. Please try again.');
       }
-
-      console.log('[AUTH-APP-CONFIRMEMAIL] ✓ Token verification successful:', data.message);
 
       // Store the email for later use
       if (data.email) {
         setUserEmail(data.email);
-        console.log('[AUTH-APP-CONFIRMEMAIL] Stored email:', data.email);
       }
 
       // Set session if provided
       if (data.session) {
         const { error: sessionError } = await supabase.auth.setSession(data.session);
         if (sessionError) {
-          console.error('[AUTH-APP-CONFIRMEMAIL] Session error:', sessionError);
           throw new Error('Failed to establish session');
         }
       }
 
     } catch (error) {
-      console.error('[AUTH-APP-CONFIRMEMAIL] Critical verification error:', error);
       setStatus('error');
       setMessage('Failed to verify your password reset link. Please try again or contact support.');
       return;
@@ -186,8 +173,6 @@ const ConfirmEmail: React.FC = () => {
         throw new Error('Email not found in token verification');
       }
 
-      console.log(`[AUTH-APP-CONFIRMEMAIL] Calling update-password edge function with email: ${userEmail}`);
-
       // Call update-password edge function
       const { data: updateData, error } = await supabase.functions.invoke('update-password', {
         body: {
@@ -215,7 +200,6 @@ const ConfirmEmail: React.FC = () => {
       }, 2000);
 
     } catch (error: any) {
-      console.error('[AUTH-APP-CONFIRMEMAIL] Password update failed:', error);
       setStatus('error');
       setMessage(error.message || 'Failed to update password. Please try again.');
     } finally {
@@ -227,8 +211,6 @@ const ConfirmEmail: React.FC = () => {
     const verify = async () => {
       if (processedRef.current) return;
       processedRef.current = true;
-
-      console.log(`[AUTH-APP-CONFIRMEMAIL] 🚨 AUTH-APP CONFIRMEMAIL - Starting verification process`);
 
       try {
         const hash = new URLSearchParams(location.hash.slice(1));
@@ -245,7 +227,6 @@ const ConfirmEmail: React.FC = () => {
 
         // For recovery type, just pass token to edge function
         if (tokenType === 'recovery') {
-          console.log(`[AUTH-APP-CONFIRMEMAIL] Recovery token detected, calling password reset flow`);
           finishPasswordSuccess(token);
         } else if (tokenType) {
           // For other types, still require email
@@ -255,7 +236,6 @@ const ConfirmEmail: React.FC = () => {
           finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change', token, email);
         } else {
           // No token type specified, try to determine from token itself
-          console.log(`[AUTH-APP-CONFIRMEMAIL] No token type specified, attempting token verification`);
           finishPasswordSuccess(token);
         }
 

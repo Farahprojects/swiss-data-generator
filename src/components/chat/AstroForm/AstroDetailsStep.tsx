@@ -4,11 +4,11 @@ import { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'rea
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ProfileSelector } from '@/components/shared/forms/ProfileSelector';
-import { SaveProfileButton } from '@/components/shared/forms/SaveProfileButton';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
 import { ReportFormData } from '@/types/public-report';
@@ -26,6 +26,8 @@ interface AstroDetailsStepProps {
   isProcessing: boolean;
   isInsights: boolean;
   shouldDisableAnimations: boolean;
+  saveToProfile: boolean;
+  setSaveToProfile: (value: boolean) => void;
 }
 
 const ErrorMsg = ({ msg }: { msg: string }) => (
@@ -48,6 +50,8 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
   isProcessing,
   isInsights,
   shouldDisableAnimations,
+  saveToProfile,
+  setSaveToProfile,
 }) => {
   const formValues = watch();
 
@@ -85,37 +89,34 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
           {errors.name && <ErrorMsg msg={errors.name.message || ''} />}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
-            <ProfileSelector
-              onProfileSelect={(profile) => {
-                setValue('name', profile.name);
-                setValue('birthDate', profile.birth_date);
-                setValue('birthTime', profile.birth_time);
-                setValue('birthLocation', profile.birth_location);
-                if (profile.birth_latitude) setValue('birthLatitude', profile.birth_latitude);
-                if (profile.birth_longitude) setValue('birthLongitude', profile.birth_longitude);
-                if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
-              }}
-              currentValue={formValues.name}
-            />
-          </div>
+        <div>
+          <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
+          <ProfileSelector
+            onProfileSelect={(profile) => {
+              setValue('name', profile.name);
+              setValue('birthDate', profile.birth_date);
+              setValue('birthTime', profile.birth_time);
+              setValue('birthLocation', profile.birth_location);
+              if (profile.birth_latitude) setValue('birthLatitude', profile.birth_latitude);
+              if (profile.birth_longitude) setValue('birthLongitude', profile.birth_longitude);
+              if (profile.birth_place_id) setValue('birthPlaceId', profile.birth_place_id);
+            }}
+            currentValue={formValues.name}
+          />
+        </div>
 
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Save Profile</Label>
-            <SaveProfileButton
-              profileData={{
-                name: formValues.name || '',
-                birthDate: formValues.birthDate || '',
-                birthTime: formValues.birthTime || '',
-                birthLocation: formValues.birthLocation || '',
-                birthLatitude: formValues.birthLatitude,
-                birthLongitude: formValues.birthLongitude,
-                birthPlaceId: formValues.birthPlaceId,
-              }}
-            />
-          </div>
+        <div className="flex items-center space-x-2 py-2">
+          <Checkbox
+            id="save-profile"
+            checked={saveToProfile}
+            onCheckedChange={(checked) => setSaveToProfile(checked as boolean)}
+          />
+          <label
+            htmlFor="save-profile"
+            className="text-sm font-light text-gray-700 cursor-pointer select-none"
+          >
+            Save this profile for future use
+          </label>
         </div>
 
         <div>

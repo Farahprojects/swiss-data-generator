@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAstroConversation } from '@/hooks/useAstroConversation';
 import { useAstroFormValidation } from '@/hooks/useAstroFormValidation';
 import { useAstroReportPayload } from '@/hooks/useAstroReportPayload';
+import { useProfileSaver } from '@/hooks/useProfileSaver';
 
 // Step components
 import { AstroTypeStep } from './AstroForm/AstroTypeStep';
@@ -69,6 +70,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [selectedAstroType, setSelectedAstroType] = useState<string>(preselectedType || '');
   const [activeSelector, setActiveSelector] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [saveToProfile, setSaveToProfile] = useState(false);
+  const [saveSecondPersonToProfile, setSaveSecondPersonToProfile] = useState(false);
 
   // Hooks
   const isMobile = useIsMobile();
@@ -79,6 +82,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const { createConversation, cleanupEmptyConversation } = useAstroConversation();
   const { validatePrimaryPerson, validateSecondPerson } = useAstroFormValidation();
   const { buildReportPayload } = useAstroReportPayload();
+  const { saveProfile } = useProfileSaver();
 
   const mode = explicitMode || contextMode;
   const isAuthenticated = location.pathname.startsWith('/c/');
@@ -100,8 +104,21 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     setCurrentStep('details');
   };
 
-  const handleDetailsFormSubmit = () => {
+  const handleDetailsFormSubmit = async () => {
     if (!validatePrimaryPerson(formValues, setError)) return;
+
+    // Save profile if checkbox is checked
+    if (saveToProfile && user) {
+      await saveProfile({
+        name: formValues.name,
+        birthDate: formValues.birthDate,
+        birthTime: formValues.birthTime,
+        birthLocation: formValues.birthLocation,
+        birthLatitude: formValues.birthLatitude,
+        birthLongitude: formValues.birthLongitude,
+        birthPlaceId: formValues.birthPlaceId,
+      });
+    }
 
     if (selectedAstroType === 'sync') {
       setCurrentStep('secondPerson');
@@ -110,8 +127,22 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
   };
 
-  const handleSecondPersonFormSubmit = () => {
+  const handleSecondPersonFormSubmit = async () => {
     if (!validateSecondPerson(formValues, setError)) return;
+
+    // Save second person's profile if checkbox is checked
+    if (saveSecondPersonToProfile && user) {
+      await saveProfile({
+        name: formValues.secondPersonName,
+        birthDate: formValues.secondPersonBirthDate,
+        birthTime: formValues.secondPersonBirthTime,
+        birthLocation: formValues.secondPersonBirthLocation,
+        birthLatitude: formValues.secondPersonLatitude,
+        birthLongitude: formValues.secondPersonLongitude,
+        birthPlaceId: formValues.secondPersonPlaceId,
+      });
+    }
+
     handleFormSubmission(formValues);
   };
 
@@ -245,6 +276,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 isProcessing={isProcessing}
                 isInsights={isInsights}
                 shouldDisableAnimations={shouldDisableAnimations}
+                saveToProfile={saveToProfile}
+                setSaveToProfile={setSaveToProfile}
               />
             ) : currentStep === 'secondPerson' ? (
               <AstroSecondPersonStep
@@ -260,6 +293,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 onSubmit={handleSecondPersonFormSubmit}
                 isProcessing={isProcessing}
                 shouldDisableAnimations={shouldDisableAnimations}
+                saveSecondPersonToProfile={saveSecondPersonToProfile}
+                setSaveSecondPersonToProfile={setSaveSecondPersonToProfile}
               />
             ) : null}
           </AnimatePresence>

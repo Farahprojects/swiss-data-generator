@@ -167,14 +167,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess, showAsPage = false }
   // ————————————————————————————————————————————————
   if (showForgotPassword) {
     return (
-      <ForgotPasswordForm
-        onCancel={() => setShowForgotPassword(false)}
-      />
+      <div className={showAsPage ? "min-h-screen flex items-start justify-center pt-24" : "space-y-6"}>
+        <div className={showAsPage ? "w-full max-w-md" : "space-y-6"}>
+          <ForgotPasswordForm
+            onCancel={() => setShowForgotPassword(false)}
+          />
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className={showAsPage ? "min-h-screen flex items-start justify-center pt-16" : "space-y-6"}>
+    <div className={showAsPage ? "min-h-screen flex items-start justify-center pt-24" : "space-y-6"}>
       <div className={showAsPage ? "w-full max-w-md" : "space-y-6"}>
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-light text-gray-900">Welcome back</h1>

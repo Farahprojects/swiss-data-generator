@@ -4,11 +4,11 @@ import { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'rea
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ProfileSelector } from '@/components/shared/forms/ProfileSelector';
-import { SaveProfileButton } from '@/components/shared/forms/SaveProfileButton';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
 import { ReportFormData } from '@/types/public-report';
@@ -25,6 +25,8 @@ interface AstroSecondPersonStepProps {
   onSubmit: () => void;
   isProcessing: boolean;
   shouldDisableAnimations: boolean;
+  saveSecondPersonToProfile: boolean;
+  setSaveSecondPersonToProfile: (value: boolean) => void;
 }
 
 const ErrorMsg = ({ msg }: { msg: string }) => (
@@ -46,6 +48,8 @@ export const AstroSecondPersonStep: React.FC<AstroSecondPersonStepProps> = ({
   onSubmit,
   isProcessing,
   shouldDisableAnimations,
+  saveSecondPersonToProfile,
+  setSaveSecondPersonToProfile,
 }) => {
   const formValues = watch();
 
@@ -85,37 +89,34 @@ export const AstroSecondPersonStep: React.FC<AstroSecondPersonStepProps> = ({
           {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
-            <ProfileSelector
-              onProfileSelect={(profile) => {
-                setValue('secondPersonName', profile.name);
-                setValue('secondPersonBirthDate', profile.birth_date);
-                setValue('secondPersonBirthTime', profile.birth_time);
-                setValue('secondPersonBirthLocation', profile.birth_location);
-                if (profile.birth_latitude) setValue('secondPersonLatitude', profile.birth_latitude);
-                if (profile.birth_longitude) setValue('secondPersonLongitude', profile.birth_longitude);
-                if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
-              }}
-              currentValue={formValues.secondPersonName}
-            />
-          </div>
+        <div>
+          <Label className="text-sm font-medium text-gray-700">Load Profile</Label>
+          <ProfileSelector
+            onProfileSelect={(profile) => {
+              setValue('secondPersonName', profile.name);
+              setValue('secondPersonBirthDate', profile.birth_date);
+              setValue('secondPersonBirthTime', profile.birth_time);
+              setValue('secondPersonBirthLocation', profile.birth_location);
+              if (profile.birth_latitude) setValue('secondPersonLatitude', profile.birth_latitude);
+              if (profile.birth_longitude) setValue('secondPersonLongitude', profile.birth_longitude);
+              if (profile.birth_place_id) setValue('secondPersonPlaceId', profile.birth_place_id);
+            }}
+            currentValue={formValues.secondPersonName}
+          />
+        </div>
 
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Save Profile</Label>
-            <SaveProfileButton
-              profileData={{
-                name: formValues.secondPersonName || '',
-                birthDate: formValues.secondPersonBirthDate || '',
-                birthTime: formValues.secondPersonBirthTime || '',
-                birthLocation: formValues.secondPersonBirthLocation || '',
-                birthLatitude: formValues.secondPersonLatitude,
-                birthLongitude: formValues.secondPersonLongitude,
-                birthPlaceId: formValues.secondPersonPlaceId,
-              }}
-            />
-          </div>
+        <div className="flex items-center space-x-2 py-2">
+          <Checkbox
+            id="save-second-person-profile"
+            checked={saveSecondPersonToProfile}
+            onCheckedChange={(checked) => setSaveSecondPersonToProfile(checked as boolean)}
+          />
+          <label
+            htmlFor="save-second-person-profile"
+            className="text-sm font-light text-gray-700 cursor-pointer select-none"
+          >
+            Save this profile for future use
+          </label>
         </div>
 
         <div>
