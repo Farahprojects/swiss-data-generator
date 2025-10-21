@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useChatStore } from '@/core/store';
 import { useMessageStore } from '@/stores/messageStore';
 import { Message } from '@/core/types';
@@ -88,16 +88,11 @@ const renderMessages = (messages: Message[], currentUserId?: string) => {
 export const MessageList = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   
-  // Use unified message store
-  const { 
-    messages, 
-    loading, 
-    error: windowError, 
-    hasOlder, 
-    loadOlder, 
-    setChatId 
-  } = useMessageStore();
-  
+  // ⚡ OPTIMIZED: Use selective subscriptions to prevent unnecessary re-renders
+  // Each selector only triggers re-render when its specific value changes
+  const messages = useMessageStore((state) => state.messages);
+  const windowError = useMessageStore((state) => state.error);
+  const loadOlder = useMessageStore((state) => state.loadOlder);
   
   // Unified store handles all messages via real-time subscriptions
   
@@ -124,13 +119,14 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
-  // Check if user has sent a message
+  // ⚡ OPTIMIZED: Check if user has sent a message - early exit to avoid redundant work
   React.useEffect(() => {
-    const userMessages = messages.filter(m => m.role === 'user');
-    if (userMessages.length > 0) {
+    if (hasUserSentMessage) return; // Already found a user message, skip
+    const hasUser = messages.some(m => m.role === 'user');
+    if (hasUser) {
       setHasUserSentMessage(true);
     }
-  }, [messages]);
+  }, [messages, hasUserSentMessage]);
 
   // Auto-scroll when content grows
   React.useEffect(() => {
@@ -139,6 +135,12 @@ export const MessageList = () => {
   }, [messages.length]);
 
   // Auto-scroll handled by messages.length changes
+
+  // ⚡ OPTIMIZED: Memoize rendered messages - prevents recreating JSX for unchanged messages
+  const renderedMessages = useMemo(() => 
+    renderMessages(messages, user?.id),
+    [messages, user?.id]
+  );
 
   // Render messages directly in message_number order - no complex turn grouping needed
 
@@ -185,7 +187,7 @@ export const MessageList = () => {
             <div className="flex flex-col p-4">
               {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
-              {renderMessages(messages, user?.id)}
+              {renderedMessages}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
               <div style={{ height: '80px' }} />

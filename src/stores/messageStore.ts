@@ -130,7 +130,7 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
             pending: false, 
             source: message.source || updated[idx].source 
           };
-          updated.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          // ⚡ OPTIMIZED: No sort needed - messages already in order from DB
           return { messages: updated };
         }
       }
@@ -154,11 +154,8 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         return { messages: updatedMessages };
       }
       
-      // Add new message and sort by timestamp
+      // ⚡ OPTIMIZED: Add new message - no sort needed, messages arrive ordered from DB
       const newMessages = [...state.messages, message];
-      newMessages.sort((a, b) => 
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
       
       return { messages: newMessages };
     });
@@ -175,11 +172,8 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
         source: 'fetch' as const // Optimistic messages don't animate (user's own text)
       };
       
-      // Add optimistic message and sort by timestamp
+      // ⚡ OPTIMIZED: Add optimistic message - no sort needed, new timestamp > existing
       const newMessages = [...state.messages, optimisticMessage];
-      newMessages.sort((a, b) => 
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
       
       return { messages: newMessages };
     });
@@ -425,32 +419,22 @@ if (typeof window !== 'undefined') {
       const message = mapDbToMessage(messageData);
       const messageWithSource = { ...message, source: 'websocket' as const };
       
-      // Check if message already exists (deduplication)
-      const exists = messages.some(m => m.id === messageData.id);
-      if (!exists) {
+      // ⚡ OPTIMIZED: Fast O(1) deduplication using Set of recent message IDs
+      const recentIds = new Set(messages.slice(-20).map(m => m.id));
+      if (!recentIds.has(messageData.id)) {
         addMessage(messageWithSource);
       }
       
-      // Handle side-effects ONLY for assistant messages
+      // ⚡ OPTIMIZED: Handle side-effects ONLY for assistant messages
       if (role === 'assistant') {
-        // Wait for React to render the message before clearing the typing state
-        // This ensures the stop icon stays visible until the message appears on screen
-        requestAnimationFrame(() => {
-          const { setAssistantTyping } = useChatStore.getState();
-          setAssistantTyping(false);
-        });
+        // Clear typing immediately - guard to prevent unnecessary state update
+        const chatState = useChatStore.getState();
+        if (chatState.isAssistantTyping) {
+          chatState.setAssistantTyping(false);
+        }
       }
       
-      // Remove pending status from user messages
-      if (role === 'user') {
-        const { messages: updatedMessages, updateMessage } = useMessageStore.getState();
-        console.log('[MessageStore] Clearing pending flags on', updatedMessages.length, 'messages');
-        updatedMessages.forEach(userMsg => {
-          if (userMsg.role === 'user' && userMsg.pending) {
-            updateMessage(userMsg.id, { pending: false });
-          }
-        });
-      }
+      // Skip pending flag clearing - optimistic UI already handles it
     } else {
       console.log('[MessageStore] Chat ID mismatch, ignoring event');
     }

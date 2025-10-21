@@ -31,11 +31,9 @@ export function useAutoScroll() {
   // Call this whenever messages length changes (or streaming chunk arrives)
   const onContentChange = useCallback(() => {
     if (autoScroll) {
-      // Use double rAF to ensure DOM is stable before scrolling
+      // ⚡ OPTIMIZED: Single rAF is sufficient - cuts scroll latency from ~32ms to ~16ms
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          bottomRef.current?.scrollIntoView({ block: "end" });
-        });
+        bottomRef.current?.scrollIntoView({ block: "end" });
       });
     }
   }, [autoScroll]);
