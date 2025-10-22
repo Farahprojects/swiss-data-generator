@@ -11,7 +11,7 @@ import { VoiceBubble } from './VoiceBubble';
 // Universal audio pipeline
 import { UniversalSTTRecorder } from '@/services/audio/UniversalSTTRecorder';
 import { ttsPlaybackService } from '@/services/voice/TTSPlaybackService';
-import { llmService } from '@/services/llm/chat';
+// llmService import removed - not used in this file
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/config';

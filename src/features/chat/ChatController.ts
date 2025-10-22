@@ -285,7 +285,8 @@ class ChatController {
       text: message,
       createdAt: new Date().toISOString(),
       status: 'thinking',
-      meta: { type: 'payment-progress' }
+      meta: { type: 'payment-progress' },
+      client_msg_id: `payment-progress-${Date.now()}`
     };
 
     addMessage(progressMessage);

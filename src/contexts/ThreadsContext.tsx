@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { Conversation } from '@/services/conversations';
+import { Conversation } from '@/core/types';
 
 interface ThreadsContextType {
   threads: Conversation[];
@@ -70,7 +70,7 @@ export const ThreadsProvider: React.FC<ThreadsProviderProps> = ({ children }) =>
       const conversationId = await createConversation(userId, mode, title);
       
       // Add new thread to local state immediately for instant UI feedback
-      const newThread = {
+      const newThread: Conversation = {
         id: conversationId,
         user_id: userId,
         title: title || 'New Chat',

@@ -117,7 +117,10 @@ export const ChatInput = () => {
         text: messageText,
         createdAt: new Date().toISOString(),
         status: 'thinking',
-        client_msg_id
+        client_msg_id,
+        mode: mode,
+        user_id: user?.id,
+        user_name: displayName || 'User'
       };
       
       const { addOptimisticMessage } = useMessageStore.getState();

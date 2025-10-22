@@ -21,7 +21,7 @@ import { useUserData } from "@/hooks/useUserData";
 export const SettingsModal = () => {
   const { isOpen, closeSettings, activePanel, setActivePanel } = useSettingsModal();
   const { signOut, user, loading } = useAuth();
-  const { isSubscriptionActive, setShowPaywall } = useSubscription();
+  const { isSubscriptionActive } = useSubscription();
   const { fetchData: fetchSettingsData } = useUserData();
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);

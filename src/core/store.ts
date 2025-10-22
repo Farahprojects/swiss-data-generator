@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { Message } from './types';
-import { Conversation } from '@/services/conversations';
+import { Message, Conversation } from './types';
 import { useMessageStore } from '@/stores/messageStore';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -266,7 +265,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       const conversationId = await createConversation(userId, mode, title, reportData);
       
       // Add new thread to local state immediately for instant UI feedback
-      const newThread = {
+      const newThread: Conversation = {
         id: conversationId,
         user_id: userId,
         title: title || 'New Chat',

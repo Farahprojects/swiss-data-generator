@@ -64,6 +64,7 @@ const mapDbToMessage = (db: any): StoreMessage => ({
   status: db.status,
   context_injected: db.context_injected,
   message_number: db.message_number,
+  mode: db.mode,
   source: 'fetch', // All DB-fetched messages are explicitly 'fetch' - no animation
 });
 

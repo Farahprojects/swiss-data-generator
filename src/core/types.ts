@@ -8,9 +8,22 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 type DbMessage = Database['public']['Tables']['messages']['Row'];
 
 // Extended message type with UI-only fields
-export interface Message extends Omit<DbMessage, 'created_at' | 'meta'> {
-  // Renamed fields for frontend convention
+export interface Message {
+  // Required DB fields
+  id: string;
+  chat_id: string;
+  role: string;
+  text: string;
+  status: string;
   createdAt: string; // maps to created_at
+  
+  // Optional DB fields
+  client_msg_id?: string;
+  context_injected?: boolean;
+  message_number?: number;
+  mode?: string;
+  user_id?: string;
+  user_name?: string;
   meta?: Record<string, any>; // typed from Json
   
   // UI-only fields (not in DB)
@@ -23,10 +36,21 @@ export interface Message extends Omit<DbMessage, 'created_at' | 'meta'> {
 type DbConversation = Database['public']['Tables']['conversations']['Row'];
 
 // Extended conversation type with UI-only fields
-export interface Conversation extends Omit<DbConversation, 'meta'> {
-  // Typed meta field
-  meta?: Record<string, any>; // typed from Json
+export interface Conversation {
+  // Required DB fields
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  
+  // Optional DB fields
+  title?: string | null;
+  mode?: string | null;
+  folder_id?: string | null;
+  is_public?: boolean | null;
+  owner_user_id?: string | null;
+  meta?: Record<string, any> | null; // typed from Json
   
   // UI-only fields (not in DB)
-  messages: Message[]; // Loaded separately, not a DB column
+  messages?: Message[]; // Loaded separately, not a DB column
 }
