@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: false, 
         error: "Internal server error",
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
         processing_time_ms: processingTime,
         timestamp: new Date().toISOString()
       }),

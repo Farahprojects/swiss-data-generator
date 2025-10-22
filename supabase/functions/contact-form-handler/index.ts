@@ -246,7 +246,8 @@ Deno.serve(async (req) => {
     };
     
     // Use Deno's waitUntil to handle the background task
-    if (typeof EdgeRuntime !== 'undefined') {
+    // @ts-ignore - EdgeRuntime check for Deno Deploy compatibility
+    if (typeof globalThis.EdgeRuntime !== 'undefined') {
       // @ts-ignore - EdgeRuntime is available in Deno Deploy
       EdgeRuntime.waitUntil(sendAutoReplyAsync());
       logMessage("Auto-reply email queued as background task", "info");

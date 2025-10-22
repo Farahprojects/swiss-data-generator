@@ -26,7 +26,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 auth: { persistSession: false }
 });
 
-const json = (status, data) =>
+const json = (status: number, data: any) =>
 new Response(JSON.stringify(data), {
 status,
 headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -100,11 +100,8 @@ console.error("[chat-send] LLM call failed:", err);
 // FIRE-AND-FORGET: DB insert (WebSocket + optimistic UI handle sync)
 supabase
 .from("messages")
-.insert(message, {
-onConflict: "client_msg_id",
-ignoreDuplicates: true,
-returning: "minimal"
-}).then(({ error }) => {
+.insert(message)
+.then(({ error }) => {
 if (error) {
 console.error("[chat-send] DB insert failed:", error);
 }

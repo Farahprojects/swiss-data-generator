@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
                 console.error(`❌ Stripe cleanup error for customer ${pm.stripe_customer_id}:`, stripeError)
                 await logToAdmin(supabase, user.id, 'stripe_customer_error', `Stripe cleanup failed for customer ${pm.stripe_customer_id}`, {
                   customer_id: pm.stripe_customer_id,
-                  error: stripeError.message
+                  error: stripeError instanceof Error ? stripeError.message : String(stripeError)
                 })
               }
             }
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
     } catch (stripeError) {
       console.error('❌ Stripe cleanup failed:', stripeError)
       await logToAdmin(supabase, user.id, 'stripe_cleanup_failed', 'Stripe cleanup failed but continuing with deletion', {
-        error: stripeError.message
+        error: stripeError instanceof Error ? stripeError.message : String(stripeError)
       })
       // Continue with deletion - don't let Stripe errors block account deletion
     }
@@ -196,8 +196,8 @@ Deno.serve(async (req) => {
       }
     } catch (dbError) {
       console.error('❌ Unexpected database error:', dbError)
-      await logToAdmin(supabase, user.id, 'database_cleanup_unexpected_error', `Unexpected database error: ${dbError.message}`, {
-        error: dbError.message
+      await logToAdmin(supabase, user.id, 'database_cleanup_unexpected_error', `Unexpected database error: ${dbError instanceof Error ? dbError.message : String(dbError)}`, {
+        error: dbError instanceof Error ? dbError.message : String(dbError)
       })
     }
 
@@ -241,13 +241,13 @@ Deno.serve(async (req) => {
 
     } catch (authError) {
       console.error('❌ Unexpected auth error:', authError)
-      await logToAdmin(supabase, user.id, 'auth_deletion_unexpected_error', `Unexpected auth deletion error: ${authError.message}`, {
-        error: authError.message
+      await logToAdmin(supabase, user.id, 'auth_deletion_unexpected_error', `Unexpected auth deletion error: ${authError instanceof Error ? authError.message : String(authError)}`, {
+        error: authError instanceof Error ? authError.message : String(authError)
       })
       
       return new Response(JSON.stringify({ 
         error: 'Unexpected error during authentication deletion',
-        details: authError.message 
+        details: authError instanceof Error ? authError.message : String(authError)
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -273,9 +273,9 @@ Deno.serve(async (req) => {
     
     // Try to log the error if we have the supabase client
     try {
-      await logToAdmin(supabase, 'unknown', 'unexpected_deletion_error', `Unexpected error in delete account function: ${error.message}`, {
-        error: error.message,
-        stack: error.stack
+      await logToAdmin(supabase, 'unknown', 'unexpected_deletion_error', `Unexpected error in delete account function: ${error instanceof Error ? error.message : String(error)}`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       })
     } catch (logError) {
       console.error('⚠️ Failed to log unexpected error:', logError)
@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

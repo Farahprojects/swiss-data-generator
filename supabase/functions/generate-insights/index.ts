@@ -246,7 +246,7 @@ async function generateInsight(systemPrompt: string, clientData: any, requestId:
   } catch (err) {
     console.error(`[${requestId}] Gemini API failed after retries:`, err);
     if ((err as any).skipRetry) {
-        throw new Error(`Permanent Gemini API error: ${err.message}`);
+        throw new Error(`Permanent Gemini API error: ${err instanceof Error ? err.message : String(err)}`);
     }
     throw err;
   }
@@ -345,7 +345,7 @@ Deno.serve(async (req) => {
     } catch (error) {
       return jsonResponse({
         error: "Failed to parse request body",
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
         requestId
       }, { status: 400 }, requestId);
     }

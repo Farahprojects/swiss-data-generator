@@ -63,15 +63,12 @@ Deno.serve(async (req) => {
     supabaseClient
       .from('geo_cache')
       .insert(placeDataToCache)
-      .then(({ error }) => {
-        if (error) {
-          console.error('❌ Failed to cache place data:', error);
+      .then(({ error: insertError }) => {
+        if (insertError) {
+          console.error('❌ Failed to cache place data:', insertError);
         } else {
           console.log('✅ Successfully cached place data (background)');
         }
-      })
-      .catch(err => {
-        console.error('❌ Cache insert failed:', err);
       });
     
     return new Response(JSON.stringify(placeDataToReturn), {
@@ -80,7 +77,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Edge function error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
