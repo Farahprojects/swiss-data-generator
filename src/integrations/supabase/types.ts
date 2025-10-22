@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_logs: {
@@ -708,19 +683,13 @@ export type Database = {
           client_msg_id: string | null
           context_injected: boolean | null
           created_at: string
-          error: Json | null
           id: string
-          latency_ms: number | null
           message_number: number
           meta: Json
           mode: string | null
-          model: string | null
-          reply_to_id: string | null
           role: string
           status: string | null
           text: string | null
-          token_count: number | null
-          updated_at: string | null
           user_id: string | null
           user_name: string | null
         }
@@ -729,19 +698,13 @@ export type Database = {
           client_msg_id?: string | null
           context_injected?: boolean | null
           created_at?: string
-          error?: Json | null
           id?: string
-          latency_ms?: number | null
           message_number?: number
           meta?: Json
           mode?: string | null
-          model?: string | null
-          reply_to_id?: string | null
           role: string
           status?: string | null
           text?: string | null
-          token_count?: number | null
-          updated_at?: string | null
           user_id?: string | null
           user_name?: string | null
         }
@@ -750,19 +713,13 @@ export type Database = {
           client_msg_id?: string | null
           context_injected?: boolean | null
           created_at?: string
-          error?: Json | null
           id?: string
-          latency_ms?: number | null
           message_number?: number
           meta?: Json
           mode?: string | null
-          model?: string | null
-          reply_to_id?: string | null
           role?: string
           status?: string | null
           text?: string | null
-          token_count?: number | null
-          updated_at?: string | null
           user_id?: string | null
           user_name?: string | null
         }
@@ -1970,9 +1927,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       queue_status: ["pending", "processing", "completed", "failed"],
