@@ -12,3 +12,4 @@ FROM pg_class
 WHERE oid = 'public.messages'::regclass;
 
 
+
