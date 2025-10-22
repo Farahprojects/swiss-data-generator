@@ -2,6 +2,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
+// Debug flag for production logging
+const DEBUG = import.meta.env.DEV;
+
 // Simplified WebSocket service - only for message fetching
 
 class UnifiedWebSocketService {
@@ -14,6 +17,7 @@ class UnifiedWebSocketService {
   private isColdReconnecting: boolean = false;
   private coldReconnectAttempts: number = 0;
   private wakeListenersAttached: boolean = false;
+  private subscribeToken: number = 0; // Guard against stale subscribe calls
 
   // No callbacks - just emit events
 
@@ -22,9 +26,10 @@ class UnifiedWebSocketService {
     // Attach wake listeners once
     if (!this.wakeListenersAttached) {
       this.wakeListenersAttached = true;
-             const wakeReconnect = this.debounce(() => {
-               this.coldReconnect();
-             }, 250);
+      // ⚡ OPTIMIZED: Use warm check on wake instead of cold reconnect
+      const wakeReconnect = this.debounce(() => {
+        void this.ensureConnected(); // Warm check - only reconnects if needed
+      }, 250);
 
       try {
         document.addEventListener('visibilitychange', () => {
@@ -50,6 +55,8 @@ class UnifiedWebSocketService {
    * Subscribe to a specific chat - just listen, emit events
    */
   async subscribe(chat_id: string) {
+    // 🔒 Increment token to invalidate stale subscriptions
+    this.subscribeToken++;
     this.currentChatId = chat_id;
     
     // Clean up existing subscription
@@ -107,6 +114,8 @@ class UnifiedWebSocketService {
   private async setupRealtimeSubscription(chat_id: string) {
     try {
       this.subscriptionRetryCount = 0;
+      // 🔒 Capture token to guard against stale callbacks
+      const currentToken = this.subscribeToken;
 
       this.realtimeChannel = supabase
         .channel(`unified-messages:${chat_id}`)
@@ -119,16 +128,23 @@ class UnifiedWebSocketService {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            // 🔒 Ignore if subscription is stale
+            if (currentToken !== this.subscribeToken) return;
+            
             const role = payload.new?.role;
             const messageId = payload.new?.id;
-            console.log(`[UnifiedWebSocket] 📥 ${role} message INSERT:`, { 
-              chat_id, 
-              message_id: messageId,
-              text_preview: payload.new?.text?.substring(0, 50)
-            });
+            
+            if (DEBUG) {
+              console.log(`[UnifiedWebSocket] 📥 ${role} message INSERT:`, { 
+                chat_id, 
+                message_id: messageId,
+                text_preview: payload.new?.text?.substring(0, 50)
+              });
+            }
             
             // Emit global event with full message data (no DB refetch needed)
-            console.log(`[UnifiedWebSocket] 🔔 Emitting message event with data for chat_id:`, chat_id);
+            if (DEBUG) console.log(`[UnifiedWebSocket] 🔔 Emitting message event with data for chat_id:`, chat_id);
+            
             window.dispatchEvent(new CustomEvent('assistant-message', { 
               detail: { 
                 chat_id, 
@@ -136,86 +152,91 @@ class UnifiedWebSocketService {
                 message: payload.new // ⚡ Pass full message data to avoid refetch
               }
             }));
-            console.log(`[UnifiedWebSocket] ✅ Event dispatched`);
+            
+            if (DEBUG) console.log(`[UnifiedWebSocket] ✅ Event dispatched`);
           }
         )
         .subscribe((status) => {
-          console.log(`[UnifiedWebSocket] 🔌 Status changed:`, status, `for chat_id: ${chat_id}`);
+          // 🔒 Ignore stale subscription callbacks
+          if (currentToken !== this.subscribeToken) return;
+          
+          if (DEBUG) console.log(`[UnifiedWebSocket] 🔌 Status changed:`, status, `for chat_id: ${chat_id}`);
           this.realtimeStatus = status as any;
           
-                 if (status === 'SUBSCRIBED') {
-                   console.log(`[UnifiedWebSocket] ✅ CONNECTED & LISTENING for chat_id: ${chat_id}`);
-                   this.subscriptionRetryCount = 0;
+          if (status === 'SUBSCRIBED') {
+            if (DEBUG) console.log(`[UnifiedWebSocket] ✅ CONNECTED & LISTENING for chat_id: ${chat_id}`);
+            this.subscriptionRetryCount = 0;
             this.coldReconnectAttempts = 0;
             if (this.connectTimeoutId !== null) {
               clearTimeout(this.connectTimeoutId);
               this.connectTimeoutId = null;
             }
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-            console.warn(`[UnifiedWebSocket] ⚠️ Connection failed:`, status);
+            if (DEBUG) console.warn(`[UnifiedWebSocket] ⚠️ Connection failed:`, status);
             this.coldReconnect();
           }
         });
     } catch (error) {
-      console.error('[UnifiedWebSocket] Failed to setup subscription:', error);
+      if (DEBUG) console.error('[UnifiedWebSocket] Failed to setup subscription:', error);
     }
   }
 
   /**
-   * Ensure WS is connected; if not, perform a cold reconnect.
+   * ⚡ OPTIMIZED: Warm check - only reconnects if actually disconnected
    */
   async ensureConnected() {
     if (!this.currentChatId) {
-      console.log('[UnifiedWebSocket] ensureConnected: no chat_id, skipping');
+      if (DEBUG) console.log('[UnifiedWebSocket] ensureConnected: no chat_id, skipping');
       return;
     }
     
     if (this.realtimeStatus !== 'SUBSCRIBED' || !this.realtimeChannel) {
-      console.log('[UnifiedWebSocket] ⚠️ Not connected (status:', this.realtimeStatus, 'channel:', !!this.realtimeChannel, ') - triggering cold reconnect');
+      if (DEBUG) console.log('[UnifiedWebSocket] ⚠️ Not connected (status:', this.realtimeStatus, 'channel:', !!this.realtimeChannel, ') - triggering cold reconnect');
       await this.coldReconnect();
     } else {
-      console.log('[UnifiedWebSocket] ✓ Already connected');
+      if (DEBUG) console.log('[UnifiedWebSocket] ✓ Already connected');
     }
   }
 
   /**
-   * Cold reconnect = teardown + rebind callbacks + resubscribe.
-   * Mirrors a lightweight browser refresh for WS stack.
+   * ⚡ OPTIMIZED: Cold reconnect - teardown + resubscribe
+   * Only refreshes auth if we got a CHANNEL_ERROR
    */
-         private async coldReconnect() {
-           if (this.isColdReconnecting) return;
-           this.isColdReconnecting = true;
-           try {
-
-      // Step 1: Refresh auth session
-      try {
-        const { data, error } = await supabase.auth.refreshSession();
-        if (error) {
-          console.error('[UnifiedWebSocket] Auth refresh failed:', error);
-               }
-      } catch (err) {
-        console.error('[UnifiedWebSocket] Auth refresh error:', err);
+  private async coldReconnect() {
+    if (this.isColdReconnecting) return;
+    this.isColdReconnecting = true;
+    try {
+      // ⚡ OPTIMIZED: Only refresh auth if we suspect token issues
+      if (this.realtimeStatus === 'CHANNEL_ERROR') {
+        try {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error && DEBUG) {
+            console.error('[UnifiedWebSocket] Auth refresh failed:', error);
+          }
+        } catch (err) {
+          if (DEBUG) console.error('[UnifiedWebSocket] Auth refresh error:', err);
+        }
       }
 
-      // Step 2: Hard teardown - remove old channel and wait for cleanup
+      // Hard teardown - remove old channel
       if (this.realtimeChannel) {
         const channelToRemove = this.realtimeChannel;
         this.realtimeChannel = null;
         
-               try {
-                 await supabase.removeChannel(channelToRemove);
-               } catch (err) {
-          console.error('[UnifiedWebSocket] Channel removal error:', err);
+        try {
+          await supabase.removeChannel(channelToRemove);
+        } catch (err) {
+          if (DEBUG) console.error('[UnifiedWebSocket] Channel removal error:', err);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // ⚡ OPTIMIZED: Removed artificial 100ms delay
       }
 
-      // Step 3: Resubscribe if chat is known
+      // Resubscribe if chat is known
       if (this.currentChatId) {
         await this.setupRealtimeSubscription(this.currentChatId);
         this.startConnectConfirmationTimer(() => {
-          console.warn('[UnifiedWebSocket] ⚠️ Cold reconnect failed');
+          if (DEBUG) console.warn('[UnifiedWebSocket] ⚠️ Cold reconnect failed');
         });
       }
     } finally {
@@ -224,22 +245,35 @@ class UnifiedWebSocketService {
   }
 
   /**
-   * Start a short timer to confirm connection; if not SUBSCRIBED, cold reconnect.
+   * ⚡ OPTIMIZED: Start confirmation timer - try warm reconnect first
    */
   private startConnectConfirmationTimer(onTimeout?: () => void) {
     if (this.connectTimeoutId !== null) {
       clearTimeout(this.connectTimeoutId);
     }
+    
+    // First timeout: warm check
     this.connectTimeoutId = window.setTimeout(() => {
-      this.connectTimeoutId = null;
       if (this.realtimeStatus !== 'SUBSCRIBED') {
-        this.coldReconnectAttempts += 1;
-        if (this.coldReconnectAttempts <= 1) {
-          this.coldReconnect();
-        } else if (onTimeout) {
-          onTimeout();
-        }
+        // Try warm reconnect first
+        void this.ensureConnected();
+        
+        // Second timeout: cold reconnect if still not connected
+        this.connectTimeoutId = window.setTimeout(() => {
+          this.connectTimeoutId = null;
+          if (this.realtimeStatus !== 'SUBSCRIBED') {
+            this.coldReconnectAttempts += 1;
+            if (this.coldReconnectAttempts <= 1) {
+              this.coldReconnect();
+            } else if (onTimeout) {
+              onTimeout();
+            }
+          } else {
+            this.coldReconnectAttempts = 0;
+          }
+        }, 600);
       } else {
+        this.connectTimeoutId = null;
         this.coldReconnectAttempts = 0;
       }
     }, this.connectTimeoutMs);
