@@ -1,8 +1,17 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
-import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 import { useChatStore } from '@/core/store';
 import type { Message } from '@/core/types';
+
+// Debug flag for production logging
+const DEBUG = import.meta.env.DEV;
+
+// Extended message type with UI-only metadata
+export type StoreMessage = Message & {
+  pending?: boolean;
+  tempId?: string;
+  source?: 'fetch' | 'websocket';
+};
 
 // Self-cleaning logic - only clean when explicitly needed
 const shouldSelfClean = async (): Promise<boolean> => {
@@ -26,16 +35,16 @@ const shouldSelfClean = async (): Promise<boolean> => {
 interface MessageStore {
   // State
   chat_id: string | null;
-  messages: Message[];
+  messages: StoreMessage[];
   loading: boolean;
   error: string | null;
   hasOlder: boolean;
   
   // Actions
   setChatId: (id: string | null) => void;
-  addMessage: (message: Message) => void;
-  addOptimisticMessage: (message: Message) => void;
-  updateMessage: (id: string, updates: Partial<Message>) => void;
+  addMessage: (message: StoreMessage) => void;
+  addOptimisticMessage: (message: StoreMessage) => void;
+  updateMessage: (id: string, updates: Partial<StoreMessage>) => void;
   clearMessages: () => void;
   fetchMessages: () => Promise<void>;
   fetchLatestAssistantMessage: (chat_id: string) => Promise<void>;
@@ -43,7 +52,7 @@ interface MessageStore {
   selfClean: () => void;
 }
 
-const mapDbToMessage = (db: any): Message => ({
+const mapDbToMessage = (db: any): StoreMessage => ({
   id: db.id,
   chat_id: db.chat_id,
   role: db.role,
@@ -72,22 +81,22 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
     const currentState = get();
     const currentChatId = currentState.chat_id;
     
-    
     // If switching to a different chat_id, clear messages
     // But preserve optimistic messages if they're for the new chat_id
     if (currentChatId !== id) {
       // If setting to null (no user logged in), clear everything
       if (id === null) {
-        console.log('[MessageStore] Setting to null, clearing all');
+        if (DEBUG) console.log('[MessageStore] Setting to null, clearing all');
         set({ chat_id: null, messages: [], error: null, hasOlder: false });
         return;
       }
       
-      const optimisticMessages = currentState.messages.filter(m => m.status === 'thinking');
-      const shouldPreserveOptimistic = optimisticMessages.some(m => m.chat_id === id);
+      // Preserve optimistic messages ONLY if they match the new chat_id
+      const optimisticMessages = currentState.messages.filter(
+        m => m.pending && m.chat_id === id
+      );
       
-      
-      if (shouldPreserveOptimistic) {
+      if (optimisticMessages.length > 0) {
         // Keep optimistic messages for the new chat_id
         set({ chat_id: id, messages: optimisticMessages, error: null });
       } else {
@@ -197,9 +206,10 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
       // ⚡ OPTIMIZED: Simple fetch - just get messages, RLS handles authorization
       fetchMessages: async () => {
-        const { chat_id } = get();
-        if (!chat_id) {
-          console.log('[MessageStore] fetchMessages: No chat_id, skipping');
+        // 🔒 Capture chat_id at start to prevent stale state writes
+        const fetchChatId = get().chat_id;
+        if (!fetchChatId) {
+          if (DEBUG) console.log('[MessageStore] fetchMessages: No chat_id, skipping');
           return;
         }
 
@@ -216,9 +226,16 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       const { data, error } = await supabase
         .from('messages')
         .select('id, chat_id, role, text, created_at, client_msg_id, status, context_injected, message_number, user_id, user_name')
-        .eq('chat_id', chat_id)
+        .eq('chat_id', fetchChatId)
         .order('created_at', { ascending: true })
         .limit(50);
+
+      // 🔒 Prevent stale state write if user switched chats during fetch
+      const currentChatId = get().chat_id;
+      if (currentChatId !== fetchChatId) {
+        if (DEBUG) console.log('[MessageStore] fetchMessages: Chat switched during fetch, ignoring stale result');
+        return;
+      }
 
       if (error) {
         // If RLS blocks access, user will get appropriate error
@@ -234,16 +251,16 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       });
       
     } catch (e: any) {
-      console.error('[MessageStore] Failed to fetch messages:', e.message, e);
+      if (DEBUG) console.error('[MessageStore] Failed to fetch messages:', e.message, e);
       set({ error: e.message, loading: false });
     }
   },
 
-  // Fetch latest assistant message from DB (WebSocket notification trigger)
+  // Fetch latest assistant message from DB (fallback - WebSocket should handle most cases)
   fetchLatestAssistantMessage: async (chat_id: string) => {
     if (!chat_id) return;
 
-    console.log('[MessageStore] fetchLatestAssistantMessage:', { chat_id });
+    if (DEBUG) console.log('[MessageStore] fetchLatestAssistantMessage:', { chat_id });
 
     try {
       const { data, error } = await supabase
@@ -258,38 +275,32 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       if (error) {
         // If no rows, that's ok - message might not be replicated yet
         if (error.code === 'PGRST116') {
-          console.log('[MessageStore] Assistant message not in DB yet, will arrive on next broadcast');
+          if (DEBUG) console.log('[MessageStore] Assistant message not in DB yet, will arrive on next broadcast');
           return;
         }
         throw error;
       }
 
       if (data) {
-        console.log('[MessageStore] Found assistant message:', { 
+        if (DEBUG) console.log('[MessageStore] Found assistant message:', { 
           id: data.id,
           text_preview: data.text?.substring(0, 50) 
         });
         
         const message = mapDbToMessage(data);
-        // Mark as WebSocket source for animation
-        const messageWithSource = { ...message, source: 'websocket' as const };
+        // Note: DB-fetched fallback, keep source as 'fetch' (no animation needed)
         
         // Check if we already have this message by ID
         const { messages } = get();
         const exists = messages.some(m => m.id === data.id);
         
-        console.log('[MessageStore] Message exists in store?', exists);
-        
         if (!exists) {
-          console.log('[MessageStore] Adding new assistant message to store');
-          useMessageStore.getState().addMessage(messageWithSource);
-          console.log('[MessageStore] Store now has', get().messages.length, 'messages');
-        } else {
-          console.log('[MessageStore] Message already in store, skipping');
+          if (DEBUG) console.log('[MessageStore] Adding new assistant message to store');
+          useMessageStore.getState().addMessage(message);
         }
       }
     } catch (e: any) {
-      console.error('[MessageStore] Failed to fetch latest assistant message:', e.message, e);
+      if (DEBUG) console.error('[MessageStore] Failed to fetch latest assistant message:', e.message, e);
     }
   },
 
@@ -327,42 +338,40 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
 
 }));
 
-// Cleanup function
-export const cleanupMessageStore = () => {
-  const channel = (useMessageStore as any)._channel;
-  if (channel) {
-    supabase.removeChannel(channel);
-    (useMessageStore as any)._channel = null;
-  }
-};
-
 // Self-cleaning mechanism - only called on auth state changes
 export const triggerMessageStoreSelfClean = async () => {
   await useMessageStore.getState().selfClean();
 };
 
-// Initialize message store - listen for WebSocket events
-if (typeof window !== 'undefined') {
+// 🔒 Initialize message store - listen for WebSocket events (one-time guard)
+if (typeof window !== 'undefined' && !(window as any).__msgStoreListenerInstalled) {
+  (window as any).__msgStoreListenerInstalled = true;
+  
   // Listen for message events from WebSocket
   window.addEventListener('assistant-message', async (event: any) => {
     const { chat_id, role, message: messageData } = event.detail;
-    console.log('[MessageStore] 🔔 Message event received:', { 
-      event_chat_id: chat_id,
-      role,
-      hasMessageData: !!messageData
-    });
+    
+    if (DEBUG) {
+      console.log('[MessageStore] 🔔 Message event received:', { 
+        event_chat_id: chat_id,
+        role,
+        hasMessageData: !!messageData
+      });
+    }
     
     const { addMessage, chat_id: currentChatId, messages } = useMessageStore.getState();
     
-    console.log('[MessageStore] Current store state:', { 
-      currentChatId, 
-      messageCount: messages.length,
-      matchesEvent: chat_id === currentChatId 
-    });
+    if (DEBUG) {
+      console.log('[MessageStore] Current store state:', { 
+        currentChatId, 
+        messageCount: messages.length,
+        matchesEvent: chat_id === currentChatId 
+      });
+    }
     
     // Only process if this is for the current chat
     if (chat_id === currentChatId && messageData) {
-      console.log('[MessageStore] ⚡ Using WebSocket payload directly (no DB refetch)');
+      if (DEBUG) console.log('[MessageStore] ⚡ Using WebSocket payload directly (no DB refetch)');
       
       // Use message data directly from WebSocket payload
       const message = mapDbToMessage(messageData);
@@ -382,9 +391,7 @@ if (typeof window !== 'undefined') {
           chatState.setAssistantTyping(false);
         }
       }
-      
-      // Skip pending flag clearing - optimistic UI already handles it
-    } else {
+    } else if (DEBUG && chat_id !== currentChatId) {
       console.log('[MessageStore] Chat ID mismatch, ignoring event');
     }
   });
