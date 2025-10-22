@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:shared-ui": "node scripts/build-shared-ui.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "migrate": "node migrate-to-firebase.js"
