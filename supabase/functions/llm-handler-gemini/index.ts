@@ -189,9 +189,14 @@ const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
 
 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const requestBody = {
-system_instruction: { role: "system", parts: [{ text: combinedSystemInstruction }] },
-contents,
-generationConfig: { temperature: 0.7 }
+  system_instruction: { role: "system", parts: [{ text: combinedSystemInstruction }] },
+  contents,
+  generationConfig: { 
+    temperature: 0.7,
+    thinkingConfig: {
+      thinkingBudget: 0
+    }
+  }
 };
 
 let llmStartedAt = Date.now();
