@@ -1,36 +1,32 @@
-export type ProviderName = 'openai' | 'google' | 'deepgram' | 'elevenlabs' | 'local';
+import { Database } from '@/integrations/supabase/types';
 
-// Timings removed
+export type ProviderName = 'openai' | 'google' | 'deepgram' | 'elevenlabs' | 'local';
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
-export interface Message {
-  id: string;
-  chat_id: string;
-  role: MessageRole;
-  text: string;
-  user_id?: string;
-  user_name?: string;
-  audioUrl?: string;
-  createdAt: string;
-  meta?: Record<string, any>;
-  client_msg_id?: string;
-  status?: 'thinking' | 'complete' | 'error';
-  context_injected?: boolean;
-  message_number?: number; // Global per-chat ordering key
+// Database message type - 100% aligned with Supabase schema
+type DbMessage = Database['public']['Tables']['messages']['Row'];
+
+// Extended message type with UI-only fields
+export interface Message extends Omit<DbMessage, 'created_at' | 'meta'> {
+  // Renamed fields for frontend convention
+  createdAt: string; // maps to created_at
+  meta?: Record<string, any>; // typed from Json
+  
+  // UI-only fields (not in DB)
   pending?: boolean; // Optimistic message flag
   tempId?: string; // Temporary ID for reconciliation
   source?: 'websocket' | 'fetch'; // Message source for animation logic
 }
 
-export interface Conversation {
-  id: string;
-  user_id?: string;
-  reportId?: string;
-  title?: string;
-  created_at: string;
-  updated_at: string;
-  meta?: Record<string, any>;
-  mode?: 'chat' | 'astro' | 'insight';
-  messages: Message[];
+// Database conversation type - 100% aligned with Supabase schema
+type DbConversation = Database['public']['Tables']['conversations']['Row'];
+
+// Extended conversation type with UI-only fields
+export interface Conversation extends Omit<DbConversation, 'meta'> {
+  // Typed meta field
+  meta?: Record<string, any>; // typed from Json
+  
+  // UI-only fields (not in DB)
+  messages: Message[]; // Loaded separately, not a DB column
 }

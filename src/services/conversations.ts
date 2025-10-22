@@ -1,16 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Conversation {
-  id: string;
-  user_id: string;
-  title?: string;
-  created_at: string;
-  updated_at: string;
-  meta?: Record<string, any> | null;
-  mode?: 'chat' | 'astro' | 'insight';
-  is_public?: boolean;
-  folder_id?: string | null;
-}
+import { Conversation } from '@/core/types';
 
 /**
  * Create a new conversation for an authenticated user using edge function
