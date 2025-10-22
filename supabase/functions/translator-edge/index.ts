@@ -292,7 +292,7 @@ Deno.serve(async (req)=>{
         name: parsed.name || parsed.person_a?.name || '',
         reportType: parsed.reportType,  // Changed from 'report' to 'reportType'
         request: parsed.request,
-        user_id: parsed.user_id,
+        user_id: (parsed as any).user_id,
         house_system: parsed.person_a?.house_system ?? withLatLon.house_system ?? "P",
       };
     }

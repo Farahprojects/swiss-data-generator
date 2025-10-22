@@ -265,14 +265,16 @@ Deno.serve(async (req) => {
       Object.assign(mergedPayload, parsedEmailBody);
       
       // Remove the original body field as we've now extracted its content
-      delete mergedPayload.body;
+      (mergedPayload as any).body = undefined;
+      delete (mergedPayload as any).body;
       
       console.log("[swiss] Final email payload after JSON parsing:", mergedPayload);
     } catch (parseError) {
       console.log("[swiss] Email body is not valid JSON, treating as plain text request");
       // Fall back to current behavior if not valid JSON
-      mergedPayload.request = String(bodyJson.body);
-      delete mergedPayload.body;
+      (mergedPayload as any).request = String(bodyJson.body);
+      (mergedPayload as any).body = undefined;
+      delete (mergedPayload as any).body;
     }
   }
 
@@ -284,9 +286,9 @@ Deno.serve(async (req) => {
     apiKey,
     userId: row.user_id,
     balance,
-    requestType: mergedPayload.request || "unknown",
+    requestType: (mergedPayload as any).request || "unknown",
     payload: mergedPayload
-  }, status, text).catch(err => console.error("[swiss] Logging failed:", err));
+  }, status, text).catch((err: unknown) => console.error("[swiss] Logging failed:", err));
 
   return new Response(text, { status, headers: corsHeaders });
 });

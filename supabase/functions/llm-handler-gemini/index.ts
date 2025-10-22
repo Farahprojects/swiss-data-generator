@@ -22,7 +22,7 @@ const corsHeaders = {
 "Vary": "Origin"
 };
 
-const json = (status, data) =>
+const json = (status: number, data: any) =>
 new Response(JSON.stringify(data), {
 status,
 headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -50,7 +50,7 @@ console.log("[llm-handler-gemini] 📊 Using model:", GEMINI_MODEL);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
 // Simple sanitizer: strips common markdown and extra whitespace
-function sanitizePlainText(input) {
+function sanitizePlainText(input: string) {
 const s = typeof input === "string" ? input : "";
 return s
 .replace(/```[\s\S]*?```/g, "") // code blocks
@@ -209,11 +209,11 @@ console.log("[llm-handler-gemini] ✅ Gemini API success, response time:", Date.
 } catch (e) {
 clearTimeout(timeout);
 console.error("[llm-handler-gemini] ❌ Gemini request exception:", {
-  error: e?.message || String(e),
-  name: e?.name,
-  stack: e?.stack
+  error: (e as any)?.message || String(e),
+  name: (e as any)?.name,
+  stack: (e as any)?.stack
 });
-return json(504, { error: `Gemini request error: ${e?.message || String(e)}` });
+return json(504, { error: `Gemini request error: ${(e as any)?.message || String(e)}` });
 }
 
 const llmLatencyMs = Date.now() - llmStartedAt;
@@ -222,7 +222,7 @@ const llmLatencyMs = Date.now() - llmStartedAt;
 let assistantText = "";
 try {
 const parts = data?.candidates?.[0]?.content?.parts || [];
-assistantText = parts.map((p) => p?.text || "").filter(Boolean).join(" ").trim();
+assistantText = parts.map((p: any) => p?.text || "").filter(Boolean).join(" ").trim();
 } catch {
 // ignore
 }

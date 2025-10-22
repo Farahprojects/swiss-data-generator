@@ -18,7 +18,7 @@ if (!GOOGLE_STT) throw new Error("Missing env: GOOGLE-STT-NEW");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const json = (status, data) =>
+const json = (status: number, data: any) =>
 new Response(JSON.stringify(data), {
 status,
 headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -33,7 +33,7 @@ if (lower.includes("mp3")) return { encoding: "MP3" };
 return { encoding: "ENCODING_UNSPECIFIED" };
 }
 
-function normalizeLanguageCode(language) {
+function normalizeLanguageCode(language: string) {
 if (!language) return "en-US";
 const lower = String(language).toLowerCase();
 if (lower === "en") return "en-US";
@@ -41,7 +41,7 @@ return language;
 }
 
 // Encode Uint8Array to base64 safely in chunks
-function base64EncodeUint8(bytes) {
+function base64EncodeUint8(bytes: Uint8Array) {
 let binary = "";
 const chunkSize = 8192;
 for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -53,11 +53,16 @@ binary += chunkStr;
 return btoa(binary);
 }
 
-async function transcribeWithGoogle({ apiKey, audioBytes, mimeType, languageCode }) {
-const encodingInfo = mapMimeToGoogleEncoding(mimeType);
+async function transcribeWithGoogle({ apiKey, audioBytes, mimeType, languageCode }: { 
+  apiKey: string; 
+  audioBytes: Uint8Array; 
+  mimeType: string; 
+  languageCode: string 
+}) {
+const encodingInfo = mapMimeToGoogleEncoding(mimeType) as { encoding: string; sampleRateHertz?: number };
 const audioContent = base64EncodeUint8(audioBytes);
 
-const config = {
+const config: any = {
 encoding: encodingInfo.encoding,
 languageCode,
 enableAutomaticPunctuation: true,
@@ -78,9 +83,9 @@ throw new Error(`Google STT error: ${resp.status} - ${errorText}`);
 const result = await resp.json();
 const transcript = Array.isArray(result.results)
 ? result.results
-.flatMap((r) => (Array.isArray(r.alternatives) ? r.alternatives : []))
-.map((a) => a?.transcript || "")
-.filter((t) => t && t.trim().length > 0)
+.flatMap((r: any) => (Array.isArray(r.alternatives) ? r.alternatives : []))
+.map((a: any) => a?.transcript || "")
+.filter((t: any) => t && t.trim().length > 0)
 .join(" ")
 : "";
 
@@ -191,6 +196,6 @@ if (chattype === "voice" && chat_id) {
 return json(200, { transcript });
 } catch (err) {
 console.error("[google-stt] Error:", err);
-return json(500, { error: err?.message || "Unknown error" });
+return json(500, { error: (err as any)?.message || "Unknown error" });
 }
 });

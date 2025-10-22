@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID().substring(0, 8);
-  const log = (...args) => console.log(`[VERIFY-EMAIL:${requestId}]`, ...args);
+  const log = (...args: any[]) => console.log(`[VERIFY-EMAIL:${requestId}]`, ...args);
 
   // Log request details
   log("🚀 Edge function started");
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
           message: verifyError.message,
           status: verifyError.status,
           code: verifyError.code,
-          details: verifyError.details
+          details: (verifyError as any).details
         } : null
       });
 
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
           message: verifyError.message,
           status: verifyError.status,
           code: verifyError.code,
-          details: verifyError.details,
+          details: (verifyError as any).details,
           fullError: verifyError
         });
         return new Response(JSON.stringify({

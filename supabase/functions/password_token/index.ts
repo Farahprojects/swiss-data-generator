@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     }
 
     // Extract token and OTP from the generated link
-    const actionLink = linkData?.action_link || linkData?.properties?.action_link || "";
+    const actionLink = (linkData as any)?.properties?.action_link || "";
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 

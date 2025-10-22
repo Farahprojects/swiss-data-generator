@@ -147,12 +147,12 @@ fireAndForget(
         mimeType: "audio/mpeg",
       },
     })
-    .then(({ error: broadcastError }) => {
-      if (broadcastError) {
-        console.error("[google-tts] Failed to broadcast:", broadcastError);
+    .then((response) => {
+      if (response === 'ok') {
+        console.log("[google-tts] Broadcast successful");
       }
     })
-    .catch((e) => console.error("[google-tts] Broadcast error:", e))
+    .catch((e: unknown) => console.error("[google-tts] Broadcast error:", e))
 );
 
 // Minimal response

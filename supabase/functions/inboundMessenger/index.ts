@@ -2,7 +2,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Supabase Setup ──
-const supabase = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "", 
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+);
 
 // ── Security Utilities ──
 const sanitizeString = (input: string, maxLength = 10000): string => {
@@ -67,8 +70,8 @@ const isValidDomainSlug = async (domain: string, slug: string): Promise<boolean>
     return false;
   }
 
-  const isValid = data[slug] === true;
-  console.log(`[inboundMessenger] ✅ DOMAIN/SLUG VALIDATION:`, { domain, slug, isValid, slugValue: data[slug] });
+  const isValid = (data as any)[slug] === true;
+  console.log(`[inboundMessenger] ✅ DOMAIN/SLUG VALIDATION:`, { domain, slug, isValid, slugValue: (data as any)[slug] });
   return isValid;
 };
 
@@ -224,7 +227,7 @@ Deno.serve(async (req) => {
   const sanitizedHeaders = sanitizeHeaders(raw_headers);
   
   // Sanitize and validate attachments
-  let sanitizedAttachments = [];
+  let sanitizedAttachments: any[] = [];
   let sanitizedAttachmentCount = 0;
   let sanitizedHasAttachments = false;
   

@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
           }
         }
       } catch (e) {
-        console.error(`[report-orchestrator] Error during age check:`, e.message);
+        console.error(`[report-orchestrator] Error during age check:`, (e as any).message);
       }
     }
     

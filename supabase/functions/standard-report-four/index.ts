@@ -238,7 +238,7 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     return await retryWithBackoff(callGeminiApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "Gemini API call");
   } catch (err) {
     if ((err as any).skipRetry) {
-        throw new Error(`Permanent Gemini API error: ${err.message}`);
+        throw new Error(`Permanent Gemini API error: ${(err as any).message}`);
     }
     throw err; // Propagate other errors
   }
@@ -385,8 +385,7 @@ Deno.serve(async (req) => {
       engine_used: reportData?.selectedEngine || "standard-report-four",
       created_at: new Date().toISOString(),
     })
-    .then(() => console.log(`${logPrefix} Logged error to report_logs.`))
-    .catch(err2 => console.error(`${logPrefix} Failed to log error to report_logs:`, err2));
+    .then(() => console.log(`${logPrefix} Logged error to report_logs.`));
     
     return jsonResponse({
       success: false,
