@@ -85,6 +85,9 @@ No labels , human led conversation
 Check-in: Close with a simple, open question.`;
 
 Deno.serve(async (req) => {
+const totalStartTime = Date.now();
+console.log("[llm-handler-gemini] ⏱️  Request received");
+
 if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
@@ -93,6 +96,7 @@ const startedAt = Date.now();
 let body;
 try {
 body = await req.json();
+console.log(`[llm-handler-gemini] ⏱️  JSON parsed (+${Date.now() - totalStartTime}ms)`);
 } catch {
 return json(400, { error: "Invalid JSON body" });
 }
@@ -118,6 +122,7 @@ let history: MessageRow[] = [];
 
 try {
   // ⚡ PARALLEL FETCH: System messages and history in parallel (~50-100ms saved)
+  console.log(`[llm-handler-gemini] ⏱️  Starting DB fetch for history (+${Date.now() - totalStartTime}ms)`);
   const [systemResult, historyResult] = await Promise.all([
     // Fetch system messages (context-injected, ordered oldest first)
     supabase
@@ -157,6 +162,7 @@ try {
   } else if (historyResult.error) {
     console.warn("[llm] history fetch warning:", historyResult.error.message);
   }
+  console.log(`[llm-handler-gemini] ⏱️  DB fetch complete (+${Date.now() - totalStartTime}ms) - Found ${history.length} history messages`);
 } catch (e: any) {
   console.warn("[llm] parallel fetch exception:", e?.message || String(e));
 }
@@ -191,7 +197,7 @@ generationConfig: { temperature: 0.7 }
 let llmStartedAt = Date.now();
 let data;
 try {
-console.log("[llm-handler-gemini] 🚀 Calling Gemini API...", {
+console.log(`[llm-handler-gemini] ⏱️  Starting Gemini API call (+${Date.now() - totalStartTime}ms)`, {
   model: GEMINI_MODEL,
   url: geminiUrl,
   chat_id: chat_id
@@ -205,7 +211,8 @@ signal: controller.signal
 });
 clearTimeout(timeout);
 
-console.log("[llm-handler-gemini] 📡 Gemini API response status:", resp.status);
+const geminiLatency = Date.now() - llmStartedAt;
+console.log(`[llm-handler-gemini] ⏱️  Gemini API responded (+${Date.now() - totalStartTime}ms) - Gemini took ${geminiLatency}ms - Status: ${resp.status}`);
 
 if (!resp.ok) {
   const errText = await resp.text().catch(() => "");
@@ -290,6 +297,7 @@ body: JSON.stringify({ text: sanitizedTextForTTS, voice: selectedVoice, chat_id 
 Promise.allSettled(tasks).catch(() => {});
 
 const totalLatencyMs = Date.now() - startedAt;
+console.log(`[llm-handler-gemini] ⏱️  Returning response (+${Date.now() - totalStartTime}ms) TOTAL - LLM: ${llmLatencyMs}ms`);
 
 return json(200, {
 text: assistantText, // ⚡ Return raw markdown to client

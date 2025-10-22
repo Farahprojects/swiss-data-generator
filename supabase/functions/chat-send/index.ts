@@ -33,6 +33,9 @@ headers: { ...corsHeaders, "Content-Type": "application/json" }
 });
 
 Deno.serve(async (req) => {
+const startTime = Date.now();
+console.log("[chat-send] ⏱️  Request received");
+
 if (req.method === "OPTIONS") {
 return new Response("ok", { headers: corsHeaders });
 }
@@ -44,6 +47,7 @@ return json(405, { error: "Method not allowed" });
 let body;
 try {
 body = await req.json();
+console.log(`[chat-send] ⏱️  JSON parsed (+${Date.now() - startTime}ms)`);
 } catch {
 return json(400, { error: "Invalid JSON body" });
 }
@@ -85,6 +89,8 @@ meta: {}
 // ⚡ FIRE-AND-FORGET: Start LLM immediately (non-blocking)
 const shouldStartLLM = role === "user" && chattype !== "voice";
 if (shouldStartLLM) {
+const llmStartTime = Date.now();
+console.log(`[chat-send] ⏱️  Firing LLM handler (+${Date.now() - startTime}ms)`);
 fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
 method: "POST",
 headers: {
@@ -92,22 +98,28 @@ headers: {
 "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
 },
 body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
+}).then(() => {
+console.log(`[chat-send] ⏱️  LLM handler fetch completed (+${Date.now() - llmStartTime}ms from fire)`);
 }).catch((err) => {
 console.error("[chat-send] LLM call failed:", err);
 });
 }
 
 // ⚡ FIRE-AND-FORGET: DB insert (WebSocket + optimistic UI handle sync)
+console.log(`[chat-send] ⏱️  Starting DB insert (+${Date.now() - startTime}ms)`);
 supabase
 .from("messages")
 .insert(message)
 .then(({ error }) => {
 if (error) {
 console.error("[chat-send] DB insert failed:", error);
+} else {
+console.log(`[chat-send] ⏱️  DB insert complete (+${Date.now() - startTime}ms)`);
 }
 });
 
 // Return immediately (no await, both operations already non-blocking)
+console.log(`[chat-send] ⏱️  Returning response (+${Date.now() - startTime}ms) TOTAL`);
 return json(200, {
 message: role === "assistant" ? "Assistant message saved" : "User message saved",
 saved: message,
