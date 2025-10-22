@@ -181,6 +181,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cascade_deletion_log: {
+        Row: {
+          deleted_at: string | null
+          id: string
+          parent_id: string
+          parent_table: string
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          deleted_at?: string | null
+          id?: string
+          parent_id: string
+          parent_table: string
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          deleted_at?: string | null
+          id?: string
+          parent_id?: string
+          parent_table?: string
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
       chat_folders: {
         Row: {
           created_at: string | null
@@ -675,7 +702,15 @@ export type Database = {
           summary?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_block_summaries_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -723,7 +758,15 @@ export type Database = {
           user_id?: string | null
           user_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       password_reset_tokens: {
         Row: {
@@ -1606,6 +1649,14 @@ export type Database = {
       bytea_to_text: {
         Args: { data: string }
         Returns: string
+      }
+      check_orphaned_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          orphaned_count: number
+          table_name: string
+          total_size_estimate: string
+        }[]
       }
       check_report_logs_constraints: {
         Args: Record<PropertyKey, never>
