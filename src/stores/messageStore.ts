@@ -47,7 +47,6 @@ interface MessageStore {
   updateMessage: (id: string, updates: Partial<StoreMessage>) => void;
   clearMessages: () => void;
   fetchMessages: () => Promise<void>;
-  fetchLatestAssistantMessage: (chat_id: string) => Promise<void>;
   loadOlder: () => Promise<void>;
   selfClean: () => void;
 }
@@ -255,56 +254,6 @@ export const useMessageStore = create<MessageStore>()((set, get) => ({
       set({ error: e.message, loading: false });
     }
   },
-
-  // Fetch latest assistant message from DB (fallback - WebSocket should handle most cases)
-  fetchLatestAssistantMessage: async (chat_id: string) => {
-    if (!chat_id) return;
-
-    if (DEBUG) console.log('[MessageStore] fetchLatestAssistantMessage:', { chat_id });
-
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('id, chat_id, role, text, created_at, client_msg_id, status, context_injected, message_number, user_id, user_name')
-        .eq('chat_id', chat_id)
-        .eq('role', 'assistant')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        // If no rows, that's ok - message might not be replicated yet
-        if (error.code === 'PGRST116') {
-          if (DEBUG) console.log('[MessageStore] Assistant message not in DB yet, will arrive on next broadcast');
-          return;
-        }
-        throw error;
-      }
-
-      if (data) {
-        if (DEBUG) console.log('[MessageStore] Found assistant message:', { 
-          id: data.id,
-          text_preview: data.text?.substring(0, 50) 
-        });
-        
-        const message = mapDbToMessage(data);
-        // Note: DB-fetched fallback, keep source as 'fetch' (no animation needed)
-        
-        // Check if we already have this message by ID
-        const { messages } = get();
-        const exists = messages.some(m => m.id === data.id);
-        
-        if (!exists) {
-          if (DEBUG) console.log('[MessageStore] Adding new assistant message to store');
-          useMessageStore.getState().addMessage(message);
-        }
-      }
-    } catch (e: any) {
-      if (DEBUG) console.error('[MessageStore] Failed to fetch latest assistant message:', e.message, e);
-    }
-  },
-
-
 
   // Load older messages (use timestamp ordering)
   loadOlder: async () => {

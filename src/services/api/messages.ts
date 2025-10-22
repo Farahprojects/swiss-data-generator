@@ -56,30 +56,3 @@ export const updateMessage = async (id: string, updates: Partial<Message>): Prom
     status: (data.status as Message['status']) || 'complete'
   } as Message;
 };
-
-export const getMessagesForConversation = async (chat_id: string): Promise<Message[]> => {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('chat_id', chat_id)
-    .order('message_number', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  
-  // Filter out context injection messages from UI display
-  return (data || [])
-    .filter(msg => !msg.context_injected)
-    .map(msg => ({
-      id: msg.id,
-      chat_id: msg.chat_id,
-      role: msg.role as Message['role'],
-      text: msg.text,
-      // audioUrl removed
-      // timings removed
-      createdAt: msg.created_at,
-      meta: (msg.meta as Record<string, any>) || {},
-      client_msg_id: msg.client_msg_id,
-      status: (msg.status as Message['status']) || 'complete',
-      message_number: msg.message_number
-    }));
-};
