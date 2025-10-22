@@ -1,9 +1,10 @@
--- Check for any triggers on messages table
-SELECT
-    tgname AS trigger_name,
-    pg_get_triggerdef(oid) AS trigger_definition
-FROM pg_trigger
-WHERE tgrelid = 'public.messages'::regclass
-  AND tgisinternal = false
-ORDER BY tgname;
-
+-- Check all triggers on messages table
+SELECT 
+    trigger_name,
+    event_manipulation,
+    action_timing,
+    action_statement
+FROM information_schema.triggers
+WHERE event_object_table = 'messages'
+  AND event_object_schema = 'public'
+ORDER BY trigger_name;

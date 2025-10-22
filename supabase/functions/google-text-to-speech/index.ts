@@ -46,6 +46,9 @@ for (let i = 0; i < drop; i++) cache.delete(oldest[i][0]);
 }
 
 async function synthesizeMP3(text: string, voiceName: string, signal?: AbortSignal): Promise<string> {
+  const ttsStartTime = Date.now();
+  console.log(`[google-tts] ⏱️ Starting Google TTS API call`);
+  
   const resp = await fetch(
     `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
 {
@@ -60,6 +63,8 @@ signal,
 }
 );
 
+  console.log(`[google-tts] ⏱️ Google TTS API responded in ${Date.now() - ttsStartTime}ms - Status: ${resp.status}`);
+
 if (!resp.ok) {
 const errText = await resp.text().catch(() => "");
 throw new Error(`Google TTS API error (${resp.status}): ${errText}`);
@@ -70,6 +75,7 @@ if (!json?.audioContent) {
 throw new Error("Google TTS API returned no audioContent");
 }
 
+  console.log(`[google-tts] ⏱️ Total TTS processing: ${Date.now() - ttsStartTime}ms`);
   // Return base64 string directly (no decode on server)
   return json.audioContent as string;
 }
@@ -99,7 +105,10 @@ return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
 try {
-const { chat_id, text, voice } = await req.json();
+const body = await req.json();
+console.log('[google-tts] 📦 RAW PAYLOAD:', JSON.stringify(body, null, 2));
+
+const { chat_id, text, voice } = body;
 
 if (!chat_id || !text) {
   throw new Error("Missing 'chat_id' or 'text' in request body.");
@@ -110,24 +119,31 @@ if (!voice) {
 
 const voiceName = `en-US-Chirp3-HD-${voice}`;
 
+console.log(`[google-tts] 📝 Text length: ${text.length} chars, Voice: ${voiceName}`);
+
 // cache + inflight de-dup
 const key = cacheKey(text, voiceName);
 let audioBase64 = getFromCache(key);
 if (!audioBase64) {
+  console.log('[google-tts] 💾 Cache MISS - calling Google TTS API');
   let pending = inflight.get(key);
   if (!pending) {
     // Optional: timeout to avoid hanging requests
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000); // 15s
+    const timeout = setTimeout(() => controller.abort(), 25000); // 25s (increased from 15s)
     pending = synthesizeMP3(text, voiceName, controller.signal)
       .finally(() => {
         clearTimeout(timeout);
         inflight.delete(key);
       });
     inflight.set(key, pending);
+  } else {
+    console.log('[google-tts] ⏳ Request already in-flight, waiting...');
   }
   audioBase64 = await pending;
   setCache(key, audioBase64);
+} else {
+  console.log('[google-tts] ✅ Cache HIT - returning cached audio');
 }
 
 const processingTime = Date.now() - startTime;
