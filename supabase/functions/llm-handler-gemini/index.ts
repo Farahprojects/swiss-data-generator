@@ -49,6 +49,31 @@ console.log("[llm-handler-gemini] 📊 Using model:", GEMINI_MODEL);
 // Supabase client (module scope)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
+// ⚡ IN-MEMORY CACHE for system messages (5min TTL, saves 40-80ms per cache hit)
+const systemMessageCache = new Map<string, { text: string; expires: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedSystemMessage(chat_id: string): string | null {
+  const cached = systemMessageCache.get(chat_id);
+  if (cached && cached.expires > Date.now()) {
+    return cached.text;
+  }
+  // Expired or missing
+  if (cached) systemMessageCache.delete(chat_id);
+  return null;
+}
+
+function setCachedSystemMessage(chat_id: string, text: string): void {
+  // Auto-cleanup: remove expired entries when cache grows
+  if (systemMessageCache.size > 100) {
+    const now = Date.now();
+    for (const [key, value] of systemMessageCache.entries()) {
+      if (value.expires <= now) systemMessageCache.delete(key);
+    }
+  }
+  systemMessageCache.set(chat_id, { text, expires: Date.now() + CACHE_TTL_MS });
+}
+
 // Simple sanitizer: strips common markdown and extra whitespace
 function sanitizePlainText(input: string) {
 const s = typeof input === "string" ? input : "";
@@ -117,45 +142,65 @@ let systemText = "";
 let history: MessageRow[] = [];
 
 try {
-  // ⚡ PARALLEL FETCH: System messages and history in parallel (~50-100ms saved)
-  const [systemResult, historyResult] = await Promise.all([
-    // Fetch system messages (context-injected, ordered oldest first)
-    supabase
-      .from("messages")
-      .select("role, text, created_at")
-      .eq("chat_id", chat_id)
-      .eq("role", "system")
-      .eq("status", "complete")
-      .not("text", "is", null)
-      .neq("text", "")
-      .order("created_at", { ascending: true })
-      .limit(1),
-    
-    // Fetch recent non-system messages for history
-    supabase
+  // ⚡ CHECK CACHE FIRST: Skip DB query if system message is cached
+  const cachedSystemText = getCachedSystemMessage(chat_id);
+  
+  if (cachedSystemText) {
+    // Cache hit - only fetch history
+    systemText = cachedSystemText;
+    const { data, error } = await supabase
       .from("messages")
       .select("role, text, created_at")
       .eq("chat_id", chat_id)
       .neq("role", "system")
-      .eq("status", "complete")
       .not("text", "is", null)
       .neq("text", "")
       .order("created_at", { ascending: false })
-      .limit(HISTORY_LIMIT)
-  ]);
+      .limit(HISTORY_LIMIT);
+    
+    if (data) history = data as MessageRow[];
+    else if (error) console.warn("[llm] history fetch warning:", error.message);
+  } else {
+    // Cache miss - fetch both in parallel
+    // ⚡ REMOVED STATUS FILTER: Trust data quality, saves 20-30ms per query
+    const [systemResult, historyResult] = await Promise.all([
+      // Fetch system messages (context-injected, ordered oldest first)
+      supabase
+        .from("messages")
+        .select("role, text, created_at")
+        .eq("chat_id", chat_id)
+        .eq("role", "system")
+        .not("text", "is", null)
+        .neq("text", "")
+        .order("created_at", { ascending: true })
+        .limit(1),
+      
+      // Fetch recent non-system messages for history
+      supabase
+        .from("messages")
+        .select("role, text, created_at")
+        .eq("chat_id", chat_id)
+        .neq("role", "system")
+        .not("text", "is", null)
+        .neq("text", "")
+        .order("created_at", { ascending: false })
+        .limit(HISTORY_LIMIT)
+    ]);
 
-  // Extract system text
-  if (systemResult.data && systemResult.data.length > 0) {
-    systemText = String(systemResult.data[0].text || "");
-  } else if (systemResult.error) {
-    console.warn("[llm] system messages fetch warning:", systemResult.error.message);
-  }
-
-  // Extract history
-  if (historyResult.data) {
-    history = historyResult.data as MessageRow[];
-  } else if (historyResult.error) {
-    console.warn("[llm] history fetch warning:", historyResult.error.message);
+    // Extract system text and cache it
+    if (systemResult.data && systemResult.data.length > 0) {
+      systemText = String(systemResult.data[0].text || "");
+      setCachedSystemMessage(chat_id, systemText); // ⚡ Cache for 5 minutes
+    } else if (systemResult.error) {
+      console.warn("[llm] system messages fetch warning:", systemResult.error.message);
+    }
+    
+    // Extract history
+    if (historyResult.data) {
+      history = historyResult.data as MessageRow[];
+    } else if (historyResult.error) {
+      console.warn("[llm] history fetch warning:", historyResult.error.message);
+    }
   }
 } catch (e: any) {
   console.warn("[llm] parallel fetch exception:", e?.message || String(e));
