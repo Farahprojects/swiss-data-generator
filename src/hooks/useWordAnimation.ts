@@ -11,17 +11,18 @@ interface WordAnimationResult {
  * Used for streaming message animation effect like ChatGPT
  * 
  * @param text - Complete message text to animate
+ * @param shouldAnimate - Whether to animate (false for loaded/refreshed messages)
  * @param initialDelay - Optional initial delay before starting animation (ms)
  * @returns Object with animatedText and isAnimating flag
  */
-export function useWordAnimation(text: string, initialDelay?: number): WordAnimationResult {
+export function useWordAnimation(text: string, shouldAnimate: boolean = true, initialDelay?: number): WordAnimationResult {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   const isConversationOpen = useConversationUIStore((state) => state.isConversationOpen);
 
   useEffect(() => {
-    // Skip animation if Conversation Mode is open or no text
-    if (!text || isConversationOpen) {
+    // Skip animation if not supposed to animate, Conversation Mode is open, or no text
+    if (!text || !shouldAnimate || isConversationOpen) {
       setDisplayedText(text);
       setIsAnimating(false);
       return;
@@ -75,7 +76,7 @@ export function useWordAnimation(text: string, initialDelay?: number): WordAnima
     }, initialDelay || 0);
 
     return () => clearTimeout(startAnimationDelay);
-  }, [text, isConversationOpen, initialDelay]);
+  }, [text, shouldAnimate, isConversationOpen, initialDelay]);
 
   return { animatedText: displayedText, isAnimating };
 }

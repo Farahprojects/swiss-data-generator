@@ -35,8 +35,10 @@ UserMessage.displayName = 'UserMessage';
 
 // ⚡ MEMOIZED ASSISTANT MESSAGE - Only re-renders when message data changes
 const AssistantMessage = React.memo(({ message }: { message: Message }) => {
-  const { text, pending } = message;
-  const { animatedText, isAnimating } = useWordAnimation(text || '');
+  const { text, pending, source } = message;
+  // Only animate fresh WebSocket messages, not loaded/refreshed messages
+  const shouldAnimate = source === 'websocket';
+  const { animatedText, isAnimating } = useWordAnimation(text || '', shouldAnimate);
   const displayText = isAnimating ? animatedText : text || '';
 
   return (
@@ -70,10 +72,11 @@ const AssistantMessage = React.memo(({ message }: { message: Message }) => {
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Re-render if text or id changed (new message or updated message)
+  // Re-render if text, id, or source changed (new message or updated message)
   return prevProps.message.id === nextProps.message.id && 
          prevProps.message.text === nextProps.message.text &&
-         prevProps.message.pending === nextProps.message.pending;
+         prevProps.message.pending === nextProps.message.pending &&
+         prevProps.message.source === nextProps.message.source;
 });
 AssistantMessage.displayName = 'AssistantMessage';
 
