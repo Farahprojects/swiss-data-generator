@@ -82,32 +82,37 @@ user_name: user_name ?? null,
 meta: {}
 };
 
-// FIRE-AND-FORGET: Start LLM immediately
 const shouldStartLLM = role === "user" && chattype !== "voice";
+
+// ⚡ ULTRA FIRE-AND-FORGET: Queue LLM call in microtask (zero blocking)
 if (shouldStartLLM) {
+queueMicrotask(() => {
 fetch(`${SUPABASE_URL}/functions/v1/llm-handler-gemini`, {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-},
-body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+  },
+  body: JSON.stringify({ chat_id, text, mode, user_id, user_name })
 }).catch((err) => {
-console.error("[chat-send] LLM call failed:", err);
+  console.error("[chat-send] LLM call failed:", err);
+});
 });
 }
 
-// FIRE-AND-FORGET: DB insert (WebSocket + optimistic UI handle sync)
+// ⚡ ULTRA FIRE-AND-FORGET: Queue DB insert in microtask (zero blocking)
+queueMicrotask(() => {
 supabase
 .from("messages")
 .insert(message)
 .then(({ error }) => {
-if (error) {
-console.error("[chat-send] DB insert failed:", error);
-}
+  if (error) {
+    console.error("[chat-send] DB insert failed:", error);
+  }
+});
 });
 
-// Return immediately (no await)
+// ⚡ INSTANT RETURN: No waiting for LLM or DB (both queued in microtasks)
 return json(200, {
 message: role === "assistant" ? "Assistant message saved" : "User message saved",
 saved: message,
