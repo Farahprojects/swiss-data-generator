@@ -148,11 +148,10 @@ if (!audioBase64) {
 
 const processingTime = Date.now() - startTime;
 
-// Fire-and-forget WebSocket broadcast (unchanged payload shape)
+// Fire-and-forget HTTP broadcast (explicit REST API delivery)
+const channel = supabase.channel(`conversation:${chat_id}`);
 fireAndForget(
-  supabase
-    .channel(`conversation:${chat_id}`)
-    .send({
+  channel.send({
       type: "broadcast",
       event: "tts-ready",
       payload: {
@@ -162,13 +161,18 @@ fireAndForget(
         chat_id,
         mimeType: "audio/mpeg",
       },
-    })
+    }, { httpSend: true })
     .then((response) => {
       if (response === 'ok') {
         console.log("[google-tts] Broadcast successful");
       }
+      // Clean up channel
+      channel.unsubscribe();
     })
-    .catch((e: unknown) => console.error("[google-tts] Broadcast error:", e))
+    .catch((e: unknown) => {
+      console.error("[google-tts] Broadcast error:", e);
+      channel.unsubscribe();
+    })
 );
 
 // Minimal response
