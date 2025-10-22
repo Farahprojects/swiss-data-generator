@@ -5,7 +5,10 @@ import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
+import { useWordAnimation } from '@/hooks/useWordAnimation';
 import { Button } from '@/components/ui/button';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 // TypewriterText removed - keeping source field logic for future use
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -31,17 +34,47 @@ const UserMessage = React.memo(({ message, isOwn }: { message: Message; isOwn: b
 UserMessage.displayName = 'UserMessage';
 
 // ⚡ MEMOIZED ASSISTANT MESSAGE - Only re-renders when message data changes
-const AssistantMessage = React.memo(({ message }: { message: Message }) => (
-  <div className="flex items-end gap-3 justify-start mb-8">
-    <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
-      <p className="text-base font-light leading-relaxed text-left selectable-text">
-        <span className="whitespace-pre-wrap">
-          {message.text || ''}
-        </span>
-      </p>
+const AssistantMessage = React.memo(({ message }: { message: Message }) => {
+  const { text, pending } = message;
+  const { animatedText, isAnimating } = useWordAnimation(text || '');
+  const displayText = isAnimating ? animatedText : text || '';
+
+  return (
+    <div className="flex items-end gap-3 justify-start mb-8">
+      <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+        <div className="text-base font-light leading-relaxed text-left selectable-text prose prose-sm max-w-none">
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Customize rendering to match your design system
+              p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+              strong: ({node, ...props}) => <strong className="font-medium" {...props} />,
+              em: ({node, ...props}) => <em className="italic" {...props} />,
+              code: ({node, ...props}) => {
+                const isInline = !props.className?.includes('language-');
+                return isInline ? 
+                  <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props} /> :
+                  <code className="block bg-gray-100 p-2 rounded text-sm overflow-x-auto" {...props} />;
+              },
+              ul: ({node, ...props}) => <ul className="list-disc ml-4 mb-2" {...props} />,
+              ol: ({node, ...props}) => <ol className="list-decimal ml-4 mb-2" {...props} />,
+            }}
+          >
+            {displayText}
+          </ReactMarkdown>
+        </div>
+        {pending && (
+          <div className="text-xs text-gray-500 mt-1 italic">Thinking...</div>
+        )}
+      </div>
     </div>
-  </div>
-));
+  );
+}, (prevProps, nextProps) => {
+  // Re-render if text or id changed (new message or updated message)
+  return prevProps.message.id === nextProps.message.id && 
+         prevProps.message.text === nextProps.message.text &&
+         prevProps.message.pending === nextProps.message.pending;
+});
 AssistantMessage.displayName = 'AssistantMessage';
 
 // Simple message rendering - no complex turn grouping needed with message_number ordering

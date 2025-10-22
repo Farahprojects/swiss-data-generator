@@ -228,7 +228,8 @@ assistantText = parts.map((p) => p?.text || "").filter(Boolean).join(" ").trim()
 }
 if (!assistantText) return json(502, { error: "No response text from Gemini" });
 
-const sanitizedText = sanitizePlainText(assistantText) || assistantText;
+// Sanitize text for TTS only (strip markdown for voice)
+const sanitizedTextForTTS = sanitizePlainText(assistantText) || assistantText;
 
 // Usage metadata (if present)
 const usage = {
@@ -251,7 +252,7 @@ method: "POST",
 headers,
 body: JSON.stringify({
 chat_id,
-text: sanitizedText,
+text: assistantText, // ⚡ Save raw markdown to DB for formatted display
 client_msg_id: assistantClientId,
 role: "assistant",
 mode,
@@ -268,7 +269,7 @@ tasks.push(
 fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
 method: "POST",
 headers,
-body: JSON.stringify({ text: sanitizedText, voice: selectedVoice, chat_id })
+body: JSON.stringify({ text: sanitizedTextForTTS, voice: selectedVoice, chat_id }) // ⚡ Sanitized for TTS
 })
 );
 }
@@ -278,7 +279,7 @@ Promise.allSettled(tasks).catch(() => {});
 const totalLatencyMs = Date.now() - startedAt;
 
 return json(200, {
-text: sanitizedText,
+text: assistantText, // ⚡ Return raw markdown to client
 usage,
 llm_latency_ms: llmLatencyMs,
 total_latency_ms: totalLatencyMs
