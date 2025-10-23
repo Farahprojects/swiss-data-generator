@@ -1,7 +1,7 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/*──────────────── ENV ----------------------------------------------------*/
+/*──────────────── ENV --------------------------------------------------*/
 const SWISS_API = Deno.env.get("SWISS_EPHEMERIS_URL")!;
 const SB_URL    = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
