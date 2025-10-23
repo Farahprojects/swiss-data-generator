@@ -9,8 +9,7 @@ import './index.css';
 import { initDevConsoleFilter } from './utils/devConsoleFilter';
 // One-time cleanup of old storage keys
 import { cleanupOldStorage } from './utils/cleanupOldStorage';
-// Initialize WebSocket early for fast message fetching
-import './stores/initializeApp';
+// Initialize WebSocket early for fast message fetching - removed chat functionality
 
 // Force deploy - 2025-06-29
 if (typeof window !== 'undefined') {
