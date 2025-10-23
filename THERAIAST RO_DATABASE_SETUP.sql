@@ -147,59 +147,16 @@ CREATE POLICY "Service role can manage translator_logs"
 
 
 -- ============================================================================
--- 5. API_KEYS TABLE (For Swiss Function API Authentication)
+-- 5. API_KEYS TABLE (OPTIONAL - Not needed for basic app)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS api_keys (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-    email TEXT,
-    api_key TEXT UNIQUE NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    last_used_at TIMESTAMPTZ
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX IF NOT EXISTS idx_api_keys_email ON api_keys(email);
-CREATE INDEX IF NOT EXISTS idx_api_keys_api_key ON api_keys(api_key);
-
--- RLS for api_keys
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own api_keys"
-    ON api_keys FOR SELECT
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Service role can manage api_keys"
-    ON api_keys FOR ALL
-    USING (auth.jwt() ->> 'role' = 'service_role');
+-- Removed - Swiss function not used in simplified app
+-- Users authenticate through Supabase auth, not API keys
 
 
 -- ============================================================================
--- 6. SWISSDEBUGLOGS TABLE (Swiss Function Debug Logging)
+-- 6. SWISSDEBUGLOGS TABLE (REMOVED - Swiss function not used)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS swissdebuglogs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    api_key TEXT,
-    user_id UUID,
-    balance_usd NUMERIC(10,2),
-    request_type TEXT,
-    request_payload JSONB,
-    response_status INTEGER,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Index for querying
-CREATE INDEX IF NOT EXISTS idx_swissdebuglogs_created ON swissdebuglogs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_swissdebuglogs_user_id ON swissdebuglogs(user_id);
-
--- RLS
-ALTER TABLE swissdebuglogs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Service role can manage swissdebuglogs"
-    ON swissdebuglogs FOR ALL
-    USING (auth.jwt() ->> 'role' = 'service_role');
+-- Removed - App uses translator-edge directly, not swiss gateway
 
 
 -- ============================================================================
@@ -261,15 +218,9 @@ CREATE POLICY "Service role can manage payment methods"
 
 
 -- ============================================================================
--- 9. DATABASE VIEW: v_api_key_balance (For Swiss function balance checks)
+-- 9. DATABASE VIEW: v_api_key_balance (REMOVED - Not needed)
 -- ============================================================================
-CREATE OR REPLACE VIEW v_api_key_balance AS
-SELECT 
-    a.api_key,
-    a.user_id,
-    100.00 AS balance_usd  -- Default balance for all users (or customize logic)
-FROM api_keys a
-WHERE a.is_active = true;
+-- Removed - No API key system in simplified app
 
 
 -- ============================================================================
@@ -292,16 +243,13 @@ CREATE TRIGGER update_profiles_updated_at
 -- ============================================================================
 -- SUMMARY OF TABLES
 -- ============================================================================
--- Core Tables:
+-- Core Tables (5 total):
 -- 1. profiles - User accounts with subscription status
 -- 2. price_list - Subscription pricing ($30/year plan)
 -- 3. geo_cache - Geocoding cache for translator-edge
 -- 4. translator_logs - Translator function activity logs
--- 5. api_keys - API key authentication for swiss function
--- 6. swissdebuglogs - Swiss function debug logs
--- 7. stripe_webhook_events - Stripe webhook audit trail
--- 8. payment_method - Payment method tracking
--- 9. v_api_key_balance - View for balance checking
+-- 5. stripe_webhook_events - Stripe webhook audit trail
+-- 6. payment_method - Payment method tracking (optional)
 
 -- IMPORTANT: 
 -- - Replace 'YOUR_STRIPE_PRICE_ID_HERE' with your actual Stripe price ID

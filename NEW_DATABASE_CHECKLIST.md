@@ -68,39 +68,7 @@
 
 ---
 
-### 5. **api_keys** (API Authentication)
-**Purpose**: API key authentication for swiss function
-
-**Key Columns**:
-- `id` - UUID
-- `user_id` - UUID (links to profiles)
-- `email` - Text
-- `api_key` - Text UNIQUE
-- `is_active` - Boolean
-- `created_at`, `last_used_at` - Timestamps
-
-**Why**: Swiss function checks this for authentication
-
----
-
-### 6. **swissdebuglogs** (Swiss Function Logs)
-**Purpose**: Debug logging for swiss function
-
-**Key Columns**:
-- `id` - UUID
-- `api_key` - Text
-- `user_id` - UUID
-- `balance_usd` - Numeric
-- `request_type` - Text
-- `request_payload` - JSONB
-- `response_status` - Integer
-- `created_at` - Timestamp
-
-**Why**: Swiss function debugging
-
----
-
-### 7. **stripe_webhook_events** (Webhook Audit)
+### 5. **stripe_webhook_events** (Webhook Audit)
 **Purpose**: Store all incoming Stripe webhook events
 
 **Key Columns**:
@@ -116,7 +84,7 @@
 
 ---
 
-### 8. **payment_method** (Optional)
+### 6. **payment_method** (Optional)
 **Purpose**: Track user payment methods
 
 **Key Columns**:
@@ -131,17 +99,6 @@
 
 ---
 
-### 9. **v_api_key_balance** (Database View)
-**Purpose**: View for balance checking in swiss function
-
-**Returns**:
-- `api_key` - Text
-- `user_id` - UUID
-- `balance_usd` - Numeric
-
-**Why**: Swiss function queries this to check user balance
-
----
 
 ## 🚀 Setup Instructions
 
@@ -180,15 +137,16 @@ SWISS_EPHEMERIS_URL=https://your-swiss-api.com
 
 ### Step 4: Deploy Edge Functions
 ```bash
-# Deploy all functions
+# Deploy essential functions only
 supabase functions deploy translator-edge
-supabase functions deploy swiss
 supabase functions deploy create-subscription-checkout
 supabase functions deploy stripe-webhook-handler
 supabase functions deploy check-subscription
 supabase functions deploy customer-portal
 supabase functions deploy cancel-subscription
 ```
+
+**Note**: `swiss` function removed - app calls `translator-edge` directly
 
 ### Step 5: Configure Stripe Webhooks
 1. Go to Stripe Dashboard > Webhooks
