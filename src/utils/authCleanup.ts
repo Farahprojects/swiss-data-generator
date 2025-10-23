@@ -2,11 +2,7 @@
  * Utility for cleaning up authentication state to prevent limbo states
  */
 export const cleanupAuthState = async () => {
-  // Clear chat stores first (downstream from auth)
-  try {
-    // Clear message store using dynamic import (works in browser)
-    const { triggerMessageStoreSelfClean } = await import('@/stores/messageStore');
-    await triggerMessageStoreSelfClean();
+  // Chat functionality removed - no cleanup needed
     
     // Clear chat store using dynamic import (works in browser)
     const { useChatStore } = await import('@/core/store');

@@ -1,4 +1,4 @@
-import { useChatStore } from '@/core/store';
+// Removed chat store import - no longer using chat functionality
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useLocation } from 'react-router-dom';
 

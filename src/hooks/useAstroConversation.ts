@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useChatStore } from '@/core/store';
-import { chatController } from '@/features/chat/ChatController';
+// Removed chat functionality - no longer needed
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
