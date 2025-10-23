@@ -125,6 +125,9 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
           {isMobile ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                  Birth Date * <span className="text-xs text-gray-500 font-normal">(DD/MM/YYYY)</span>
+                </label>
                 <InlineDateTimeSelector
                   type="date"
                   value={formValues.birthDate || ''}
@@ -139,6 +142,9 @@ export const AstroDetailsStep: React.FC<AstroDetailsStepProps> = ({
                 {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
               </div>
               <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                  Birth Time *
+                </label>
                 <InlineDateTimeSelector
                   type="time"
                   value={formValues.birthTime || ''}

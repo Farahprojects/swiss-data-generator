@@ -55,6 +55,42 @@ const baseSchema = z.object({
   return false;
 }, { message: "Provide 'utc' or 'local', or a birth_date + birth_time pair." });
 
+/** Parse YYYY-MM-DD date string explicitly */
+function parseISODate(dateStr: string): { year: number; month: number; day: number } {
+  // Validate format: YYYY-MM-DD
+  const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = dateStr.match(isoDatePattern);
+  
+  if (!match) {
+    throw new Error(`Invalid date format: ${dateStr}. Expected YYYY-MM-DD (e.g., 1990-12-25)`);
+  }
+  
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  
+  // Validate ranges
+  if (year < 1800 || year > 2100) {
+    throw new Error(`Invalid year: ${year}. Must be between 1800-2100`);
+  }
+  if (month < 1 || month > 12) {
+    throw new Error(`Invalid month: ${month}. Must be between 01-12 in date: ${dateStr}`);
+  }
+  if (day < 1 || day > 31) {
+    throw new Error(`Invalid day: ${day}. Must be between 01-31 in date: ${dateStr}`);
+  }
+  
+  // Validate it's a real date (e.g., not Feb 30)
+  const testDate = new Date(Date.UTC(year, month - 1, day));
+  if (testDate.getUTCFullYear() !== year || 
+      testDate.getUTCMonth() !== month - 1 || 
+      testDate.getUTCDate() !== day) {
+    throw new Error(`Invalid date: ${dateStr}. This date does not exist (e.g., Feb 30)`);
+  }
+  
+  return { year, month, day };
+}
+
 /** Parse various timestamp combos into an ISO‑UTC string. */
 export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; birth_time?: string; location?: string }): string {
   if (parts.local) {
@@ -71,18 +107,18 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
 
   if (actualDate) {
     if (actualTime) {
-      const birthDate = new Date(actualDate);
-      if (isNaN(birthDate.getTime())) {
-        console.error('[translator-edge] Invalid birth_date:', actualDate);
-        throw new Error(`Invalid birth_date: ${actualDate}. Expected ISO format (YYYY-MM-DD), got: ${actualDate}`);
-      }
-      const year = birthDate.getUTCFullYear();
-      const month = birthDate.getUTCMonth();
-      const day = birthDate.getUTCDate();
+      // Parse date explicitly
+      const { year, month, day } = parseISODate(actualDate);
+      
       const [H, M] = actualTime.split(":" as const).map(Number);
+      if (isNaN(H) || isNaN(M) || H < 0 || H > 23 || M < 0 || M > 59) {
+        throw new Error(`Invalid time: ${actualTime}. Expected HH:MM format (00:00 to 23:59)`);
+      }
+      
       const tz = parts.tz || "UTC";
       
-      const provisional = new Date(Date.UTC(year, month, day, H, M));
+      // Use month - 1 because JS Date months are 0-indexed
+      const provisional = new Date(Date.UTC(year, month - 1, day, H, M));
       
       try {
         const fmt = new Intl.DateTimeFormat("en-US", {
@@ -105,11 +141,9 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
         return provisional.toISOString();
       }
     }
-    const d = new Date(actualDate);
-    if (isNaN(d.getTime())) {
-      console.error('[translator-edge] Invalid date (no time):', actualDate);
-      throw new Error(`Invalid date: ${actualDate}. Expected ISO format (YYYY-MM-DD)`);
-    }
+    // Parse date explicitly even without time
+    const { year, month, day } = parseISODate(actualDate);
+    const d = new Date(Date.UTC(year, month - 1, day));
     return d.toISOString();
   }
 

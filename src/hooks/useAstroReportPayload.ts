@@ -6,22 +6,29 @@ export const useAstroReportPayload = () => {
   const { user } = useAuth();
   const { mode: contextMode } = useMode();
 
-  const convertDateFormat = (dateStr: string): string => {
-    if (!dateStr) return dateStr;
-    if (dateStr.includes('-') && dateStr.length === 10) return dateStr;
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/');
-      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-        const [day, month, year] = parts;
-        return `${year}-${month}-${day}`;
-      }
+  const validateDateFormat = (dateStr: string, fieldName: string): string => {
+    if (!dateStr) {
+      throw new Error(`${fieldName} is required`);
     }
+    
+    // Expect YYYY-MM-DD format (10 chars, 2 hyphens)
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!isoDatePattern.test(dateStr)) {
+      throw new Error(`${fieldName} must be in YYYY-MM-DD format, got: ${dateStr}`);
+    }
+    
+    // Validate it's a real date
+    const date = new Date(dateStr + 'T00:00:00Z');
+    if (isNaN(date.getTime())) {
+      throw new Error(`${fieldName} is not a valid date: ${dateStr}`);
+    }
+    
     return dateStr;
   };
 
   const buildReportPayload = (data: ReportFormData, selectedAstroType: string) => {
     const personA: any = {
-      birth_date: convertDateFormat(data.birthDate),
+      birth_date: validateDateFormat(data.birthDate, 'Birth date'),
       birth_time: data.birthTime,
       location: data.birthLocation,
       latitude: data.birthLatitude,
@@ -41,7 +48,7 @@ export const useAstroReportPayload = () => {
     // Add person_b for compatibility requests
     if (selectedAstroType === 'sync' && data.secondPersonName) {
       const personB: any = {
-        birth_date: convertDateFormat(data.secondPersonBirthDate),
+        birth_date: validateDateFormat(data.secondPersonBirthDate, 'Second person birth date'),
         birth_time: data.secondPersonBirthTime,
         location: data.secondPersonBirthLocation,
         latitude: data.secondPersonLatitude,

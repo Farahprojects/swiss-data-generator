@@ -258,7 +258,9 @@ export const ProfilesPanel = () => {
             {isMobile ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Birth Date *</Label>
+                  <Label className="text-sm font-medium text-gray-700">
+                    Birth Date * <span className="text-xs text-gray-500 font-normal">(DD/MM/YYYY)</span>
+                  </Label>
                   <InlineDateTimeSelector
                     type="date"
                     value={birthDate}
