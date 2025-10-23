@@ -1,58 +1,36 @@
 import React, { lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Auth from './pages/auth/Auth';
 import { AuthGuard } from './components/auth/AuthGuard';
-import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
-import Contact from './pages/Contact';
-import About from './pages/About';
-import Legal from './pages/Legal';
-import Pricing from './pages/Pricing';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useIsNativeApp } from '@/hooks/use-native-app';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import ChatContainer from './pages/ChatContainer';
 import Index from './pages/Index';
-import MobileLanding from './pages/MobileLanding';
+import Generate from './pages/Generate';
+import SystemPrompts from './pages/SystemPrompts';
+import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
 const EmbeddedCheckout = lazy(() => import('./pages/EmbeddedCheckout'));
-import Beats from './pages/Beats';
 
 // This shell contains all routes that can rely on context providers. Providers are now applied at the App root.
 const AuthedAppShell: React.FC = () => {
-  const isMobile = useIsMobile();
-  const isNativeApp = useIsNativeApp();
-
   return (
     <Routes>
-      {/* Main public route - show MobileLanding on mobile, Index on desktop */}
-      <Route path="/" element={
-        isMobile ? <MobileLanding /> : <Index />
-      } />
+      {/* Main public landing page */}
+      <Route path="/" element={<Index />} />
       
-      {/* Public routes */}
-      <Route path="/about" element={<About />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/legal" element={<Legal />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/blog" element={<Blog />} />
-      <Route path="/blog/:slug" element={<BlogPost />} />
-      
-      {/* Auth routes - redirect mobile users to landing page */}
-      <Route path="/login" element={
-        isMobile ? <Navigate to="/" replace /> : <Login />
-      } />
-      <Route path="/signup" element={
-        isMobile ? <Navigate to="/" replace /> : <Signup />
-      } />
+      {/* Auth routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/auth/password" element={<Auth />} />
       <Route path="/auth/email" element={<Auth />} />
+      
+      {/* Main app pages - REQUIRES AUTH */}
+      <Route path="/generate" element={<AuthGuard><Generate /></AuthGuard>} />
+      <Route path="/prompts" element={<AuthGuard><SystemPrompts /></AuthGuard>} />
       
       {/* Payment/subscription routes */}
       <Route path="/subscription" element={<SubscriptionPaywall />} />
@@ -61,15 +39,11 @@ const AuthedAppShell: React.FC = () => {
       <Route path="/cancel" element={<SubscriptionPaywall />} />
       <Route path="/stripe" element={<EmbeddedCheckout />} />
       
-      {/* Auth routes - /c/:thread_id - REQUIRES AUTH */}
-      <Route path="/c/:threadId" element={<AuthGuard><ChatContainer /></AuthGuard>} />
-      
-      {/* Auth clean page - no auto thread creation */}
-      <Route path="/therai" element={<AuthGuard><ChatContainer /></AuthGuard>} />
-      
-      {/* Protected routes */}
+      {/* Settings */}
       <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
-      <Route path="/beats" element={<Beats />} />
+      
+      {/* Legal */}
+      <Route path="/legal" element={<Legal />} />
       
       {/* 404 */}
       <Route path="*" element={<NotFound />} />

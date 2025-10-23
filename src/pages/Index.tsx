@@ -1,147 +1,203 @@
-import React, { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Star, Clock, Shield } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import UnifiedNavigation from '@/components/UnifiedNavigation';
-import Footer from '@/components/Footer';
+import { useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLandingPageImages } from '@/hooks/useLandingPageImages';
-
-/**
- * Desktop Landing / Index page with Know Your [Self, Mind, Bae, Soul, Will] hero
- */
-
-// Animation helpers
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.6, ease: "easeOut" },
-  }),
-};
+import { Button } from '@/components/ui/button';
+import { Sparkles, Database, Code2 } from 'lucide-react';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { data: imageConfig } = useLandingPageImages();
 
-  // Rotating words for the "Your..." animation
-  const rotatingWords = ['Self', 'Mind', 'Bae', 'Soul', 'Will'];
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-
-  // Word rotation effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentWordIndex((prev) => (prev + 1) % rotatingWords.length);
-    }, 3000); // Change word every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [rotatingWords.length]);
-
-  // Redirect authenticated users to chat
+  // Redirect authenticated users to generate page
   if (!loading && user) {
-    return <Navigate to="/therai" replace />;
+    return <Navigate to="/generate" replace />;
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <UnifiedNavigation />
+      
+      {/* Simple Header */}
+      <header className="border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+          <div className="text-2xl font-light italic text-gray-900">
+            Swiss Data Generator
+          </div>
+          <div className="flex gap-4">
+            <Button
+              onClick={() => window.location.href = '/login'}
+              variant="outline"
+              className="font-light"
+            >
+              Sign In
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/signup'}
+              className="bg-gray-900 hover:bg-gray-800 font-light"
+            >
+              Get Started
+            </Button>
+          </div>
+        </div>
+      </header>
 
-      <main className="flex-grow overflow-hidden">
-        {/* Hero Section with Know Your [rotating words] */}
-        <section className="relative h-screen w-full flex items-center justify-center bg-white overflow-hidden">
-          {/* Subtle animated background */}
-          <div className="absolute inset-0">
-            <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/20 rounded-full animate-pulse"></div>
-            <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/30 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+      {/* Hero Section */}
+      <main className="flex-grow">
+        <section className="max-w-4xl mx-auto px-6 py-24 text-center space-y-8">
+          
+          <h1 className="text-6xl font-light italic text-gray-900">
+            Generate Swiss<br />Astrology Data
+          </h1>
+          
+          <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto">
+            Create accurate astrological data in JSON format. 
+            Perfect for AI applications and astrology tools.
+          </p>
+
+          <div className="flex gap-4 justify-center pt-6">
+            <Button
+              onClick={() => window.location.href = '/signup'}
+              size="lg"
+              className="bg-gray-900 hover:bg-gray-800 text-lg font-light px-8 py-6 rounded-xl"
+            >
+              Start Generating Data
+            </Button>
           </div>
 
-          <div className="relative z-10 w-full md:px-4 md:container md:mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="max-w-5xl mx-auto space-y-12"
-            >
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-gray-900 leading-tight">
-                Know
-                <br />
-                <span className="italic font-medium flex items-center justify-center gap-x-4 flex-wrap">
-                  <span>Your</span>
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={currentWordIndex}
-                      initial={{ opacity: 0, rotateX: 90 }}
-                      animate={{ opacity: 1, rotateX: 0 }}
-                      exit={{ opacity: 0, rotateX: -90 }}
-                      transition={{ duration: 0.3 }}
-                      className="inline-block text-left min-w-[4rem] overflow-visible transform-gpu"
-                      style={{
-                        willChange: 'transform',
-                        backfaceVisibility: 'hidden'
-                      }}
-                    >
-                      {rotatingWords[currentWordIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                </span>
-              </h1>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.8 }}
-                className="mb-16"
-              >
-                <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-                  Psychological insights that create momentum
-                </p>
-              </motion.div>
+          <p className="text-sm text-gray-500 font-light pt-4">
+            Only $30/year for unlimited access
+          </p>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.4, duration: 0.6 }}
-                className="flex justify-center items-center gap-6 text-sm text-gray-500 font-medium mb-12"
-              >
-                <div className="flex items-center gap-2 group">
-                  <Star className="h-4 w-4 transition-transform group-hover:scale-110" />
-                  <span>Analyse</span>
-                </div>
-                <div className="flex items-center gap-2 group">
-                  <Clock className="h-4 w-4 transition-transform group-hover:scale-110" />
-                  <span>Instant</span>
-                </div>
-                <div className="flex items-center gap-2 group">
-                  <Shield className="h-4 w-4 transition-transform group-hover:scale-110" />
-                  <span>Private</span>
-                </div>
-              </motion.div>
+        </section>
 
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.0, duration: 0.6 }}
-                className="space-y-8"
-              >
-                <Link to="/signup">
-                  <Button 
-                    size="lg" 
-                    className="bg-primary text-white px-12 py-6 rounded-xl text-lg font-medium hover:bg-primary-hover transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
-                  >
-                    Begin Your Journey
-                  </Button>
-                </Link>
-              </motion.div>
-            </motion.div>
+        {/* Features Grid */}
+        <section className="max-w-6xl mx-auto px-6 py-24">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            
+            <div className="space-y-4 text-center">
+              <div className="flex justify-center">
+                <div className="p-4 rounded-full bg-gray-100">
+                  <Database className="w-8 h-8 text-gray-900" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-light italic text-gray-900">
+                Swiss Ephemeris
+              </h3>
+              <p className="text-gray-600 font-light">
+                Powered by the industry-standard Swiss Ephemeris engine for accurate astronomical calculations
+              </p>
+            </div>
+
+            <div className="space-y-4 text-center">
+              <div className="flex justify-center">
+                <div className="p-4 rounded-full bg-gray-100">
+                  <Code2 className="w-8 h-8 text-gray-900" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-light italic text-gray-900">
+                JSON Output
+              </h3>
+              <p className="text-gray-600 font-light">
+                Get clean, structured JSON data ready to use in your AI applications and tools
+              </p>
+            </div>
+
+            <div className="space-y-4 text-center">
+              <div className="flex justify-center">
+                <div className="p-4 rounded-full bg-gray-100">
+                  <Sparkles className="w-8 h-8 text-gray-900" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-light italic text-gray-900">
+                System Prompts
+              </h3>
+              <p className="text-gray-600 font-light">
+                Pre-built system prompts to help you integrate astrology AI into your applications
+              </p>
+            </div>
+
           </div>
         </section>
+
+        {/* How It Works */}
+        <section className="bg-gray-50 py-24">
+          <div className="max-w-4xl mx-auto px-6">
+            <h2 className="text-4xl font-light italic text-gray-900 text-center mb-16">
+              How It Works
+            </h2>
+            <div className="space-y-8">
+              
+              <div className="flex items-start gap-6">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-light text-xl">
+                  1
+                </div>
+                <div>
+                  <h3 className="text-xl font-light italic text-gray-900 mb-2">Sign Up</h3>
+                  <p className="text-gray-600 font-light">
+                    Create your account with a simple $30/year subscription
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-6">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-light text-xl">
+                  2
+                </div>
+                <div>
+                  <h3 className="text-xl font-light italic text-gray-900 mb-2">Generate Data</h3>
+                  <p className="text-gray-600 font-light">
+                    Enter birth details and select chart type to generate Swiss ephemeris data
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-6">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-light text-xl">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-xl font-light italic text-gray-900 mb-2">Copy & Use</h3>
+                  <p className="text-gray-600 font-light">
+                    Copy the JSON output and paste directly into your AI application
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="py-24">
+          <div className="max-w-4xl mx-auto px-6 text-center space-y-6">
+            <h2 className="text-4xl font-light italic text-gray-900">
+              Ready to Start Generating?
+            </h2>
+            <p className="text-xl text-gray-600 font-light">
+              Join today for just $30/year
+            </p>
+            <Button
+              onClick={() => window.location.href = '/signup'}
+              size="lg"
+              className="bg-gray-900 hover:bg-gray-800 text-lg font-light px-8 py-6 rounded-xl"
+            >
+              Create Your Account
+            </Button>
+          </div>
+        </section>
+
       </main>
 
-      <Footer />
+      {/* Footer */}
+      <footer className="border-t border-gray-200 py-8">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex justify-between items-center text-sm text-gray-500 font-light">
+            <div>© 2025 Swiss Data Generator</div>
+            <div className="flex gap-6">
+              <a href="/legal" className="hover:text-gray-900">Legal</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 };
