@@ -3,13 +3,6 @@
  */
 export const cleanupAuthState = async () => {
   // Chat functionality removed - no cleanup needed
-    
-    // Clear chat store using dynamic import (works in browser)
-    const { useChatStore } = await import('@/core/store');
-    useChatStore.getState().clearAllData();
-  } catch (error) {
-    console.warn('Could not clear chat stores during auth cleanup:', error);
-  }
   
   // Clear all Supabase auth keys from localStorage (comprehensive patterns)
   Object.keys(localStorage).forEach((key) => {
