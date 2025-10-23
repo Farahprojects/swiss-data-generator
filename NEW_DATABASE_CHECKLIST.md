@@ -68,7 +68,27 @@
 
 ---
 
-### 5. **stripe_webhook_events** (Webhook Audit)
+### 5. **email_notification_templates** (Email Templates)
+**Purpose**: Store email templates for verification, welcome, and support emails
+
+**Key Columns**:
+- `id` - UUID
+- `template_type` - Text UNIQUE (e.g., 'email_verification', 'welcome_email', 'support_email')
+- `subject` - Text (email subject line)
+- `body_html` - Text (HTML email body)
+- `body_text` - Text (plain text fallback)
+- `created_at`, `updated_at` - Timestamps
+
+**Pre-loaded Templates**:
+- `email_verification` - Email verification link
+- `support_email` - Contact form submissions
+- `welcome_email` - Welcome message after subscription
+
+**Why**: Email verification and communication system
+
+---
+
+### 6. **stripe_webhook_events** (Webhook Audit)
 **Purpose**: Store all incoming Stripe webhook events
 
 **Key Columns**:
@@ -84,7 +104,7 @@
 
 ---
 
-### 6. **payment_method** (Optional)
+### 7. **payment_method** (Optional)
 **Purpose**: Track user payment methods
 
 **Key Columns**:
