@@ -1,53 +1,10 @@
 -- ============================================================================
--- EXACT EMAIL NOTIFICATION TEMPLATES COPY
+-- COPY EXACT EMAIL TEMPLATES - For Existing Table
 -- Copy/paste this entire file into your TheraiAstro Supabase SQL Editor
 -- ============================================================================
 
--- Create table with exact structure
-CREATE TABLE IF NOT EXISTS "public"."email_notification_templates" (
-    "id" uuid DEFAULT gen_random_uuid() NOT NULL,
-    "template_type" text NOT NULL,
-    "subject" text NOT NULL,
-    "body_html" text NOT NULL,
-    "body_text" text NOT NULL,
-    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
-
--- Add primary key and unique constraint
-ALTER TABLE ONLY "public"."email_notification_templates"
-    ADD CONSTRAINT "email_notification_templates_pkey" PRIMARY KEY ("id");
-
-ALTER TABLE ONLY "public"."email_notification_templates"
-    ADD CONSTRAINT "email_notification_templates_template_type_key" UNIQUE ("template_type");
-
--- Enable RLS
-ALTER TABLE "public"."email_notification_templates" ENABLE ROW LEVEL SECURITY;
-
--- Add RLS policy
-CREATE POLICY "Allow all users to view email templates" 
-    ON "public"."email_notification_templates" 
-    FOR SELECT 
-    USING (true);
-
--- Add trigger for updated_at
-CREATE OR REPLACE FUNCTION update_email_templates_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_email_templates_updated_at
-    BEFORE UPDATE ON "public"."email_notification_templates"
-    FOR EACH ROW
-    EXECUTE FUNCTION update_email_templates_updated_at();
-
--- Grant permissions
-GRANT ALL ON TABLE "public"."email_notification_templates" TO "anon";
-GRANT ALL ON TABLE "public"."email_notification_templates" TO "authenticated";
-GRANT ALL ON TABLE "public"."email_notification_templates" TO "service_role";
+-- Drop existing templates (if any)
+TRUNCATE TABLE email_notification_templates;
 
 -- Insert EXACT templates with original IDs and timestamps
 INSERT INTO email_notification_templates (id, template_type, subject, body_html, body_text, created_at, updated_at)
@@ -167,12 +124,7 @@ VALUES
 </div>',
     'Hi there,\n\nThanks for reaching out to Theria. We''ve received your message and our team will get back to you within 24 hours.\n\nTalk soon,\nThe Theria Team\nhttps://therai.co',
     '2025-05-23 07:06:43.214809+00',
-    '2025-09-23 23:43:31.357269+00')
-ON CONFLICT (template_type) DO UPDATE SET
-    subject = EXCLUDED.subject,
-    body_html = EXCLUDED.body_html,
-    body_text = EXCLUDED.body_text,
-    updated_at = EXCLUDED.updated_at;
+    '2025-09-23 23:43:31.357269+00');
 
 -- Verify templates were copied
 SELECT template_type, subject, created_at, updated_at 
