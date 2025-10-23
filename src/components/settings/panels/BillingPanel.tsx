@@ -56,8 +56,7 @@ export const BillingPanel: React.FC = () => {
       const { data: plansData, error: plansError } = await supabase
         .from('price_list')
         .select('*')
-        .eq('endpoint', 'subscription')
-        .neq('id', 'test_50c');
+        .eq('endpoint', 'subscription');
 
       if (!plansError && plansData) {
         setAvailablePlans(plansData);
@@ -112,6 +111,7 @@ export const BillingPanel: React.FC = () => {
     // Map plan names to UI-friendly names
     if (planName === 'Growth' || planName.includes('15')) return 'Growth';
     if (planName === 'Premium' || planName.includes('25')) return 'Premium';
+    if (planName === 'Test Plan' || planName.includes('Test')) return 'Test';
     return planName;
   };
 
