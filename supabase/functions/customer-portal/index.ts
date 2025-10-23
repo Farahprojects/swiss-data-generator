@@ -44,10 +44,46 @@ Deno.serve(async (req) => {
     const customerId = customers.data[0].id;
     const origin = req.headers.get("origin") || "https://api.therai.co";
 
-    // Create billing portal session
+    // First, ensure a portal configuration exists or create one
+    let configurations = await stripe.billingPortal.configurations.list({ limit: 1 });
+    let configurationId;
+
+    if (configurations.data.length === 0) {
+      // Create a default configuration if none exists
+      const config = await stripe.billingPortal.configurations.create({
+        business_profile: {
+          headline: "Manage your subscription",
+        },
+        features: {
+          customer_update: {
+            enabled: true,
+            allowed_updates: ["email", "address"],
+          },
+          invoice_history: {
+            enabled: true,
+          },
+          payment_method_update: {
+            enabled: true,
+          },
+          subscription_cancel: {
+            enabled: true,
+            mode: "at_period_end",
+          },
+          subscription_pause: {
+            enabled: false,
+          },
+        },
+      });
+      configurationId = config.id;
+    } else {
+      configurationId = configurations.data[0].id;
+    }
+
+    // Create billing portal session with configuration
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/therai`,
+      configuration: configurationId,
     });
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
