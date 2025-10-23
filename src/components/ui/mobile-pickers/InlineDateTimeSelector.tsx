@@ -144,20 +144,17 @@ const InlineDateTimeSelector = ({
         return val;
       } else if (val.includes('-')) {
         // ISO format (YYYY-MM-DD) - convert to DD/MM/YYYY for display
-        const date = new Date(val);
-        if (isNaN(date.getTime())) return val; // Return raw value if invalid date
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
+        // Parse explicitly, never use new Date()
+        const isoMatch = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) {
+          const year = isoMatch[1];
+          const month = isoMatch[2];
+          const day = isoMatch[3];
+          return `${day}/${month}/${year}`;
+        }
+        return val; // Return raw value if format doesn't match
       } else {
-        // Try to parse as regular date
-        const date = new Date(val);
-        if (isNaN(date.getTime())) return val; // Return raw value if invalid date
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
+        return val; // Return as-is if unrecognized format
       }
     } else {
       const [hours, minutes] = val.split(':');

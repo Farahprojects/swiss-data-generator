@@ -28,20 +28,23 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
       };
     }
     
-    const date = new Date(dateValue);
-    if (isNaN(date.getTime())) {
-      const now = new Date();
+    // Parse YYYY-MM-DD format explicitly (never use new Date() for parsing)
+    const isoMatch = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
       return {
-        month: now.getMonth() + 1,
-        day: now.getDate(),
-        year: now.getFullYear()
+        year: parseInt(isoMatch[1], 10),
+        month: parseInt(isoMatch[2], 10),
+        day: parseInt(isoMatch[3], 10)
       };
     }
     
+    // Fallback to current date if format is invalid
+    console.warn('[InlineDateWheel] Invalid date format received:', dateValue, 'Expected YYYY-MM-DD');
+    const now = new Date();
     return {
-      month: date.getMonth() + 1,
-      day: date.getDate(),
-      year: date.getFullYear()
+      month: now.getMonth() + 1,
+      day: now.getDate(),
+      year: now.getFullYear()
     };
   }, []);
 

@@ -156,14 +156,28 @@ Test these scenarios to verify the fix:
 5. ❌ Non-existent date: `2024-02-30` → "This date does not exist"
 6. ❌ Out of range year: `1700-12-19` → "Invalid year: 1700"
 
+## Root Cause (Updated After Further Investigation)
+
+The `2024-26-19` error was caused by **locale-dependent `new Date()` parsing** in the mobile date picker components. When loading dates from profiles or storage:
+
+1. Profile loads `birth_date` from database as string (e.g., `"2024-12-19"`)
+2. Mobile picker components use `new Date(dateValue)` to parse it
+3. `new Date()` interprets dates based on system locale, **swapping day/month incorrectly**
+4. Result: month=26, day=19 instead of month=12, day=26
+
 ## Files Modified
 
-### Frontend
-- `src/components/ui/SimpleDateTimePicker.tsx` - Added format hint to label
+### Frontend - UI Components (Date Parsing Fixed)
+- `src/components/ui/mobile-pickers/InlineDateWheel.tsx` - **Replaced `new Date()` with explicit regex parsing**
+- `src/components/ui/mobile-pickers/MobileDatePicker.tsx` - **Replaced `new Date()` with explicit regex parsing**
+- `src/components/ui/mobile-pickers/InlineDateTimeSelector.tsx` - **Replaced `new Date()` with explicit regex parsing for display**
+- `src/components/ui/SimpleDateTimePicker.tsx` - Added format hint to label (already had correct parsing)
 - `src/components/chat/AstroForm/AstroDetailsStep.tsx` - Added format hint to mobile labels
 - `src/components/chat/AstroForm/AstroSecondPersonStep.tsx` - Added format hint to mobile labels
 - `src/components/settings/panels/ProfilesPanel.tsx` - Added format hint to mobile label
-- `src/hooks/useAstroReportPayload.ts` - Replaced conversion with validation
+
+### Frontend - Validation
+- `src/hooks/useAstroReportPayload.ts` - Replaced conversion with validation (fail fast)
 
 ### Backend
 - `supabase/functions/translator-edge/index.ts` - Added explicit date parsing and validation
