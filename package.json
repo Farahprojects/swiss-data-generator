@@ -1,7 +1,7 @@
 {
-  "name": "therai-celestial-nexus",
+  "name": "swiss-data-generator",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
