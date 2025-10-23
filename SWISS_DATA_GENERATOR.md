@@ -115,3 +115,4 @@ The app is configured for Vercel deployment:
 - Google API key required for geocoding (location → lat/lon)
 - All astro data generation requires active subscription
 
+

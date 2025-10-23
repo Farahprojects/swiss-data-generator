@@ -25,3 +25,4 @@ ON CONFLICT (id) DO UPDATE SET
 -- Add comment
 COMMENT ON TABLE price_list IS 'Product pricing catalog - Swiss Data Generator $30/year';
 
+
