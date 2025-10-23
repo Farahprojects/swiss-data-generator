@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// Removed chat store import - no longer using chat functionality
+import { useChatStore } from '@/core/store';
 
 interface TypewriterTextProps {
   text: string;

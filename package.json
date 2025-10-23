@@ -32,6 +32,7 @@
     "@vitejs/plugin-react-swc": "^3.11.0",
     "class-variance-authority": "^0.7.1",
     "date-fns": "^4.1.0",
+    "firebase": "^12.4.0",
     "framer-motion": "^12.23.24",
     "lovable-tagger": "^1.1.11",
     "lucide-react": "^0.312.0",

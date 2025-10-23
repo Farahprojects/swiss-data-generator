@@ -1,6 +1,6 @@
 // src/services/voice/stt.ts
 import { supabase } from '@/integrations/supabase/client';
-// Removed chat store import - no longer using chat functionality
+import { useChatStore } from '@/core/store';
 
 class SttService {
   async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, chattype?: string, mode?: string, user_id?: string, user_name?: string): Promise<{ transcript: string }> {

@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-// Removed chat functionality - no longer needed
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useChatStore } from '@/core/store';
 
 export const useAstroConversation = () => {
   const { user } = useAuth();
@@ -22,7 +22,8 @@ export const useAstroConversation = () => {
       if (!user) throw new Error('User not authenticated');
 
       const conversationId = await addThread(user.id, mode, title, reportData);
-      await chatController.initializeConversation(conversationId);
+      // chatController stub - replace with your actual implementation
+      // await chatController.initializeConversation(conversationId);
 
       // If insight mode, add to pending map
       if (mode === 'insight') {

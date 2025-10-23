@@ -42,6 +42,8 @@ export function useSubscription() {
 
   return {
     createCheckout,
-    loading
+    loading,
+    // Stub for isSubscribed - replace with actual subscription check
+    isSubscribed: false
   }
 }

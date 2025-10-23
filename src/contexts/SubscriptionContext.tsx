@@ -131,5 +131,9 @@ export function useSubscription() {
   if (context === undefined) {
     throw new Error('useSubscription must be used within a SubscriptionProvider');
   }
-  return context;
+  // Add alias for compatibility with existing code
+  return {
+    ...context,
+    isSubscribed: context.isSubscriptionActive,
+  };
 }
