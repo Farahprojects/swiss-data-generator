@@ -68,7 +68,7 @@ export const PaymentFailureAlert: React.FC<PaymentFailureAlertProps> = ({
 
   if (!isVisible) return null;
 
-  const urgencyLevel = daysUntilCancellation !== null && daysUntilCancellation <= 3 ? 'critical' : 'warning';
+  const urgencyLevel = daysUntilCancellation !== null && daysUntilCancellation <= 1 ? 'critical' : 'warning';
   
   return (
     <div className={`fixed top-0 left-0 right-0 z-50 ${

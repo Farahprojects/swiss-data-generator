@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -26,7 +26,7 @@ export const PaymentFailureToast: React.FC<PaymentFailureToastProps> = ({
       
       if (data?.url) {
         window.open(data.url, '_blank');
-        onDismiss(); // Dismiss toast after opening portal
+        onDismiss();
       }
     } catch (error) {
       console.error('Error opening customer portal:', error);
@@ -36,57 +36,59 @@ export const PaymentFailureToast: React.FC<PaymentFailureToastProps> = ({
     }
   };
 
-  if (!isVisible) return null;
-
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
-      <div className="bg-orange-50 border-2 border-orange-400 rounded-xl shadow-lg p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-          
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-gray-900 mb-1">
-              Payment Failed
-            </h3>
-            <p className="text-sm text-gray-700 mb-3">
-              Your last payment was declined. 
-              {daysUntilCancellation !== null && (
-                <span className="font-medium">
-                  {' '}Your subscription will be canceled in {daysUntilCancellation} {daysUntilCancellation === 1 ? 'day' : 'days'}.
-                </span>
-              )}
-            </p>
-            
-            <div className="flex items-center gap-2">
-              <Button
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="fixed bottom-24 left-0 right-0 z-50 flex justify-center px-4"
+        >
+          <div className="bg-white border-2 border-red-400 rounded-full shadow-lg px-6 py-4 flex items-center justify-between gap-4 w-full max-w-md">
+            {/* Icon */}
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-normal text-gray-900">
+                  Payment Failed
+                </p>
+                <p className="text-xs font-light text-gray-600 truncate">
+                  {daysUntilCancellation !== null && daysUntilCancellation > 0 ? (
+                    <>Cancels in {daysUntilCancellation} {daysUntilCancellation === 1 ? 'day' : 'days'}</>
+                  ) : (
+                    <>Update payment to restore access</>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
                 onClick={handleUpdatePayment}
                 disabled={isOpening}
-                size="sm"
-                className="bg-orange-600 hover:bg-orange-700 text-white rounded-full font-normal px-4"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-light rounded-full transition-colors disabled:opacity-50"
               >
-                {isOpening ? 'Opening...' : 'Update Payment Method'}
-              </Button>
-              <Button
+                {isOpening ? 'Opening...' : 'Update'}
+              </button>
+              <button
                 onClick={onDismiss}
-                variant="ghost"
-                size="sm"
-                className="text-gray-600 hover:text-gray-900 rounded-full font-normal px-4"
+                className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Dismiss"
               >
-                Dismiss
-              </Button>
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
             </div>
           </div>
-          
-          <button
-            onClick={onDismiss}
-            className="p-1 hover:bg-orange-100 rounded transition-colors flex-shrink-0"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4 text-gray-600" />
-          </button>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

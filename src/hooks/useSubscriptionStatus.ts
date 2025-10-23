@@ -73,11 +73,11 @@ export function useSubscriptionStatus() {
       
       const isPastDue = data?.subscription_status === 'past_due';
       
-      // Calculate days until cancellation (Stripe typically cancels after 14 days)
+      // Calculate days until cancellation (1 day grace period)
       let daysUntilCancellation: number | null = null;
       if (isPastDue && data?.subscription_next_charge) {
         const nextChargeDate = new Date(data.subscription_next_charge);
-        const cancellationDate = new Date(nextChargeDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const cancellationDate = new Date(nextChargeDate.getTime() + 1 * 24 * 60 * 60 * 1000);
         const now = new Date();
         const diffTime = cancellationDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
