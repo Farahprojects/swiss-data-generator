@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -115,6 +115,24 @@ export const BillingPanel: React.FC = () => {
     return planName;
   };
 
+  const openCustomerPortal = async () => {
+    setUpdatingPlanId('portal');
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      toast.error('Failed to open payment portal');
+    } finally {
+      setUpdatingPlanId(null);
+    }
+  };
+
   const handleResubscribe = async (plan: Plan) => {
     if (!plan.stripe_price_id) {
       toast.error('Invalid plan configuration');
@@ -152,6 +170,36 @@ export const BillingPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Payment Failure Alert for Past Due */}
+      {subscription?.status === 'past_due' && (
+        <div className="border-2 border-red-400 bg-red-50 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-900 mb-1">Payment Failed</h3>
+              <p className="text-sm text-gray-700 mb-3">
+                Your last payment was declined. Update your payment method to restore access to your subscription.
+              </p>
+              <Button
+                onClick={openCustomerPortal}
+                disabled={updatingPlanId === 'portal'}
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white rounded-full font-light px-6"
+              >
+                {updatingPlanId === 'portal' ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Opening...
+                  </>
+                ) : (
+                  'Update Payment Method'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Current Subscription Info */}
       {isSubscriptionActive && (
         <div className="border-b pb-6">

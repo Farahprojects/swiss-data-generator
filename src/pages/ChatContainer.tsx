@@ -4,6 +4,8 @@ import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { useChatInitialization } from '@/hooks/useChatInitialization';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { PaymentFailureAlert } from '@/components/billing/PaymentFailureAlert';
 
 /**
  * Streamlined ChatContainer - Single Responsibility
@@ -15,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
  */
 const ChatContainerContent: React.FC = () => {
   const { user } = useAuth();
+  const { isPastDue, daysUntilCancellation, lastPaymentStatus } = useSubscriptionStatus();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Single responsibility: Initialize chat when threadId changes
@@ -39,6 +42,15 @@ const ChatContainerContent: React.FC = () => {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
+      {/* Payment Failure Alert */}
+      {user && (
+        <PaymentFailureAlert
+          isPastDue={isPastDue}
+          daysUntilCancellation={daysUntilCancellation}
+          lastPaymentStatus={lastPaymentStatus}
+        />
+      )}
+      
       <ReportModalProvider>
         <ChatBox />
       </ReportModalProvider>

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { SubscriptionToast } from '@/components/subscription/SubscriptionToast';
+import { PaymentFailureToast } from '@/components/subscription/PaymentFailureToast';
 
 interface SubscriptionContextType {
   showToast: boolean;
@@ -10,6 +11,8 @@ interface SubscriptionContextType {
   isSubscriptionActive: boolean;
   subscriptionPlan: string | null;
   loading: boolean;
+  isPastDue: boolean;
+  daysUntilCancellation: number | null;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -19,7 +22,7 @@ const TOAST_DISMISS_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { isActive, plan, loading, refetch } = useSubscriptionStatus();
+  const { isActive, plan, loading, refetch, isPastDue, daysUntilCancellation } = useSubscriptionStatus();
   const [showToast, setShowToast] = useState(false);
   const location = useLocation();
 
@@ -99,16 +102,26 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         dismissToast,
         isSubscriptionActive: isActive,
         subscriptionPlan: plan,
-        loading
+        loading,
+        isPastDue,
+        daysUntilCancellation
       }}
     >
       {children}
       
-      {/* Subscription Toast */}
-      <SubscriptionToast
-        isVisible={showToast}
-        onDismiss={dismissToast}
-      />
+      {/* Show different toast based on subscription status */}
+      {isPastDue ? (
+        <PaymentFailureToast
+          isVisible={showToast}
+          onDismiss={dismissToast}
+          daysUntilCancellation={daysUntilCancellation}
+        />
+      ) : (
+        <SubscriptionToast
+          isVisible={showToast}
+          onDismiss={dismissToast}
+        />
+      )}
     </SubscriptionContext.Provider>
   );
 }
